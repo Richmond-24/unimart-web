@@ -82,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Try to get token and user from localStorage
       const storedToken = localStorage.getItem('unimart:token');
       const storedUser = localStorage.getItem('unimart:user');
+      const storedGuest = localStorage.getItem('unimart:guest');
 
       if (storedToken) {
         setToken(storedToken);
@@ -116,6 +117,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.removeItem('unimart:token');
           localStorage.removeItem('unimart:user');
           clearAuthCookie();
+        }
+      } else if (storedGuest && storedUser) {
+        try {
+          const parsedUser = JSON.parse(storedUser);
+          if (parsedUser && parsedUser.role === 'guest') {
+            setUser(parsedUser);
+          } else {
+            localStorage.removeItem('unimart:guest');
+            localStorage.removeItem('unimart:user');
+            setUser(null);
+          }
+        } catch (e) {
+          console.warn('Failed to parse guest user:', e);
+          localStorage.removeItem('unimart:guest');
+          localStorage.removeItem('unimart:user');
+          setUser(null);
         }
       } else {
         // If localStorage is cleared but an auth cookie remains, clear the stale cookie too.
@@ -227,11 +244,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const isGuestUser = !!user && user.role === 'guest';
   const value: AuthContextType = {
     user,
     token,
     isLoading,
-    isAuthenticated: !!token && !!user,
+    isAuthenticated: (!!token && !!user) || isGuestUser,
     setUser,
     setToken,
     logout,

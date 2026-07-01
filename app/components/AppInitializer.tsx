@@ -40,7 +40,8 @@ export default function AppInitializer() {
       try {
         // Check actual auth state from localStorage to determine correct stage
         const hasToken = !!localStorage.getItem('unimart:token');
-        if (hasToken) {
+        const hasGuest = !!localStorage.getItem('unimart:guest');
+        if (hasToken || hasGuest) {
           setStage('ready');
         } else {
           // Logged out — go back to auth screen

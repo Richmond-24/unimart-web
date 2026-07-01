@@ -3,10 +3,12 @@ export type ApiClientOptions = Omit<RequestInit, 'body'> & {
   body?: any;
 };
 
-const API_BASE =
+const EXPLICIT_API_BASE =
   (typeof process !== 'undefined' && (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL))
     ? (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL)?.trim().replace(/\/+$/, '')
-    : 'https://unimart-backends-2.onrender.com';
+    : '';
+
+const API_BASE = EXPLICIT_API_BASE || (typeof window !== 'undefined' ? '' : 'https://unimart-backends-2.onrender.com');
 
 function buildUrl(path: string, absolute?: boolean): string {
   if (absolute) {
@@ -14,10 +16,14 @@ function buildUrl(path: string, absolute?: boolean): string {
   }
 
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  if (normalizedPath.startsWith('/api/')) {
-    return `${API_BASE}${normalizedPath}`;
+  const hasApiPrefix = normalizedPath.startsWith('/api/');
+  const base = API_BASE;
+
+  if (base) {
+    return hasApiPrefix ? `${base}${normalizedPath}` : `${base}/api${normalizedPath}`;
   }
-  return `${API_BASE}/api${normalizedPath}`;
+
+  return hasApiPrefix ? normalizedPath : `/api${normalizedPath}`;
 }
 
 async function parseResponse(response: Response) {

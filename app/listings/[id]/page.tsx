@@ -366,9 +366,12 @@ export default function ListingPage() {
   }
 
   return (
-    <div className="pdp-shell bg-[#f5f5f5] font-sans">
-      {/* ===== Temu-style image hero (full bleed, sticky top) ===== */}
-      <div className="relative bg-white pdp-image-hero">
+    // CHANGE 1: replaced "pdp-shell" (undefined class) with explicit Tailwind + safe-area bottom padding
+    <div className="min-h-screen bg-[#f5f5f5] font-sans pb-[calc(5.5rem+env(safe-area-inset-bottom))]">
+
+      {/* ===== Image hero — normal flow, NOT sticky ===== */}
+      {/* CHANGE 2: removed "pdp-image-hero" (was causing sticky behaviour) */}
+      <div className="relative bg-white">
         {/* Overlay top bar */}
         <div
           className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-3 pb-2"
@@ -437,13 +440,24 @@ export default function ListingPage() {
 
         {images.length > 0 ? (
           <div className="relative overflow-hidden bg-[#fafafa]">
-            <div className="pdp-image-track" style={{ transform: `translateX(-${activeImg * 100}%)` }}>
+            {/* CHANGE 3 & 4: replaced "pdp-image-track" with inline flex + transform transition.
+                Replaced "aspect-square" with a capped height so images never overflow the viewport. */}
+            <div
+              style={{
+                display: "flex",
+                transform: `translateX(-${activeImg * 100}%)`,
+                transition: "transform 0.38s cubic-bezier(0.4, 0, 0.2, 1)",
+                willChange: "transform",
+              }}
+            >
               {images.map((url, idx) => (
                 <img
                   key={idx}
                   src={url}
                   alt={`${listing.title} ${idx + 1}`}
-                  className="w-full flex-shrink-0 object-contain aspect-square max-h-[min(72vh,520px)] cursor-pointer bg-white"
+                  // CHANGE 4: height capped at min(72vw, 460px) — fills mobile naturally, never exceeds 460px on desktop
+                  style={{ height: "min(72vw, 460px)", minHeight: "220px", flexShrink: 0, width: "100%" }}
+                  className="object-contain cursor-pointer bg-[#fafafa]"
                   onClick={() => { setPreviewIndex(idx); setShowPreview(true); }}
                 />
               ))}
@@ -466,7 +480,8 @@ export default function ListingPage() {
                 <div className="absolute bottom-3 right-3 bg-black/50 text-white text-xs px-2 py-0.5 rounded-full">
                   {activeImg + 1}/{images.length}
                 </div>
-                <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1">
+                {/* CHANGE 5: moved dots up to bottom-12 so they don't overlap the thumbnail strip */}
+                <div className="absolute bottom-12 left-0 right-0 flex justify-center gap-1">
                   {images.map((_, idx) => (
                     <button
                       key={idx}
@@ -479,7 +494,12 @@ export default function ListingPage() {
             )}
           </div>
         ) : (
-          <div className="w-full aspect-square bg-gray-100 flex items-center justify-center text-gray-400">No image available</div>
+          <div
+            className="w-full bg-gray-100 flex items-center justify-center text-gray-400"
+            style={{ height: "min(72vw, 460px)", minHeight: "220px" }}
+          >
+            No image available
+          </div>
         )}
 
         {images.length > 1 && (
@@ -497,11 +517,10 @@ export default function ListingPage() {
         )}
       </div>
 
-      <div className="pdp-desktop-grid px-0">
-        <div className="hidden lg:block" />
-
+      {/* CHANGE 6: replaced "pdp-desktop-grid" (undefined) with a simple centered max-width wrapper */}
+      <div className="max-w-3xl mx-auto px-0">
         <div className="space-y-2">
-          {/* Flash deal strip — Temu style */}
+          {/* Flash deal strip */}
           {(() => {
             const endsAt =
               (listing.flashDealExpiry && new Date(listing.flashDealExpiry).getTime()) ||
@@ -511,7 +530,11 @@ export default function ListingPage() {
             if (!endsAt) return null;
             const remaining = endsAt - nowTime;
             return (
-              <div className="pdp-deal-bar px-4 py-2.5 flex items-center justify-between">
+              // CHANGE 7: replaced "pdp-deal-bar" (undefined) with inline gradient style
+              <div
+                className="px-4 py-2.5 flex items-center justify-between"
+                style={{ background: "linear-gradient(90deg, #fff7ed 0%, #ffedd5 100%)", borderBottom: "1px solid #fed7aa" }}
+              >
                 <div className="flex items-center gap-2">
                   <Zap className="w-4 h-4 text-[#fb6f20]" fill="#fb6f20" />
                   <span className="text-sm font-bold text-[#c2410c]">Flash deal</span>
@@ -526,7 +549,8 @@ export default function ListingPage() {
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline gap-2 flex-wrap">
-                  <span className="pdp-price">₵{listing.price}</span>
+                  {/* CHANGE 8: replaced "pdp-price" (undefined) with explicit Tailwind typography */}
+                  <span className="text-2xl font-extrabold text-[#fb6f20] tracking-tight">₵{listing.price}</span>
                   {listing.originalPrice && (
                     <span className="text-sm text-gray-400 line-through">₵{listing.originalPrice}</span>
                   )}
@@ -687,9 +711,13 @@ export default function ListingPage() {
         <MessageCircle className="w-6 h-6" />
       </button>
 
-      {/* Temu-style sticky bottom bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-[0_-4px_24px_rgba(0,0,0,0.08)] pdp-sticky-bar">
-        <div className="max-w-3xl mx-auto px-3 pt-2.5 flex items-center gap-2">
+      {/* Sticky bottom bar */}
+      {/* CHANGE 9: removed "pdp-sticky-bar", added safe-area bottom padding inline */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-[0_-4px_24px_rgba(0,0,0,0.08)]">
+        <div
+          className="max-w-3xl mx-auto px-3 pt-2.5 flex items-center gap-2"
+          style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+        >
           <button
             onClick={contactSeller}
             aria-label="Chat"

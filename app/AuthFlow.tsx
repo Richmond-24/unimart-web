@@ -618,6 +618,7 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
   const [showGuestInfo, setShowGuestInfo] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successName, setSuccessName] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [storeName, setStoreName] = useState("");
   const [storeBio, setStoreBio] = useState("");
 
@@ -632,6 +633,7 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
     setScreen(s);
     setPwVisible(false);
     setError(null);
+    setSuccessMessage("");
   }
 
   async function handleSignup() {
@@ -786,6 +788,7 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
       // Show success UI
       setIsLoading(false);
       setSuccessName(name.split(" ")[0]);
+      setSuccessMessage('Account created successfully. Redirecting...');
       setShowSuccess(true);
 
       // Trigger auth change event and navigate based on role
@@ -910,6 +913,7 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
       // Show success UI
       setIsLoading(false);
       setSuccessName(res.user?.name ? res.user.name.split(" ")[0] : "Welcome");
+      setSuccessMessage('Logged in successfully. Redirecting...');
       setShowSuccess(true);
 
       // Trigger auth change event and navigate based on role
@@ -943,6 +947,7 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
           try { setUser(res.user ? { ...res.user } : null); } catch (e) { console.warn('Could not set user in context:', e); }
           const displayName = (res.user && res.user.name) ? (res.user.name.split(" ")[0]) : '';
           setSuccessName(displayName || 'Guest');
+          setSuccessMessage('Continuing as guest. Redirecting...');
           setShowSuccess(true);
           setTimeout(() => { 
             setShowSuccess(false); 
@@ -960,6 +965,7 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
           try { localStorage.setItem('unimart:onboarded', '1'); } catch (e) {}
           try { setUser(guestUser); } catch (e) {}
           setSuccessName(guestUser.name);
+          setSuccessMessage('Continuing as guest. Redirecting...');
           setShowSuccess(true);
           setTimeout(() => { 
             setShowSuccess(false); 
@@ -978,6 +984,7 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
         try { localStorage.setItem('unimart:onboarded', '1'); } catch (e) {}
         try { setUser(guestUser); } catch (e) {}
         setSuccessName(guestUser.name);
+        setSuccessMessage('Continuing as guest. Redirecting...');
         setShowSuccess(true);
         setTimeout(() => { setShowSuccess(false); try { window.dispatchEvent(new Event('unimart:authChanged')); } catch (e) {} if (onDone) onDone('guest'); router.replace('/'); }, 900);
         return;
@@ -1073,7 +1080,7 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.8" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
             <h3 className="um-success-title">{successName ? `Welcome, ${successName}!` : "Welcome back!"}</h3>
-            <p className="um-success-sub">You're now signed in to Uni-Mart</p>
+            <p className="um-success-sub">{successMessage || "You're now signed in to Uni-Mart"}</p>
           </div>
         </div>
       )}
