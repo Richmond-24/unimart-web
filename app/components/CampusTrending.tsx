@@ -108,10 +108,10 @@ export default function CampusTrending() {
               </p>
             </div>
             <Link 
-              href="/trending" 
+              href="/seller" 
               className="text-xs md:text-sm text-teal-600 hover:text-teal-700 font-medium flex items-center gap-1 bg-teal-50 px-3 py-1.5 rounded-full transition-colors"
             >
-              See all <ChevronRight className="w-3 h-3" />
+              See all sellers <ChevronRight className="w-3 h-3" />
             </Link>
           </div>
         </div>
