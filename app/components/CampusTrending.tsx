@@ -3,10 +3,9 @@
 
 import React, { useEffect, useState } from "react";
 import Link from 'next/link';
-import { motion, useInView } from "framer-motion";
 import { 
-  TrendingUp, Users, Eye, Heart, MessageCircle, 
-  Share2, Star, ChevronRight, Zap 
+  Users, Eye,
+  Star, ChevronRight, Zap 
 } from "lucide-react";
 import apiFetch from '../../lib/apiClient';
 
@@ -40,8 +39,6 @@ export default function CampusTrending() {
   const [items, setItems] = useState<Trend[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const sectionRef = React.useRef<HTMLDivElement>(null);
-  const isInView = useInView(sectionRef, { once: true, amount: 0.2 });
 
   useEffect(() => {
     let mounted = true;
@@ -96,36 +93,11 @@ export default function CampusTrending() {
     return num.toString();
   };
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.08,
-        delayChildren: 0.1,
-      },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, x: -20 },
-    visible: {
-      opacity: 1,
-      x: 0,
-      transition: { duration: 0.4, ease: ([0.22, 1, 0.36, 1] as unknown) as any },
-    },
-  };
-
   return (
-    <section ref={sectionRef} className="py-6 md:py-8 lg:py-10 bg-gradient-to-b from-teal-50/30 via-white to-white">
+    <section className="py-6 md:py-8 lg:py-10 bg-gradient-to-b from-teal-50/30 via-white to-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mb-5 md:mb-6"
-        >
+        <div className="mb-5 md:mb-6">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
               <h2 className="text-lg md:text-xl lg:text-2xl font-bold text-gray-900">
@@ -142,15 +114,10 @@ export default function CampusTrending() {
               See all <ChevronRight className="w-3 h-3" />
             </Link>
           </div>
-        </motion.div>
+        </div>
 
         {/* Trending items */}
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate={isInView ? "visible" : "hidden"}
-          className="space-y-3 md:space-y-4"
-        >
+        <div className="space-y-3 md:space-y-4">
           {loading && [1, 2, 3].map((s) => (
             <div key={s} className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm animate-pulse">
               <div className="flex gap-4">
@@ -171,9 +138,8 @@ export default function CampusTrending() {
           )}
 
           {items.map((trend, idx) => (
-            <motion.div
+            <div
               key={trend.id}
-              variants={itemVariants}
               onMouseEnter={() => setHoveredIndex(idx)}
               onMouseLeave={() => setHoveredIndex(null)}
             >
@@ -289,56 +255,45 @@ export default function CampusTrending() {
 
                     {/* Right side - Arrow */}
                     <div className="flex-shrink-0 flex items-center">
-                      <motion.div
-                        animate={hoveredIndex === idx ? { x: 5 } : { x: 0 }}
-                        className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center"
+                      <div
+                        className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center transition-transform duration-200"
+                        style={{ transform: hoveredIndex === idx ? "translateX(5px)" : "translateX(0)" }}
                       >
                         <ChevronRight className="w-4 h-4 text-gray-400" />
-                      </motion.div>
+                      </div>
                     </div>
                   </div>
 
                   {/* Trending progress bar */}
                   <div className="mt-3">
                     <div className="w-full h-1 bg-gray-100 rounded-full overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${Math.min(100, ((trend.viewCount || 0) / 50000) * 100)}%` }}
-                        transition={{ duration: 0.8, delay: 0.2 }}
+                      <div
                         className="h-full bg-gradient-to-r from-teal-400 to-teal-600 rounded-full"
+                        style={{ width: `${Math.min(100, ((trend.viewCount || 0) / 50000) * 100)}%` }}
                       />
                     </div>
                     <div className="flex justify-between mt-1">
                       <span className="text-[8px] md:text-[9px] text-gray-400">Trending volume</span>
-                        <motion.span
-                          animate={{ scale: [1, 1.05, 1] }}
-                          transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 3 }}
-                          className="text-[8px] md:text-[9px] text-teal-600 font-medium"
-                        >
-                          +{Math.max(0, Math.min(100, Math.floor((trend as any).deltaPercent || 5)))}% this week
-                        </motion.span>
+                      <span className="text-[8px] md:text-[9px] text-teal-600 font-medium">
+                        +{Math.max(0, Math.min(100, Math.floor((trend as any).deltaPercent || 5)))}% this week
+                      </span>
                     </div>
                   </div>
                 </div>
               </Link>
-            </motion.div>
+            </div>
           ))}
-        </motion.div>
+        </div>
 
         {/* Footer */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="mt-6 text-center"
-        >
+        <div className="mt-6 text-center">
           <div className="inline-flex items-center gap-2 bg-gradient-to-r from-teal-50 to-white border border-teal-100 rounded-full px-4 py-2">
             <Zap className="w-4 h-4 text-teal-500" />
             <span className="text-xs text-gray-600">
               Join <strong className="text-teal-600">50,000+ students</strong> discovering campus trends
             </span>
           </div>
-        </motion.div>
+        </div>
       </div>
     </section>
   );

@@ -1,20 +1,9 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { ArrowRight, Clock, Zap, BadgePercent, Rocket, Crown, Flame, ShoppingBag, } from "lucide-react";
+import { ArrowRight, Zap, BadgePercent, Rocket, Crown, Flame, ShoppingBag, } from "lucide-react";
 
-interface BgImage { src: string; x: string; y: string; size: number; delay: number; dur: number; rot: number; }
 interface CatItem { src: string; label: string; discount: string; from: string; accent: string; }
 interface Feature { icon: React.ElementType; title: string; desc: string; }
-
-const BG_IMAGES: BgImage[] = [
-  { src: "/tech.jpg",    x: "5%",  y: "6%",  size: 160, delay: 0,   dur: 18, rot: -8  },
-  { src: "/Fashion.jpg", x: "78%", y: "4%",  size: 130, delay: 2,   dur: 22, rot: 10  },
-  { src: "/books.jpg",   x: "85%", y: "52%", size: 150, delay: 3.5, dur: 20, rot: -6  },
-  { src: "/event.jpg",   x: "2%",  y: "58%", size: 140, delay: 1.5, dur: 24, rot: 12  },
-  { src: "/home.jpg",    x: "42%", y: "2%",  size: 110, delay: 4,   dur: 16, rot: -5  },
-  { src: "/used.jpg",    x: "60%", y: "70%", size: 120, delay: 1,   dur: 19, rot: 8   },
-  { src: "/groceries.jpg", x: "25%", y: "75%", size: 100, delay: 2.8, dur: 21, rot: -10 },
-];
 
 const CATEGORIES: CatItem[] = [
   { src: "/tech.jpg",      label: "Gadgets",    discount: "40%", from: "GH₵ 499",  accent: "#0d9488" },
@@ -33,15 +22,6 @@ const pad = (n: number): string => String(n).padStart(2, "0");
 
 export default function BigBanner() {
   const [timeLeft, setTimeLeft] = useState<number>(8 * 3600 + 42 * 60 + 17);
-  const [viewportWidth, setViewportWidth] = useState<number>(0);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const setW = () => setViewportWidth(window.innerWidth);
-    setW();
-    window.addEventListener('resize', setW);
-    return () => window.removeEventListener('resize', setW);
-  }, []);
 
   useEffect(() => {
     const t = setInterval(() => setTimeLeft(s => Math.max(0, s - 1)), 1000);
@@ -59,10 +39,6 @@ export default function BigBanner() {
       background: "linear-gradient(145deg,#e0fdf4 0%,#ccfbf1 40%,#cffafe 70%,#dbeafe 100%)",
       fontFamily: "'DM Sans','Outfit',system-ui,sans-serif",
       width: "100%",
-      minHeight: "100vh",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
     }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,800&family=Space+Grotesk:wght@700;800&display=swap');
@@ -379,21 +355,6 @@ export default function BigBanner() {
       `}</style>
 
       <div className="bb-card">
-        {BG_IMAGES.map(({ src, x, y, size }, i) => (
-          <div
-            key={i}
-            className="bb-bgimg"
-            style={{
-              left: x,
-              top: y,
-              width: `clamp(60px, ${size * 0.5}px, ${size}px)`,
-              height: `clamp(45px, ${size * 0.375}px, ${size * 0.75}px)`,
-              display: viewportWidth > 0 && viewportWidth < 640 ? "none" : "block",
-            }}
-          >
-            <img src={src} alt="" />
-          </div>
-        ))}
 
         <div className="bb-body">
           <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:10, marginBottom:"clamp(1rem, 3vw, 1.5rem)" }}>
@@ -527,7 +488,7 @@ export default function BigBanner() {
             bottom:0,
             left:0,
             height:"clamp(0.1875rem, 0.5vw, 0.25rem)",
-            width:`${(timeLeft / TOTAL) * 100}%`,
+            width:"60%",
             background:"linear-gradient(90deg,#fbbf24,#f97316)",
             borderRadius: "0 0 0 28px",
           }}
