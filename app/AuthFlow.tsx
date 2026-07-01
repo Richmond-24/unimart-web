@@ -810,8 +810,10 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
   }
 
   async function handleLogin() {
+    // Prevent concurrent submissions (same guard as handleSignup)
+    if (isSubmittingRef.current) return;
     setError(null);
-    
+
     // Validate email format
     if (!email || email.trim() === "") {
       setError("Please enter your email address");
@@ -823,17 +825,13 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
       return;
     }
     
-    // Validate password
+    // Only check that password is not empty — length is the server's concern
     if (!password || password.trim() === "") {
       setError("Please enter your password");
       return;
     }
-    
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters");
-      return;
-    }
 
+    isSubmittingRef.current = true;
     setIsLoading(true);
     try {
       console.debug("Attempting login with email:", email.substring(0, 3) + "***");
@@ -926,7 +924,9 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
         : backendMsg;
       setError(displayError);
       console.error("Login error:", err);
-      setIsLoading(false); 
+    } finally {
+      setIsLoading(false);
+      isSubmittingRef.current = false;
     }
   }
 
@@ -1369,7 +1369,7 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
         .um-mode-switch-btn:hover { color: var(--um-teal-dark); text-decoration: underline; }
 
         .um-success-overlay {
-          position: fixed; inset: 0; z-index: 100;
+          position: fixed; inset: 0; z-index: 10010;
           background: rgba(0,0,0,0.4);
           display: flex; align-items: center; justify-content: center;
           padding: 24px;
