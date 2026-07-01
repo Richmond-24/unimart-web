@@ -107,6 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(null);
             localStorage.removeItem('unimart:token');
             localStorage.removeItem('unimart:user');
+            clearAuthCookie();
           }
         } catch (e) {
           console.debug('Token validation failed:', e);
@@ -116,6 +117,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.removeItem('unimart:user');
           clearAuthCookie();
         }
+      } else {
+        // If localStorage is cleared but an auth cookie remains, clear the stale cookie too.
+        clearAuthCookie();
+        localStorage.removeItem('unimart:user');
+        localStorage.removeItem('unimart:guest');
+        setUser(null);
       }
     } catch (e) {
       console.error('Auth initialization error:', e);
