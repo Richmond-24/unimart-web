@@ -780,10 +780,10 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
       try { localStorage.setItem('unimart:university', role === 'buyer' ? university : ''); } catch (e) {}
       try { localStorage.setItem('unimart:onboarded', '1'); } catch (e) {}
       
-      // Notify Zapier (non-blocking if it fails)
-      try { await sendToZapierWebhook(name, email, phone || ''); } catch (e) { /* errors handled inside helper */ }
-      
-      // Show success UI
+      // Notify Zapier fire-and-forget — do NOT await so it never blocks the UI
+      sendToZapierWebhook(name, email, phone || '');
+
+      // Show success UI immediately after credentials are saved
       setIsLoading(false);
       setSuccessName(name.split(" ")[0]);
       setShowSuccess(true);
@@ -794,7 +794,6 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
         try { window.dispatchEvent(new Event('unimart:authChanged')); } catch (e) {}
         const userRole = res?.user?.role === 'seller' ? 'seller' : 'buyer';
         if (onDone) onDone(userRole);
-        router.replace('/');
       }, 900);
       
     } catch (err: any) { 
@@ -918,7 +917,6 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
         try { window.dispatchEvent(new Event('unimart:authChanged')); } catch (e) {}
         const userRole = res?.user?.role === 'seller' ? 'seller' : 'buyer';
         if (onDone) onDone(userRole);
-        router.replace('/');
       }, 900);
       
     } catch (err: any) { 
@@ -948,7 +946,6 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
             setShowSuccess(false); 
             try { window.dispatchEvent(new Event('unimart:authChanged')); } catch (e) {}
             if (onDone) onDone('guest');
-            router.replace('/');
           }, 900);
           return;
         } else {
@@ -965,7 +962,6 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
             setShowSuccess(false); 
             try { window.dispatchEvent(new Event('unimart:authChanged')); } catch (e) {}
             if (onDone) onDone('guest');
-            router.replace('/');
           }, 900);
           return;
         }
@@ -979,7 +975,7 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
         try { setUser(guestUser); } catch (e) {}
         setSuccessName(guestUser.name);
         setShowSuccess(true);
-        setTimeout(() => { setShowSuccess(false); try { window.dispatchEvent(new Event('unimart:authChanged')); } catch (e) {} if (onDone) onDone('guest'); router.replace('/'); }, 900);
+        setTimeout(() => { setShowSuccess(false); try { window.dispatchEvent(new Event('unimart:authChanged')); } catch (e) {} if (onDone) onDone('guest'); }, 900);
         return;
       } finally {
         setIsLoading(false);

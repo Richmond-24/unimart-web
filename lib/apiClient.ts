@@ -69,12 +69,25 @@ async function request<T = any>(method: string, path: string, opts: ApiClientOpt
 
   console.debug('[apiClient] request', { method, url, init });
 
+  // Abort after 20 seconds so a cold-starting backend never hangs the UI indefinitely
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 20_000);
+  init.signal = controller.signal;
+
   let response: Response;
   try {
     response = await fetch(url, init);
   } catch (err: any) {
     const errorMsg = err.message || String(err);
     console.error('[apiClient] fetch error:', errorMsg);
+
+    if (err.name === 'AbortError') {
+      const error = new Error(
+        'Request timed out. The server is taking too long to respond — please try again.'
+      );
+      (error as any).status = 0;
+      throw error;
+    }
     
     // Provide helpful error message
     if (errorMsg.includes('Failed to fetch') || errorMsg.includes('ERR_NAME_NOT_RESOLVED')) {
@@ -87,6 +100,8 @@ async function request<T = any>(method: string, path: string, opts: ApiClientOpt
     }
     
     throw err;
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   const payload = await parseResponse(response);
