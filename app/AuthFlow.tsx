@@ -703,18 +703,6 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
       const locationPromise = detectUserLocation(1000).catch(() => null);
 
       // Step 2: Notify Zapier of new signup (best-effort, non-blocking)
-      async function sendToZapierWebhook(name: string, email: string, phone_number: string) {
-        try {
-          await fetch('https://hooks.zapier.com/hooks/catch/27774445/4b93q47/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, email, phone_number }),
-          });
-        } catch (e) {
-          console.debug('sendToZapierWebhook failed (ignored):', e);
-        }
-      }
-
       // Step 3: Continue with the registration request and attach location data if available.
       let locPayload: any = {};
       try {
@@ -781,9 +769,6 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
       } catch (e) { console.warn('Could not save user:', e); }
       try { localStorage.setItem('unimart:university', role === 'buyer' ? university : ''); } catch (e) {}
       try { localStorage.setItem('unimart:onboarded', '1'); } catch (e) {}
-      
-      // Notify Zapier (non-blocking if it fails)
-      try { await sendToZapierWebhook(name, email, phone || ''); } catch (e) { /* errors handled inside helper */ }
       
       // Show success UI
       setIsLoading(false);
@@ -940,42 +925,6 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
     (async () => {
       setIsLoading(true);
       try {
-        const res = await apiFetch('/auth/guest-login', { method: 'POST' });
-        if (res && res.success) {
-          try { persistAuthToken(res.token); } catch (e) { console.warn('Could not persist token:', e); }
-          try { setToken(res.token); } catch (e) { console.warn('Could not set token in context:', e); }
-          try { setUser(res.user ? { ...res.user } : null); } catch (e) { console.warn('Could not set user in context:', e); }
-          const displayName = (res.user && res.user.name) ? (res.user.name.split(" ")[0]) : '';
-          setSuccessName(displayName || 'Guest');
-          setSuccessMessage('Continuing as guest. Redirecting...');
-          setShowSuccess(true);
-          setTimeout(() => { 
-            setShowSuccess(false); 
-            try { window.dispatchEvent(new Event('unimart:authChanged')); } catch (e) {}
-            if (onDone) onDone('guest');
-            router.replace('/');
-          }, 900);
-          return;
-        } else {
-          try { localStorage.removeItem('unimart:token'); } catch (e) {}
-          try { localStorage.setItem('unimart:guest', '1'); } catch (e) {}
-          const suffix = Math.floor(1000 + Math.random() * 9000);
-          const guestUser = { id: `guest-${Date.now()}`, name: `Guest${suffix}`, guest: true, role: 'guest' as const, createdAt: new Date().toISOString() };
-          try { localStorage.setItem('unimart:user', JSON.stringify(guestUser)); } catch (e) {}
-          try { localStorage.setItem('unimart:onboarded', '1'); } catch (e) {}
-          try { setUser(guestUser); } catch (e) {}
-          setSuccessName(guestUser.name);
-          setSuccessMessage('Continuing as guest. Redirecting...');
-          setShowSuccess(true);
-          setTimeout(() => { 
-            setShowSuccess(false); 
-            try { window.dispatchEvent(new Event('unimart:authChanged')); } catch (e) {}
-            if (onDone) onDone('guest');
-            router.replace('/');
-          }, 900);
-          return;
-        }
-      } catch (e) {
         try { localStorage.removeItem('unimart:token'); } catch (e) {}
         try { localStorage.setItem('unimart:guest', '1'); } catch (e) {}
         const suffix = Math.floor(1000 + Math.random() * 9000);
@@ -986,8 +935,14 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
         setSuccessName(guestUser.name);
         setSuccessMessage('Continuing as guest. Redirecting...');
         setShowSuccess(true);
-        setTimeout(() => { setShowSuccess(false); try { window.dispatchEvent(new Event('unimart:authChanged')); } catch (e) {} if (onDone) onDone('guest'); router.replace('/'); }, 900);
-        return;
+        setTimeout(() => {
+          setShowSuccess(false);
+          try { window.dispatchEvent(new Event('unimart:authChanged')); } catch (e) {}
+          if (onDone) onDone('guest');
+          router.replace('/');
+        }, 900);
+      } catch (err) {
+        console.error('Guest login failed:', err);
       } finally {
         setIsLoading(false);
       }
