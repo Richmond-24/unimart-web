@@ -68,7 +68,7 @@ export default function SellerIndex() {
             </p>
           </div>
           <Link href="/" className="inline-flex items-center justify-center rounded-full border border-teal-200 bg-white px-4 py-2 text-sm font-semibold text-teal-700 shadow-sm transition hover:border-teal-300 hover:bg-teal-50">
-            Back to home
+            Back
           </Link>
         </div>
 

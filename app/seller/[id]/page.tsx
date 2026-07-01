@@ -97,7 +97,7 @@ export default function SellerDetailPage({ params }: { params: { id: string } })
           <p className="mt-3 text-sm text-slate-600">{error || 'We could not find this seller.'}</p>
           <div className="mt-6 flex justify-center gap-3">
             <button onClick={() => router.back()} className="rounded-full bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-700">
-              Go back
+              Back
             </button>
             <Link href="/seller" className="rounded-full border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
               Browse sellers
@@ -176,7 +176,7 @@ export default function SellerDetailPage({ params }: { params: { id: string } })
                   </div>
                   <div className="space-y-2 p-4">
                     <p className="text-sm font-semibold text-slate-900">{product.title || 'Untitled product'}</p>
-                    <p className="text-sm text-slate-500">{product.price != null ? <span className="text-orange-600 font-semibold">₵{product.price}</span> : 'Price unavailable'}</p>
+                    <p className="text-sm text-slate-500">{product.price != null ? <span className="font-semibold" style={{ color: '#fb6f20' }}>₵{product.price}</span> : 'Price unavailable'}</p>
                   </div>
                 </Link>
               ))}

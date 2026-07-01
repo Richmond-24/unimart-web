@@ -9,7 +9,7 @@ import FashionDeals from "./components/FashionDeals";
 import ProductGrid from "./components/ProductGrid";
 import FlashDeals from "./components/FlashDeals";
 import SecondHandDeals from "./components/SecondHandDeals";
-import LogoCarousel from "./components/LogoCarousel";
+
 import Greeting from "./components/Greeting";
 // Header and RiriAI now provided globally by layout
 
@@ -28,8 +28,6 @@ export default function Home() {
       <FlashDeals />
       <SecondHandDeals />
       <CampusTrending />
-      {/* Logos carousel (replaces developer text) */}
-      <LogoCarousel />
       
     </div>
   );

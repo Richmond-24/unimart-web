@@ -472,7 +472,7 @@ export default function ProfilePage() {
         <button className="p-back-btn" onClick={handleBackToHome} disabled={backLoading} aria-busy={backLoading}>
           <i className="ti ti-arrow-left" />
           {!backLoading ? (
-            " Back to Home"
+            " Back"
           ) : (
             <>
               <span style={{ marginLeft: 8 }}>Going home</span>
@@ -1666,9 +1666,26 @@ export default function ProfilePage() {
           font-weight: 700;
         }
         .p-badge-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+          display: flex;
           gap: 12px;
+          overflow-x: auto;
+          overflow-y: hidden;
+          padding-bottom: 8px;
+          scroll-snap-type: x mandatory;
+          scroll-behavior: smooth;
+          -webkit-overflow-scrolling: touch;
+          -ms-overflow-style: -ms-autohiding-scrollbar;
+        }
+        .p-badge-grid::-webkit-scrollbar {
+          height: 4px;
+        }
+        .p-badge-grid::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 10px;
+        }
+        .p-badge-grid::-webkit-scrollbar-thumb {
+          background: #0d9488;
+          border-radius: 10px;
         }
 
         /* Earned badge medallion */
@@ -1682,6 +1699,9 @@ export default function ProfilePage() {
           border: 1.5px solid;
           cursor: default;
           transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s;
+          flex-shrink: 0;
+          min-width: 112px;
+          width: 112px;
         }
         .p-tt:hover .p-badge-medal,
         .p-tt:focus-within .p-badge-medal {
@@ -1804,12 +1824,34 @@ export default function ProfilePage() {
           }
           .p-stat-divider { display: none; }
           .p-badge-grid {
-            grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+            display: flex;
             gap: 10px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding-bottom: 6px;
           }
           .p-all-badges-grid {
             grid-template-columns: repeat(3, 1fr);
             padding: 12px;
+          }
+          .p-security-row {
+            flex-wrap: wrap;
+            padding: 12px 16px;
+            gap: 10px;
+          }
+          .p-security-icon {
+            order: 1;
+          }
+          .p-security-info {
+            order: 2;
+            min-width: calc(100% - 54px);
+          }
+          .p-security-btn {
+            order: 3;
+            width: 100%;
+            padding: 8px 12px;
+            margin-top: 4px;
+            white-space: normal;
           }
         }
 
@@ -1831,6 +1873,27 @@ export default function ProfilePage() {
             width: 24px;
             height: 24px;
             font-size: 11px;
+          }
+          .p-security-row {
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 12px 12px;
+            gap: 8px;
+          }
+          .p-security-icon {
+            order: 1;
+          }
+          .p-security-info {
+            order: 2;
+            width: 100%;
+            min-width: unset;
+          }
+          .p-security-btn {
+            order: 3;
+            width: 100%;
+            padding: 10px 12px;
+            margin-top: 0;
+            font-size: 11.5px;
           }
         }
       `}</style>

@@ -92,7 +92,7 @@ export default function TrendingDetail({ params }: { params: { id: string } }) {
           <div style={{ padding: '2rem', textAlign: 'center' }}>
             <span style={{ fontSize: 40, display: 'block', marginBottom: 12 }}>🔍</span>
             <p style={{ color: 'var(--color-text-secondary)', marginBottom: 16 }}>Trending item not found.</p>
-            <button style={styles.btnOutline} onClick={() => router.back()}>Go back</button>
+            <button style={styles.btnOutline} onClick={() => router.back()}>Back</button>
           </div>
         </div>
       </div>

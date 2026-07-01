@@ -33,7 +33,7 @@ export default function StudentDeals() {
           <h2 className="text-xl font-semibold">Student Deals</h2>
           <div className="flex items-center gap-3">
             <span className="text-sm text-stone-500">Verified student savings</span>
-            <Link href={`/search?category=${encodeURIComponent('Services')}`} className="text-sm text-teal-700 hover:underline">See all</Link>
+
           </div>
         </div>
 
@@ -98,6 +98,16 @@ export default function StudentDeals() {
               </Link>
             );
           })}
+        </div>
+
+        {/* See all button */}
+        <div className="mt-6 flex justify-center">
+          <Link 
+            href="/category/student-deals" 
+            className="px-6 py-2 text-sm font-semibold text-teal-700 bg-teal-50 border border-teal-200 rounded-lg hover:bg-teal-100 transition-colors"
+          >
+            See all Student Deals →
+          </Link>
         </div>
       </div>
     </section>

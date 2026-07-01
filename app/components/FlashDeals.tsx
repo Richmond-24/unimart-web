@@ -107,7 +107,7 @@ export default function FlashDeals() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">Flash Deals</h2>
-          <Link href="/search?tag=flash" className="text-sm text-teal-600 hover:underline">See all</Link>
+
         </div>
 
         <div className="flex gap-4 overflow-x-auto py-2 scrollbar-hide horizontal-snap">
@@ -159,6 +159,16 @@ export default function FlashDeals() {
               </Link>
             );
           })}
+        </div>
+
+        {/* See all button */}
+        <div className="mt-6 flex justify-center">
+          <Link 
+            href="/search?category=flash-deals" 
+            className="px-6 py-2 text-sm font-semibold text-teal-700 bg-teal-50 border border-teal-200 rounded-lg hover:bg-teal-100 transition-colors"
+          >
+            See all Flash Deals →
+          </Link>
         </div>
       </div>
     </section>

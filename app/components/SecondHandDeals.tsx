@@ -32,7 +32,7 @@ export default function SecondHandDeals() {
           <h2 className="text-xl font-semibold">Second-hand Picks</h2>
           <div className="flex items-center gap-3">
             <span className="text-sm text-stone-500">Sustainably sourced</span>
-            <Link href={`/search?category=${encodeURIComponent('Second Hand')}`} className="text-sm text-teal-700 hover:underline">See all</Link>
+
           </div>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-x-3 gap-y-6">
@@ -95,6 +95,16 @@ export default function SecondHandDeals() {
               </Link>
             );
           })}
+        </div>
+
+        {/* See all button */}
+        <div className="mt-6 flex justify-center">
+          <Link 
+            href="/search?category=second-hand" 
+            className="px-6 py-2 text-sm font-semibold text-teal-700 bg-teal-50 border border-teal-200 rounded-lg hover:bg-teal-100 transition-colors"
+          >
+            See all Second-hand →
+          </Link>
         </div>
       </div>
     </section>

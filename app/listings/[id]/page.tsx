@@ -761,7 +761,7 @@ function NotFound({ router }: { router: any }) {
       <div className="text-6xl mb-4">🔍</div>
       <h2 className="text-xl font-bold text-gray-800 mb-2">Listing not found</h2>
       <button onClick={() => router.back()} className="text-teal-600 font-medium hover:underline">
-        ← Go back
+        ← Back
       </button>
     </div>
   );

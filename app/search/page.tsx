@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import apiFetch from "../../lib/apiClient";
 import Link from 'next/link';
+
+const MAX_SEARCH_HISTORY = 10;
 
 export default function SearchPage() {
   const [category, setCategory] = useState<string>('all');
@@ -10,13 +12,128 @@ export default function SearchPage() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  
+  // Search history and autocomplete
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [inputValue, setInputValue] = useState('');
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Load search history from localStorage on mount
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('unimart:search_history');
+        if (saved) {
+          setSearchHistory(JSON.parse(saved));
+        }
+      } catch (err) {
+        console.error('Failed to load search history:', err);
+      }
+    }
+  }, []);
+
+  // Save search to history
+  const addToSearchHistory = (query: string) => {
+    if (!query.trim()) return;
+    const trimmed = query.trim();
+    const updated = [trimmed, ...searchHistory.filter(s => s !== trimmed)].slice(0, MAX_SEARCH_HISTORY);
+    setSearchHistory(updated);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('unimart:search_history', JSON.stringify(updated));
+      } catch (err) {
+        console.error('Failed to save search history:', err);
+      }
+    }
+  };
+
+  // Clear search history
+  const clearSearchHistory = () => {
+    setSearchHistory([]);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('unimart:search_history');
+      } catch (err) {
+        console.error('Failed to clear search history:', err);
+      }
+    }
+  };
+
+  // Fetch autocomplete suggestions
+  const fetchSuggestions = async (query: string) => {
+    if (!query.trim() || query.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    try {
+      setSuggestionsLoading(true);
+      const res = await apiFetch(`/public/search?q=${encodeURIComponent(query.trim())}&limit=5`);
+      if (res && res.data) {
+        setSuggestions(res.data.slice(0, 5));
+      } else {
+        setSuggestions([]);
+      }
+    } catch (err) {
+      console.error('Error fetching suggestions:', err);
+      setSuggestions([]);
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  };
+
+  // Handle input change with debounce for autocomplete
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.currentTarget.value;
+    setInputValue(value);
+    setShowSuggestions(true);
+    
+    // Fetch suggestions with a small delay
+    const timer = setTimeout(() => {
+      fetchSuggestions(value);
+    }, 300);
+    return () => clearTimeout(timer);
+  };
+
+  // Handle search submission
+  const handleSearch = (searchQuery: string) => {
+    if (!searchQuery.trim()) return;
+    addToSearchHistory(searchQuery);
+    window.location.href = `/search?q=${encodeURIComponent(searchQuery.trim())}`;
+  };
+
+  // Handle clicking a product from suggestions
+  const handleSuggestionClick = (product: any) => {
+    addToSearchHistory(product.title || inputValue);
+    window.location.href = `/listings/${product._id || product.id}`;
+  };
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node) && 
+          searchInputRef.current && !searchInputRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     // populate category/q from current URL on client
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       setCategory(params.get('category') || 'all');
-      setQ(params.get('q') || '');
+      const query = params.get('q') || '';
+      setQ(query);
+      setInputValue(query);
+      if (query) {
+        addToSearchHistory(query);
+      }
     }
     let mounted = true;
     const load = async () => {
@@ -79,13 +196,130 @@ export default function SearchPage() {
   }, [category, q]);
 
   return (
-    <div className="py-8">
-      <div className="flex items-center gap-4 mb-4">
-        <button onClick={() => history.back()} aria-label="Back" className="p-2 rounded-full hover:bg-gray-100">
-          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
-        </button>
-        <h1 className="text-2xl font-semibold">Search{category && category !== 'all' ? ` • ${category}` : ''}{q ? ` • ${q}` : ''}</h1>
+    <div className="min-h-screen bg-gray-50">
+      {/* Search Header - Temu Style */}
+      <div className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
+        <div className="px-4 py-3">
+          <div className="flex items-center gap-3 max-w-4xl mx-auto">
+            <button 
+              onClick={() => history.back()} 
+              aria-label="Back" 
+              className="p-2 rounded-full hover:bg-gray-100 shrink-0"
+            >
+              <svg className="w-5 h-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            
+            {/* Search Input */}
+            <div className="flex-1 relative">
+              <input 
+                ref={searchInputRef}
+                type="text" 
+                placeholder="Search products..." 
+                value={inputValue}
+                onChange={handleInputChange}
+                onKeyPress={(e) => e.key === 'Enter' && handleSearch(inputValue)}
+                onFocus={() => setShowSuggestions(true)}
+                className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" 
+              />
+              
+              {/* Autocomplete Dropdown */}
+              {showSuggestions && (inputValue.length >= 2 || searchHistory.length > 0) && (
+                <div 
+                  ref={suggestionsRef}
+                  className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 z-40 max-h-96 overflow-y-auto"
+                >
+                  {/* Recent Searches */}
+                  {searchHistory.length > 0 && inputValue.length < 2 && (
+                    <>
+                      <div className="px-4 py-2 text-xs text-gray-600 font-semibold uppercase tracking-wide border-b border-gray-100">
+                        Recent
+                      </div>
+                      <div className="space-y-0">
+                        {searchHistory.map((search, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => {
+                              setInputValue(search);
+                              handleSearch(search);
+                            }}
+                            className="w-full text-left px-4 py-2.5 hover:bg-gray-50 flex items-center gap-2 text-sm text-gray-700 transition"
+                          >
+                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            {search}
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        onClick={clearSearchHistory}
+                        className="w-full text-left px-4 py-2 text-xs text-gray-500 hover:text-gray-700 border-t border-gray-100 transition hover:bg-gray-50"
+                      >
+                        Clear history
+                      </button>
+                    </>
+                  )}
+                  
+                  {/* Product Suggestions */}
+                  {inputValue.length >= 2 && (
+                    <>
+                      {suggestionsLoading ? (
+                        <div className="px-4 py-3 text-center">
+                          <div className="inline-block w-4 h-4 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
+                        </div>
+                      ) : suggestions.length > 0 ? (
+                        <>
+                          <div className="px-4 py-2 text-xs text-gray-600 font-semibold uppercase tracking-wide border-b border-gray-100">
+                            Products
+                          </div>
+                          <div className="space-y-0">
+                            {suggestions.map((product) => (
+                              <button
+                                key={product._id || product.id}
+                                onClick={() => handleSuggestionClick(product)}
+                                className="w-full text-left px-4 py-2.5 hover:bg-gray-50 flex items-start gap-2 text-sm transition"
+                              >
+                                <div className="w-8 h-8 rounded bg-gray-100 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                                  {product.imageUrls?.[0] ? (
+                                    <img src={product.imageUrls[0]} alt="" className="w-full h-full object-cover" />
+                                  ) : (
+                                    <div className="text-gray-400 text-xs">No image</div>
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-gray-900 truncate text-xs font-medium">{product.title}</div>
+                                  <div className="text-[#fb6f20] font-bold text-xs">₵{product.price}</div>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="px-4 py-3 text-xs text-gray-500 text-center">
+                          No products found
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Results Info */}
+          {q && (
+            <div className="mt-3 text-sm text-gray-700">
+              Search results {category && category !== 'all' ? `• ${category}` : ''} {q ? `• "${q}"` : ''}
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Main Content */}
+      <div className="py-8 px-4">
+        <div className="max-w-7xl mx-auto">
 
       {/* Loading skeleton */}
       {loading && (
@@ -112,7 +346,7 @@ export default function SearchPage() {
           <h2 className="text-xl font-semibold mt-6">No results found</h2>
           <p className="text-sm text-gray-500 mt-2">We couldn't find anything matching your search. Try different keywords.</p>
           <div className="mt-4">
-            <a href="/" className="inline-flex items-center gap-2 px-4 py-2 bg-white border rounded-full shadow-sm hover:bg-gray-50">← Back to home</a>
+            <a href="/" className="inline-flex items-center gap-2 px-4 py-2 bg-white border rounded-full shadow-sm hover:bg-gray-50">← Back</a>
           </div>
         </div>
       )}
@@ -140,7 +374,7 @@ export default function SearchPage() {
                   )}
                 </div>
                 <div className="text-sm font-medium truncate">{p.title}</div>
-                <div className="text-teal-700 font-semibold mt-1">{p.price ? `₵${p.price}` : '—'}</div>
+                <div className="text-[#fb6f20] font-bold mt-1">{p.price ? `₵${p.price}` : '—'}</div>
 
                 {/* Rating */}
                 <div className="mt-2 flex items-center gap-2">
@@ -155,6 +389,8 @@ export default function SearchPage() {
             </Link>
           );
         })}
+        </div>
+        </div>
       </div>
     </div>
   );

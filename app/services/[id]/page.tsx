@@ -301,7 +301,7 @@ export default function ServicePage() {
                     </div>
                     <div className="sm:text-right">
                       <p className="text-sm text-gray-600 mb-1">Starting from</p>
-                      <p className="text-xl font-bold text-[#1dbf73]">₵{service.startingPrice || "500"}</p>
+                      <p className="text-xl font-bold text-[#fb6f20]">₵{service.startingPrice || "500"}</p>
                     </div>
                   </div>
                 </div>
@@ -639,7 +639,7 @@ function NotFound({ router }: { router: any }) {
           onClick={() => router.back()} 
           className="px-6 py-3 bg-[#1dbf73] text-white rounded-lg hover:bg-[#19a463] transition-colors font-medium w-full sm:w-auto"
         >
-          ← Go Back
+          ← Back
         </button>
       </div>
     </div>
