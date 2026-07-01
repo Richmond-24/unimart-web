@@ -128,6 +128,13 @@ body {
   padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
 }
 
+/* Image hero: stick to top of viewport as user scrolls */
+.pdp-image-hero {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
 .pdp-image-track {
   display: flex;
   transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);

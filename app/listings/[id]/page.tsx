@@ -367,12 +367,12 @@ export default function ListingPage() {
 
   return (
     <div className="pdp-shell bg-[#f5f5f5] font-sans">
-      {/* ===== Temu-style image hero (full bleed) ===== */}
-      <div className="relative bg-white">
+      {/* ===== Temu-style image hero (full bleed, sticky top) ===== */}
+      <div className="relative bg-white pdp-image-hero">
         {/* Overlay top bar */}
         <div
-          className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2"
-          style={{ background: "linear-gradient(180deg, rgba(0,0,0,0.35) 0%, transparent 100%)" }}
+          className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-3 pb-2"
+          style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))", background: "linear-gradient(180deg, rgba(0,0,0,0.40) 0%, transparent 100%)" }}
         >
           <button
             onClick={() => router.back()}

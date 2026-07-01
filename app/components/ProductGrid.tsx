@@ -38,14 +38,15 @@ export default function ProductGrid(props: { horizontal?: boolean } = {}) {
     <section className="py-8">
       <h2 className="text-xl font-semibold mb-4">Trending near you</h2>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-3 gap-y-6">
         {/* Skeleton */}
         {loading && products.length === 0 &&
           new Array(8).fill(0).map((_, i) => (
-            <div key={i} className="market-card animate-pulse p-3">
-              <div className="w-full h-40 bg-slate-100 rounded-3xl mb-3" />
-              <div className="h-4 bg-slate-100 rounded w-3/4 mb-2" />
-              <div className="h-4 bg-slate-100 rounded w-1/2" />
+            <div key={i} className="animate-pulse">
+              <div className="w-full aspect-square bg-slate-100 rounded-2xl mb-2" />
+              <div className="h-3 bg-slate-100 rounded w-3/4 mb-1.5" />
+              <div className="h-3 bg-slate-100 rounded w-1/2 mb-1.5" />
+              <div className="h-3 bg-slate-100 rounded w-1/3" />
             </div>
           ))}
 
@@ -72,75 +73,62 @@ export default function ProductGrid(props: { horizontal?: boolean } = {}) {
             <Link
               key={lid}
               href={`/listings/${lid}`}
-              className="block h-full"
+              className="block group"
             >
-              <div className="market-card p-3 flex flex-col h-full overflow-hidden">
-                {/* Image */}
-                <div className="w-full aspect-[4/3] bg-slate-100 rounded-3xl mb-3 overflow-hidden flex items-center justify-center">
-                {p.imageUrls?.length ? (
-                  <img
-                    src={p.imageUrls[0]}
-                    alt={p.title || "Product"}
-                    className="object-cover w-full h-full"
-                  />
-                ) : (
-                  <div className="text-slate-400 text-sm">No image</div>
-                )}
-              </div>
-
-              {/* Title */}
-              <div className="text-sm font-semibold leading-snug text-slate-900 break-words mb-2" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                {p.title || "Untitled"}
-              </div>
-
-              {/* Price */}
-              <div className="text-teal-700 font-bold text-base mb-3">
-                {p.price ? `₵${p.price}` : "—"}
-              </div>
-
-              <div className="flex-1" />
-
-              {/* Seller info + rating */}
-              <div className="mt-3 flex items-start gap-2">
-                {/* Avatar */}
-                <div className="w-8 h-8 rounded-full bg-slate-100 overflow-hidden flex-shrink-0">
-                  {p.sellerImage ? (
+              {/* Airbnb-style card: no box shadow on container, just clean image + text */}
+              <div className="flex flex-col">
+                {/* Square image */}
+                <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-slate-100 mb-2">
+                  {p.imageUrls?.length ? (
                     <img
-                      src={p.sellerImage}
-                      alt={p.sellerName || "Seller"}
-                      className="w-full h-full object-cover"
+                      src={p.imageUrls[0]}
+                      alt={p.title || "Product"}
+                      className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
                     />
                   ) : (
-                    <div className="w-full h-full bg-teal-100 flex items-center justify-center text-teal-700 text-xs font-semibold">
-                      {(p.sellerName || "S")
-                        .split(" ")
-                        .map((s: string) => s[0])
-                        .slice(0, 2)
-                        .join("")}
-                    </div>
+                    <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">No image</div>
                   )}
+                  {/* Subtle heart icon top-right like Airbnb */}
+                  <div className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <svg className="w-3.5 h-3.5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                  </div>
                 </div>
 
-                {/* Seller name */}
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs text-slate-700 truncate break-words">
-                    {p.sellerName || p.seller || "Campus Seller"}
+                {/* Info below image — Airbnb style */}
+                <div className="px-0.5">
+                  {/* Top row: seller name + rating */}
+                  <div className="flex items-center justify-between gap-1 mb-0.5">
+                    <p className="text-[13px] font-semibold text-slate-900 truncate leading-tight">
+                      {p.sellerName || p.seller || "Campus Seller"}
+                    </p>
+                    {avg !== null && (
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        <svg className="w-3 h-3 text-slate-900 fill-slate-900" viewBox="0 0 20 20">
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                        <span className="text-[12px] font-medium text-slate-900">{avg.toFixed(1)}</span>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Rating (kept inside card; will wrap on small screens) */}
-                  <div className="mt-1 flex items-center gap-1">
-                    <div className="flex items-center text-yellow-400 text-sm">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <span key={i} className={`${i < Math.round(avg || 0) ? 'text-yellow-400' : 'text-gray-200'}`}>★</span>
-                      ))}
-                    </div>
-                    <span className="text-xs text-slate-500 ml-1">{avg ? avg.toFixed(1) : '—'}</span>
-                  </div>
+                  {/* Product title */}
+                  <p className="text-[13px] text-slate-500 leading-snug line-clamp-1 mb-1">
+                    {p.title || "Untitled"}
+                  </p>
+
+                  {/* Price */}
+                  <p className="text-[13px] font-semibold text-slate-900">
+                    <span className="underline">₵{p.price ?? "—"}</span>
+                    {p.originalPrice && (
+                      <span className="text-slate-400 line-through ml-1.5 font-normal no-underline">₵{p.originalPrice}</span>
+                    )}
+                  </p>
                 </div>
               </div>
-            </div>
-          </Link>
-        );
+            </Link>
+          );
         })}
       </div>
     </section>
