@@ -173,6 +173,26 @@ body {
 }
 
 
+/* Lock scroll while the app hasn't reached the ready stage */
+html[data-app-stage="initializing"],
+html[data-app-stage="splash"],
+html[data-app-stage="auth"] {
+  overflow: hidden;
+}
+
+/* Hide the main chrome (header / main / nav) during non-ready stages */
+html[data-app-stage="initializing"] header,
+html[data-app-stage="splash"] header,
+html[data-app-stage="auth"] header,
+html[data-app-stage="initializing"] main,
+html[data-app-stage="splash"] main,
+html[data-app-stage="auth"] main,
+html[data-app-stage="initializing"] nav,
+html[data-app-stage="splash"] nav,
+html[data-app-stage="auth"] nav {
+  display: none !important;
+}
+
 html[data-app-stage="splash"] #site-content,
 html[data-app-stage="onboard"] #site-content,
 html[data-app-stage="auth"] #site-content {

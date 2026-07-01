@@ -41,24 +41,6 @@ export default function RootLayout({
     >
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        <style>{`
-          html[data-app-stage="initializing"],
-          html[data-app-stage="splash"],
-          html[data-app-stage="auth"] {
-            overflow: hidden;
-          }
-          html[data-app-stage="initializing"] header,
-          html[data-app-stage="splash"] header,
-          html[data-app-stage="auth"] header,
-          html[data-app-stage="initializing"] main,
-          html[data-app-stage="splash"] main,
-          html[data-app-stage="auth"] main,
-          html[data-app-stage="initializing"] nav,
-          html[data-app-stage="splash"] nav,
-          html[data-app-stage="auth"] nav {
-            display: none !important;
-          }
-        `}</style>
       </head>
       <body suppressHydrationWarning className="min-h-full flex flex-col">
         <AuthProvider>
