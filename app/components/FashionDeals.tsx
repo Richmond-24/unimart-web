@@ -37,13 +37,14 @@ export default function FashionDeals() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-3 gap-y-6">
           {/* Skeleton */}
           {loading && new Array(8).fill(0).map((_, i) => (
-            <div key={i} className="bg-white rounded-lg shadow-sm p-3 animate-pulse">
-              <div className="w-full h-40 bg-slate-100 rounded-md mb-3" />
-              <div className="h-4 bg-slate-100 rounded w-3/4 mb-2" />
-              <div className="h-4 bg-slate-100 rounded w-1/2" />
+            <div key={i} className="animate-pulse">
+              <div className="w-full aspect-square bg-slate-100 rounded-xl mb-2" />
+              <div className="h-3 bg-slate-100 rounded w-3/4 mb-1.5" />
+              <div className="h-3 bg-slate-100 rounded w-1/2 mb-1.5" />
+              <div className="h-3 bg-slate-100 rounded w-1/3" />
             </div>
           ))}
 
@@ -52,7 +53,6 @@ export default function FashionDeals() {
             <div className="text-sm text-slate-500">No fashion items found.</div>
           )}
 
-          {/* Fashion items with rating moved below seller name */}
           {items.map((p: any) => {
             const lid = p._id || p.id;
             let avg: number | null = null;
@@ -65,56 +65,34 @@ export default function FashionDeals() {
             } catch (e) { avg = null; }
 
             return (
-              <Link key={lid} href={`/listings/${lid}`} className="block">
-                <div className="bg-white rounded-lg shadow-sm p-3 hover:shadow-md transition flex flex-col h-full overflow-hidden">
-                  {/* Image */}
-                  <div className="w-full h-40 bg-slate-100 rounded-md mb-3 overflow-hidden flex items-center justify-center">
-                    {p.imageUrls && p.imageUrls.length ? (
+              <Link key={lid} href={`/listings/${lid}`} className="block group">
+                <div className="flex flex-col">
+                  <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-slate-100 mb-2 shadow-sm">
+                    {p.imageUrls?.length ? (
                       <img src={p.imageUrls[0]} alt={p.title} className="object-cover w-full h-full" />
                     ) : (
-                      <div className="text-slate-400 text-sm">No image</div>
+                      <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">No image</div>
                     )}
                   </div>
-
-                  {/* Title */}
-                  <div className="text-sm font-medium truncate break-words">
-                    {p.title}
-                  </div>
-
-                  {/* Price */}
-                  <div className="text-teal-700 font-semibold mt-1">
-                    {p.price ? `₵${p.price}` : '—'}
-                  </div>
-
-                  {/* Spacer to push seller/rating down */}
-                  <div className="flex-1" />
-
-                  {/* Seller row: avatar + name */}
-                  <div className="mt-3 flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-slate-100 overflow-hidden flex-shrink-0">
-                      {p.sellerImage ? (
-                        <img src={p.sellerImage} alt={p.sellerName || 'Seller'} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-teal-100 flex items-center justify-center text-teal-700 font-semibold text-xs">
-                          {(p.sellerName || 'S').split(' ').map((s: string) => s[0]).slice(0, 2).join('')}
+                  <div className="px-0.5">
+                    <div className="flex items-center justify-between gap-1 mb-0.5">
+                      <p className="text-[13px] font-semibold text-slate-900 truncate leading-tight">
+                        {p.sellerName || p.seller || 'Campus Seller'}
+                      </p>
+                      {avg !== null && (
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          <svg className="w-3 h-3 text-yellow-400 fill-yellow-400" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                          </svg>
+                          <span className="text-[12px] font-medium text-slate-700">{avg.toFixed(1)}</span>
                         </div>
                       )}
                     </div>
-                    <div className="text-xs text-slate-600 truncate flex-1">
-                      {p.sellerName || p.seller || 'Campus Seller'}
-                    </div>
-                  </div>
-
-                  {/* Rating row (moved below seller name) */}
-                  <div className="mt-2 flex items-center gap-1">
-                    <div className="flex items-center text-yellow-400 text-sm">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <span key={i} className={`${i < Math.round(avg || 0) ? 'text-yellow-400' : 'text-gray-200'}`}>★</span>
-                      ))}
-                    </div>
-                    <span className="text-xs text-slate-500 ml-1">
-                      {avg ? avg.toFixed(1) : '—'}
-                    </span>
+                    <p className="text-[12px] text-slate-500 leading-snug line-clamp-1 mb-1">{p.title || 'Untitled'}</p>
+                    <p className="text-[15px] font-bold" style={{ color: 'var(--temu-orange)' }}>
+                      ₵{p.price ?? '—'}
+                      {p.originalPrice && <span className="text-slate-400 line-through ml-1.5 text-[12px] font-normal">₵{p.originalPrice}</span>}
+                    </p>
                   </div>
                 </div>
               </Link>

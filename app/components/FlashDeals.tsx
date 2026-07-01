@@ -112,15 +112,12 @@ export default function FlashDeals() {
 
         <div className="flex gap-4 overflow-x-auto py-2 scrollbar-hide horizontal-snap">
           {loading && (
-            // Show three skeleton cards while loading
             <>
-              {[1,2,3].map(s => (
-                <div key={s} className="snap-start market-card min-w-[240px] flex-none overflow-hidden animate-pulse">
-                  <div className="w-full h-32 bg-gray-100" />
-                  <div className="p-3">
-                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
-                    <div className="h-3 bg-gray-200 rounded w-1/2" />
-                  </div>
+              {[1,2,3,4].map(s => (
+                <div key={s} className="snap-start flex-none w-[160px] animate-pulse">
+                  <div className="w-full aspect-square bg-slate-100 rounded-xl mb-2" />
+                  <div className="h-3 bg-slate-100 rounded w-3/4 mb-1.5" />
+                  <div className="h-3 bg-slate-100 rounded w-1/2" />
                 </div>
               ))}
             </>
@@ -135,41 +132,31 @@ export default function FlashDeals() {
           {deals.map(d => {
             const remaining = d.endsAt - now;
             return (
-              <div
+              <Link
                 key={d.id}
-                className="snap-start market-card min-w-[240px] flex-none overflow-hidden block"
+                href={`/listings/${(d as any).slug || d.id}`}
+                className="snap-start flex-none w-[160px] block group"
               >
-                <div className="relative w-full aspect-[4/3] bg-gray-100 overflow-hidden">
-                  {d.img ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <Link href={`/listings/${(d as any).slug || d.id}`} className="absolute inset-0 block">
-                      <img src={d.img} alt={d.title} className="absolute inset-0 w-full h-full object-cover" />
-                    </Link>
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-gray-300">No image</div>
-                  )}
-
-                  <div className="absolute top-2 left-2 bg-black/60 text-white text-xs px-2 py-0.5 rounded-md">
-                    {formatRemaining(remaining)}
-                  </div>
-
-                  <div className="absolute top-2 right-2 bg-white/80 rounded-md px-2 py-0.5 text-right">
-                    <div className="text-red-600 font-bold">{d.price}</div>
-                    {d.originalPrice && (
-                      <div className="text-xs text-gray-400 line-through">{d.originalPrice}</div>
+                <div className="flex flex-col">
+                  <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-slate-100 mb-2 shadow-sm">
+                    {d.img ? (
+                      <img src={d.img} alt={d.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">No image</div>
                     )}
+                    <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded font-medium">
+                      {formatRemaining(remaining)}
+                    </div>
+                  </div>
+                  <div className="px-0.5">
+                    <p className="text-[12px] text-slate-500 leading-snug line-clamp-1 mb-1">{d.title}</p>
+                    <p className="text-[15px] font-bold" style={{ color: 'var(--temu-orange)' }}>
+                      {d.price}
+                      {d.originalPrice && <span className="text-slate-400 line-through ml-1.5 text-[12px] font-normal">{d.originalPrice}</span>}
+                    </p>
                   </div>
                 </div>
-
-                <div className="p-3">
-                  <h3 className="text-sm font-medium mb-1 text-gray-900">{d.title}</h3>
-                  <p className="text-xs text-gray-500 mb-3">Limited time offer — while stocks last</p>
-                  <div className="flex gap-2">
-                    <Link href={`/listings/${(d as any).slug || d.id}`} className="flex-1 text-center bg-teal-600 text-white text-sm px-3 py-1 rounded-md">Shop</Link>
-                    {/* Save button removed per design request */}
-                  </div>
-                </div>
-              </div>
+              </Link>
             );
           })}
         </div>
