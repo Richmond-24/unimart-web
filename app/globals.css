@@ -121,22 +121,41 @@ body {
   }
 }
 
+/*
+ * Global page container.
+ * Used by pages that need the standard max-width + horizontal padding.
+ * The PDP (pdp-shell) intentionally does NOT use this so it can go full-bleed.
+ */
+.page-container {
+  width: 100%;
+  max-width: 80rem; /* 1280px — same as Tailwind max-w-7xl */
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 640px) {
+  .page-container { padding-left: 1.5rem; padding-right: 1.5rem; }
+}
+
+@media (min-width: 1024px) {
+  .page-container { padding-left: 2rem; padding-right: 2rem; }
+}
+
 /* Temu-style product detail tokens */
 
 .pdp-shell {
   min-height: 100dvh;
   padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
-  /* Header sets --header-height to 0px when hidden on listing pages,
-     so #site-content paddingTop collapses and no negative margin is needed. */
-  margin-top: 0;
-}
-
-/* Sticky image column on desktop (left side of the two-column grid) */
-.pdp-image-sticky {
-  position: sticky;
-  top: 0;
-  align-self: start;
-  z-index: 10;
+  /*
+   * #site-content adds paddingTop = var(--header-height) + env(safe-area-inset-top).
+   * The Header zeroes --header-height when it hides on listing routes, but there
+   * is a brief paint where the variable is still non-zero. Pull the shell up by
+   * the full amount so the image hero always reaches the very top of the screen
+   * with zero gap regardless of timing.
+   */
+  margin-top: calc(-1 * (var(--header-height, 0px) + env(safe-area-inset-top, 0px)));
 }
 
 .pdp-image-track {
@@ -160,28 +179,12 @@ body {
   padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
 }
 
-@media (min-width: 768px) {
-  .pdp-shell {
-    max-width: 720px;
-    margin-left: auto;
-    margin-right: auto;
-    border-left: 1px solid #f1f5f9;
-    border-right: 1px solid #f1f5f9;
-  }
-}
-
 @media (min-width: 1024px) {
   .pdp-shell {
-    max-width: 1080px;
-  }
-
-  .pdp-desktop-grid {
-    display: grid;
-    /* image sticky column | details scroll column */
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 1.5rem;
-    align-items: start;
-    padding: 0 1rem;
+    /* On desktop widen to show the two-column grid comfortably */
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
   }
 }
 

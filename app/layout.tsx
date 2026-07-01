@@ -55,11 +55,9 @@ export default function RootLayout({
             <div id="site-content" style={{ paddingTop: 'calc(var(--header-height) + env(safe-area-inset-top))', paddingBottom: 'calc(var(--footer-height) + env(safe-area-inset-bottom))' }} className="flex flex-col flex-1">
 
               <main className="flex-1">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                  <AppGate>
-                    {children}
-                  </AppGate>
-                </div>
+                <AppGate>
+                  {children}
+                </AppGate>
               </main>
 
             </div>
