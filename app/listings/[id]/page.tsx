@@ -372,8 +372,8 @@ export default function ListingPage() {
       {/* sticky left column and product details scroll in the right column.   */}
       <div className="lg:grid lg:grid-cols-2 lg:gap-6 lg:px-4 lg:pt-4 lg:max-w-[1080px] lg:mx-auto">
 
-      {/* ===== Temu-style image hero (full bleed on mobile, sticky on desktop) ===== */}
-      <div className="relative bg-white lg:sticky lg:top-0 lg:self-start lg:rounded-2xl lg:overflow-hidden lg:shadow-sm">
+      {/* ===== Temu-style image hero — sticky on all screen sizes ===== */}
+      <div className="relative bg-white sticky top-0 z-20 self-start lg:rounded-2xl lg:overflow-hidden lg:shadow-sm">
         {/* Overlay top bar */}
         <div
           className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2"

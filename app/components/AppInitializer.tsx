@@ -71,7 +71,9 @@ export default function AppInitializer() {
         const doc = document.documentElement;
         const header = document.querySelector('header[data-unimart-header]') || document.querySelector('header');
         const footer = document.querySelector('nav[role="site-footer"]') || document.querySelector('nav[data-unimart-footer]') || document.querySelector('nav');
-        const h = header ? Math.ceil((header as HTMLElement).offsetHeight) : 96;
+        // If the header is hidden (e.g. on listing pages) use 0 so #site-content
+        // padding collapses and the page image reaches the very top of the screen.
+        const h = header ? Math.ceil((header as HTMLElement).offsetHeight) : 0;
         const f = footer ? Math.ceil((footer as HTMLElement).offsetHeight) : 92;
         doc.style.setProperty('--header-height', `${h}px`);
         doc.style.setProperty('--footer-height', `${f}px`);

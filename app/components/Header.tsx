@@ -332,7 +332,14 @@ export default function Header() {
     { label: "UDS", value: "UDS", active: false },
   ];
 
-  if (hideHeader) return null;
+  if (hideHeader) {
+    // Zero out the CSS variable so #site-content padding collapses to 0
+    // and the product-detail page image hero reaches the very top.
+    if (typeof document !== "undefined") {
+      document.documentElement.style.setProperty("--header-height", "0px");
+    }
+    return null;
+  }
 
   return (
     <>

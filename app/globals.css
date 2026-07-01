@@ -126,12 +126,9 @@ body {
 .pdp-shell {
   min-height: 100dvh;
   padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
-  /*
-   * #site-content always adds paddingTop = header-height + safe-area-inset-top.
-   * On the listings route the header is hidden so we pull the shell back up by
-   * that same amount so the image hero bleeds edge-to-edge from the top.
-   */
-  margin-top: calc(-1 * (var(--header-height, 0px) + env(safe-area-inset-top)));
+  /* Header sets --header-height to 0px when hidden on listing pages,
+     so #site-content paddingTop collapses and no negative margin is needed. */
+  margin-top: 0;
 }
 
 /* Sticky image column on desktop (left side of the two-column grid) */
