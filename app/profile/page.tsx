@@ -236,12 +236,12 @@ export default function ProfilePage() {
     } catch (e) {
       // logout already clears state; ignore any error
     }
-    // Leave protected /profile; AppInitializer shows auth overlay on home.
-    // Avoid /auth — middleware bounces authenticated cookies back to /.
+    // After logout, send the user to the auth page explicitly
+    // so the app does not try to load the home screen first.
     try {
-      router.replace('/');
+      router.replace('/auth');
     } catch (e) {
-      window.location.replace('/');
+      window.location.replace('/auth');
     }
   };
 
