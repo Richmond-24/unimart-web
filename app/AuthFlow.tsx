@@ -1132,11 +1132,14 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
         @keyframes um-fade-in    { from{opacity:0} to{opacity:1} }
 
         .um-mobile-root {
-          position: fixed; inset: 0; z-index: 50;
+          position: fixed; inset: 0; z-index: 10001;
           font-family: 'Inter', sans-serif;
           background: var(--um-white);
         }
-        .um-desktop-root { display: none; }
+        .um-desktop-root {
+          display: none;
+          position: fixed; inset: 0; z-index: 10001;
+        }
         @media (min-width: 640px) {
           .um-mobile-root  { display: none; }
           .um-desktop-root { display: block; }
@@ -1394,7 +1397,7 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
 
         .um-anim-pop { animation: um-pop .45s cubic-bezier(.34,1.4,.64,1) both; }
         .um-desktop-overlay {
-          position: fixed; inset: 0; z-index: 9999;
+          position: fixed; inset: 0; z-index: 10002;
           background: rgba(10,20,40,0.55);
           backdrop-filter: blur(6px);
           display: flex; align-items: center; justify-content: center;
