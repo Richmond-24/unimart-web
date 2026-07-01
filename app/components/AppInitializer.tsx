@@ -43,8 +43,15 @@ export default function AppInitializer() {
         if (hasToken) {
           setStage('ready');
         } else {
-          // Logged out — go back to auth screen
+          // Logged out — go back to auth screen without touching the splash stage
           setStage('auth');
+          // Centrally navigate to /auth so the profile page (or any page)
+          // does not need to call router.replace itself — avoids races.
+          try {
+            if (window.location.pathname !== '/auth') {
+              router.replace('/auth');
+            }
+          } catch (_) { /* ignore navigation errors */ }
         }
       } catch (e) {
         console.warn('AppInitializer authChanged handler error', e);

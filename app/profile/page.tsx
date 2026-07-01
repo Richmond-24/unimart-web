@@ -236,13 +236,9 @@ export default function ProfilePage() {
     } catch (e) {
       // logout already clears state; ignore any error
     }
-    // After logout, send the user to the auth page explicitly
-    // so the app does not try to load the home screen first.
-    try {
-      router.replace('/auth');
-    } catch (e) {
-      window.location.replace('/auth');
-    }
+    // Navigation is handled centrally by AppInitializer via the
+    // unimart:authChanged event — do NOT navigate here to avoid a race
+    // that causes the splash screen to flash before landing on auth.
   };
 
 
