@@ -126,6 +126,20 @@ body {
 .pdp-shell {
   min-height: 100dvh;
   padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+  /*
+   * #site-content always adds paddingTop = header-height + safe-area-inset-top.
+   * On the listings route the header is hidden so we pull the shell back up by
+   * that same amount so the image hero bleeds edge-to-edge from the top.
+   */
+  margin-top: calc(-1 * (var(--header-height, 0px) + env(safe-area-inset-top)));
+}
+
+/* Sticky image column on desktop (left side of the two-column grid) */
+.pdp-image-sticky {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  z-index: 10;
 }
 
 .pdp-image-track {
@@ -161,14 +175,16 @@ body {
 
 @media (min-width: 1024px) {
   .pdp-shell {
-    max-width: 960px;
+    max-width: 1080px;
   }
 
   .pdp-desktop-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    /* image sticky column | details scroll column */
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 1.5rem;
     align-items: start;
+    padding: 0 1rem;
   }
 }
 

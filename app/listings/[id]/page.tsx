@@ -367,8 +367,13 @@ export default function ListingPage() {
 
   return (
     <div className="pdp-shell bg-[#f5f5f5] font-sans">
-      {/* ===== Temu-style image hero (full bleed) ===== */}
-      <div className="relative bg-white">
+      {/* ===== Desktop two-column wrapper ===== */}
+      {/* On mobile this is just a single stack; on lg+ the image becomes the  */}
+      {/* sticky left column and product details scroll in the right column.   */}
+      <div className="lg:grid lg:grid-cols-2 lg:gap-6 lg:px-4 lg:pt-4 lg:max-w-[1080px] lg:mx-auto">
+
+      {/* ===== Temu-style image hero (full bleed on mobile, sticky on desktop) ===== */}
+      <div className="relative bg-white lg:sticky lg:top-0 lg:self-start lg:rounded-2xl lg:overflow-hidden lg:shadow-sm">
         {/* Overlay top bar */}
         <div
           className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2"
@@ -443,7 +448,7 @@ export default function ListingPage() {
                   key={idx}
                   src={url}
                   alt={`${listing.title} ${idx + 1}`}
-                  className="w-full flex-shrink-0 object-contain aspect-square max-h-[min(72vh,520px)] cursor-pointer bg-white"
+                  className="w-full flex-shrink-0 object-contain aspect-square max-h-[min(72dvh,520px)] lg:max-h-[min(80dvh,600px)] cursor-pointer bg-white"
                   onClick={() => { setPreviewIndex(idx); setShowPreview(true); }}
                 />
               ))}
@@ -497,11 +502,9 @@ export default function ListingPage() {
         )}
       </div>
 
-      <div className="pdp-desktop-grid px-0">
-        <div className="hidden lg:block" />
-
-        <div className="space-y-2">
-          {/* Flash deal strip — Temu style */}
+      {/* ===== Product details column ===== */}
+      <div className="space-y-2">
+        {/* Flash deal strip — Temu style */}
           {(() => {
             const endsAt =
               (listing.flashDealExpiry && new Date(listing.flashDealExpiry).getTime()) ||
