@@ -16,7 +16,16 @@ export default function SocketChat({ conv, onClose }: { conv: any; onClose: () =
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [connected, setConnected] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
+
+  // Hide on desktop (640px+)
+  useEffect(() => {
+    const checkDesktop = () => setIsDesktop(window.innerWidth >= 640);
+    checkDesktop();
+    window.addEventListener('resize', checkDesktop);
+    return () => window.removeEventListener('resize', checkDesktop);
+  }, []);
 
   useEffect(() => {
     // connectSocket now retrieves token from localStorage automatically
@@ -102,7 +111,7 @@ export default function SocketChat({ conv, onClose }: { conv: any; onClose: () =
   const sellerPhone = conv?.sellerPhone || conv?.seller?.phone || null;
 
   return (
-    <div style={{ position: 'fixed', right: 20, bottom: 20, width: 420, maxHeight: '75vh', zIndex: 9999 }}>
+    <div style={{ position: 'fixed', right: 20, bottom: 20, width: 420, maxHeight: '75vh', zIndex: 9999, display: isDesktop ? 'none' : 'block' }}>
       <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 14px 40px rgba(2,6,23,0.2)', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%' }}>
         {/* Header */}
         <div style={{ padding: '12px 14px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>

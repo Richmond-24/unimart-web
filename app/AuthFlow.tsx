@@ -9,6 +9,7 @@ import TermsModal from "./components/TermsModal";
 import apiFetch from "../lib/apiClient";
 import detectUserLocation from "../lib/location";
 import { persistAuthToken } from "../lib/authCookie";
+import LoadingSpinner from "./components/LoadingSpinner";
 
 type Screen = "welcome" | "login" | "signup";
 
@@ -359,7 +360,7 @@ const FormScreen = memo(function FormScreen({
           )}
 
           <button className="um-btn-primary" type="button" onClick={onSubmit} disabled={isLoading} style={{ marginTop: 4 }}>
-            {isLoading ? <span className="um-spinner" /> : mode === "login" ? "Log in" : "Create account"}
+            {isLoading ? <LoadingSpinner size={18} className="inline-block" /> : mode === "login" ? "Log in" : "Create account"}
           </button>
 
           <div className="um-divider-row"><span className="um-divider-txt">or</span></div>
@@ -573,7 +574,7 @@ const DesktopLayout = memo(function DesktopLayout({
             )}
             {error && <div className="um-error"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{error}</div>}
             <button type="button" className="um-btn-primary" onClick={onSubmit} disabled={isLoading}>
-              {isLoading ? <span className="um-spinner" /> : screen === "login" ? "Log in" : "Create account"}
+              {isLoading ? <LoadingSpinner size={18} className="inline-block" /> : screen === "login" ? "Log in" : "Create account"}
             </button>
             <div className="um-divider-row"><span className="um-divider-txt">or</span></div>
             <p className="um-legal" style={{ marginTop: "auto", paddingTop: 8 }}>
@@ -769,9 +770,12 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
         setShowSuccess(false);
         try { window.dispatchEvent(new Event('unimart:authChanged')); } catch (e) {}
         const userRole = res?.user?.role === 'seller' ? 'seller' : 'buyer';
-        if (onDone) onDone(userRole);
-        router.replace('/');
-      }, 900);
+        if (onDone) {
+          onDone(userRole);
+        } else {
+          router.replace('/');
+        }
+      }, 300);
       
     } catch (err: any) { 
       const backendMsg = err?.payload?.message || err?.message || 'Network error';
@@ -894,9 +898,12 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
         setShowSuccess(false);
         try { window.dispatchEvent(new Event('unimart:authChanged')); } catch (e) {}
         const userRole = res?.user?.role === 'seller' ? 'seller' : 'buyer';
-        if (onDone) onDone(userRole);
-        router.replace('/');
-      }, 900);
+        if (onDone) {
+          onDone(userRole);
+        } else {
+          router.replace('/');
+        }
+      }, 300);
       
     } catch (err: any) { 
       const backendMsg = err?.payload?.message || err?.message || 'Network error';

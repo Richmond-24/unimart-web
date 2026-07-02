@@ -9,6 +9,7 @@ import FashionDeals from "./components/FashionDeals";
 import ProductGrid from "./components/ProductGrid";
 import FlashDeals from "./components/FlashDeals";
 import SecondHandDeals from "./components/SecondHandDeals";
+import SocialCommerceBanner from "./components/SocialCommerceBanner";
 
 import Greeting from "./components/Greeting";
 // Header and RiriAI now provided globally by layout
@@ -28,6 +29,7 @@ export default function Home() {
       <FlashDeals />
       <SecondHandDeals />
       <CampusTrending />
+      <SocialCommerceBanner />
       
     </div>
   );

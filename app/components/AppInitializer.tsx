@@ -118,12 +118,12 @@ export default function AppInitializer() {
           <div className="w-full h-full flex items-center justify-center bg-white">
             <AuthFlowComponent onDone={(role?: 'buyer' | 'seller' | 'guest') => {
               try {
+                setStage('ready');
                 if (role === 'seller') router.replace('/seller/dashboard');
-                else router.replace('/');
+                else if (window.location.pathname !== '/') router.replace('/');
               } catch (e) {
                 console.warn('Navigation error:', e);
               }
-              setStage('ready');
             }} />
           </div>
         )}

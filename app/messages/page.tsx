@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import apiFetch from '../../lib/apiClient';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 export default function MessagesPage() {
   const [convs, setConvs] = useState<any[]>([]);
@@ -25,7 +26,7 @@ export default function MessagesPage() {
     try { window.dispatchEvent(new CustomEvent('unimart:openChat', { detail: conv })); } catch (e) {}
   };
 
-  if (loading) return <div className="p-6">Loading...</div>;
+  if (loading) return <div className="p-6 flex items-center justify-center"><LoadingSpinner size={40} /></div>;
   if (!convs.length) return <div className="p-6">No conversations yet</div>;
 
   return (

@@ -28,6 +28,7 @@ import {
   FaWhatsapp,
 } from "react-icons/fa";
 import apiFetch from "../../../lib/apiClient";
+import LoadingSpinner from "../../../app/components/LoadingSpinner";
 import CommentsSection from "../../../app/components/CommentsSection";
 import ShareModal from "../../../app/components/ShareModal";
 
@@ -177,75 +178,58 @@ export default function ListingPage() {
 
   // --- Add to cart ---
   const handleAddCart = async () => {
-    try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('unimart:token') : null;
-      if (token) {
-        try {
-          await apiFetch('/cart/add', { method: 'POST', body: JSON.stringify({ productId: listing._id || listing.id, quantity: 1 }) });
-          try { window.dispatchEvent(new Event('unimart:cartUpdated')); } catch (e) {}
-        } catch (e) {}
-      } else {
-        try {
-          const key = 'unimart:cart';
-          const cur = JSON.parse(localStorage.getItem(key) || '[]');
-          const item = {
-            id: listing._id || listing.id,
-            title: listing.title,
-            price: listing.price,
-            qty: 1,
-            image: listing.imageUrls && listing.imageUrls[0]
-          };
-          const idx = cur.findIndex((c: any) => c.id === item.id);
-          if (idx >= 0) cur[idx].qty = (cur[idx].qty || 1) + 1;
-          else cur.push(item);
-          localStorage.setItem(key, JSON.stringify(cur));
-          try { window.dispatchEvent(new Event('unimart:cartUpdated')); } catch (e) {}
-        } catch (e) {}
-      }
+    if (!listing) return;
+    setCartAdded(true);
 
-      setCartAdded(true);
-      setTimeout(() => {
-        setCartAdded(false);
-        try { router.push('/cart'); } catch (e) {}
-      }, 600);
+    const productId = listing._id || listing.id;
+    const item = {
+      id: productId,
+      title: listing.title,
+      price: listing.price,
+      qty: 1,
+      image: listing.imageUrls && listing.imageUrls[0],
+    };
+
+    try {
+      const key = 'unimart:cart';
+      const cur = JSON.parse(localStorage.getItem(key) || '[]');
+      const idx = cur.findIndex((c: any) => c.id === item.id);
+      if (idx >= 0) cur[idx].qty = (cur[idx].qty || 1) + 1;
+      else cur.push(item);
+      localStorage.setItem(key, JSON.stringify(cur));
     } catch (e) {
-      setCartAdded(true);
-      setTimeout(() => setCartAdded(false), 2000);
+      console.warn('Failed to update local cart fallback:', e);
     }
+
+    try { window.dispatchEvent(new Event('unimart:cartUpdated')); } catch (e) {}
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('unimart:token') : null;
+    const backendSave = token
+      ? apiFetch('/cart/add', {
+          method: 'POST',
+          body: { productId, quantity: 1 },
+        }).catch((err) => {
+          console.error('Add to cart backend failed:', err);
+        })
+      : Promise.resolve();
+
+    try {
+      await router.push('/cart');
+      await backendSave;
+    } catch (e) {
+      console.error('Navigation to cart failed:', e);
+    }
+
+    setTimeout(() => setCartAdded(false), 1200);
   };
 
   // --- Contact seller ---
   const contactSeller = async () => {
+    if (!id) return;
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('unimart:token') : null;
-      const sellerId = listing?.sellerId || listing?.seller || listing?.sellerUserId || listing?.sellerUid || null;
-      const payload: any = { sellerId, productId: listing._id || listing.id, initialMessage: `Hi, I'm interested in ${listing?.title || ''}` };
-      const headers: any = { 'Content-Type': 'application/json' };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-
-      try {
-        const res = await apiFetch(`/conversations`, { method: 'POST', body: JSON.stringify(payload), headers });
-        const conv = res?.data || res;
-        if (conv && (conv._id || conv.id)) {
-          try { window.dispatchEvent(new CustomEvent('unimart:openChat', { detail: conv })); } catch (e) {}
-          return;
-        }
-      } catch (e) {
-        console.error('Failed to create conversation', e);
-      }
-
-      const localConv = {
-        id: `local-${Date.now()}`,
-        _id: `local-${Date.now()}`,
-        productId: listing?._id || listing?.id,
-        productName: listing?.title,
-        sellerId: sellerId,
-        createdAt: Date.now(),
-        isLocal: true,
-      };
-      try { window.dispatchEvent(new CustomEvent('unimart:openChat', { detail: localConv })); } catch (e) {}
+      await router.push(`/listings/${id}/chat`);
     } catch (err) {
-      console.error('contactSeller error', err);
+      console.error('Navigation to chat failed:', err);
     }
   };
 
@@ -342,7 +326,11 @@ export default function ListingPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  if (loading) return <Loader />;
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <LoadingSpinner size={48} />
+    </div>
+  );
   if (!listing) return <NotFound router={router} />;
 
   if (showAuthPrompt) {

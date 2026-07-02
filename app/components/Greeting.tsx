@@ -26,6 +26,29 @@ export default function Greeting() {
   const [xpToNext, setXpToNext] = useState<number>(1000);
   const xpPercent = xpToNext > 0 ? Math.min(100, Math.round((xp / xpToNext) * 100)) : 0;
 
+  // Load and accumulate persistent XP on mount
+  useEffect(() => {
+    const stored = localStorage.getItem("unimart:xp");
+    const lastDate = localStorage.getItem("unimart:xp-date");
+    const today = new Date().toDateString();
+
+    let currentXp = 0;
+    if (stored) {
+      currentXp = parseInt(stored, 10) || 0;
+    }
+
+    // Award daily XP bonus if new day
+    if (lastDate !== today) {
+      currentXp += 50; // 50 XP for daily login
+      localStorage.setItem("unimart:xp-date", today);
+    }
+
+    localStorage.setItem("unimart:xp", String(currentXp));
+    setXp(currentXp);
+    // Simple next level: every 500 XP
+    setXpToNext(500);
+  }, []);
+
   const moodIcons = [
     <Sparkles key="sparkles" size={16} />,
     <Zap key="zap" size={16} />,
@@ -56,7 +79,7 @@ export default function Greeting() {
 
     if (h < 12) {
       newGreeting = "Good morning";
-      newBg = "from-teal-800 to-blue-800";
+      newBg = "from-teal-800 to-blue-900";
       newMoodIcon = <Sun size={18} />;
     } else if (h < 17) {
       newGreeting = "Good afternoon";
@@ -64,11 +87,11 @@ export default function Greeting() {
       newMoodIcon = <Cloud size={18} />;
     } else if (h < 21) {
       newGreeting = "Good evening";
-      newBg = "from-teal-900 to-slate-900";
+      newBg = "from-orange-600 to-orange-800";
       newMoodIcon = <Moon size={18} />;
     } else {
       newGreeting = "Good night";
-      newBg = "from-teal-950 to-blue-950";
+      newBg = "from-orange-700 to-orange-900";
       newMoodIcon = <Moon size={18} />;
     }
 
@@ -100,13 +123,18 @@ export default function Greeting() {
           if (name) setFirstName(name as string);
 
           setStreakDays(Number(u?.streakDays || u?.currentStreak || u?.currentStreakDays || 0));
-          setLevel(Number(u?.level || Math.max(1, Math.floor((u?.xp || 0) / 100) + 1)));
+          setLevel(Number(u?.level || Math.max(1, Math.floor((u?.xp || 0) / 500) + 1)));
           setCoins(u?.coins ?? u?.balance ?? "—");
           setMessagesCount((Array.isArray(u?.messages) ? u.messages.length : (u?.unreadMessages ?? 0)) || 0);
           setOffersCount(u?.offersCount ?? u?.flashSalesPurchases ?? 0);
           setCartCount((Array.isArray(u?.cart) ? u.cart.length : (u?.cartCount ?? 0)) || 0);
-          setXp(Number(u?.xp || 0));
-          setXpToNext(Number(u?.xpToNext || 1000));
+          
+          // Use persistent stored XP if available, otherwise use server XP
+          const storedXp = parseInt(localStorage.getItem("unimart:xp") || "0", 10);
+          const serverXp = Number(u?.xp || 0);
+          const finalXp = storedXp > 0 ? storedXp : serverXp;
+          setXp(finalXp);
+          setXpToNext(500);
         } else {
           // fallback to localStorage if available
           try {
@@ -121,8 +149,10 @@ export default function Greeting() {
               setMessagesCount((Array.isArray(lu?.messages) ? lu.messages.length : (lu?.unreadMessages ?? 0)) || 0);
               setOffersCount(lu?.offersCount ?? 0);
               setCartCount((Array.isArray(lu?.cart) ? lu.cart.length : (lu?.cartCount ?? 0)) || 0);
-              setXp(Number(lu?.xp || 0));
-              setXpToNext(Number(lu?.xpToNext || 1000));
+              
+              const storedXp = parseInt(localStorage.getItem("unimart:xp") || "0", 10);
+              setXp(storedXp || Number(lu?.xp || 0));
+              setXpToNext(500);
             }
           } catch (e) {}
         }
