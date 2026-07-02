@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import ReactDOM from "react-dom";
 import { useAuth } from "./context/AuthContext";
 import TermsModal from "./components/TermsModal";
-import GuestInfo from "./components/GuestInfo";
 import apiFetch from "../lib/apiClient";
 import detectUserLocation from "../lib/location";
 import { persistAuthToken } from "../lib/authCookie";
@@ -79,10 +78,9 @@ const FloatingIcons = memo(function FloatingIcons() {
 type WelcomeScreenProps = {
   onSignup: () => void;
   onLogin: () => void;
-  onGuestInfo: () => void;
   onTerms: () => void;
 };
-const WelcomeScreen = memo(function WelcomeScreen({ onSignup, onLogin, onGuestInfo, onTerms }: WelcomeScreenProps) {
+const WelcomeScreen = memo(function WelcomeScreen({ onSignup, onLogin, onTerms }: WelcomeScreenProps) {
   return (
     <div className="um-screen um-welcome">
       <FloatingIcons />
@@ -123,7 +121,6 @@ const WelcomeScreen = memo(function WelcomeScreen({ onSignup, onLogin, onGuestIn
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
             Log in
           </button>
-          <button type="button" className="um-guest-btn" onClick={onGuestInfo}>Guest</button>
         </div>
 
         <p className="um-legal">
@@ -150,7 +147,6 @@ type FormScreenProps = {
   isLoading: boolean;
   onBack: () => void;
   onSubmit: () => void;
-  onGuestInfo: () => void;
   onTerms: () => void;
   onSwitchMode: () => void;
   role: 'buyer'|'seller';
@@ -169,7 +165,7 @@ const FormScreen = memo(function FormScreen({
   passwordConfirm, setPasswordConfirm,
   pwVisible, setPwVisible,
   error, isLoading,
-  onBack, onSubmit, onGuestInfo, onTerms, onSwitchMode,
+  onBack, onSubmit, onTerms, onSwitchMode,
   role, setRole,
   university, setUniversity,
   storeName, setStoreName,
@@ -368,11 +364,6 @@ const FormScreen = memo(function FormScreen({
 
           <div className="um-divider-row"><span className="um-divider-txt">or</span></div>
 
-          <button className="um-guest-btn" type="button" onClick={onGuestInfo}>
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-            Guest
-          </button>
-
           {mode === "signup" && (
             <p className="um-legal">By signing up, you agree to our <button type="button" className="um-legal-link" onClick={onTerms}>Terms &amp; Conditions</button></p>
           )}
@@ -404,7 +395,6 @@ type DesktopLayoutProps = {
   onLogin: () => void;
   onSignup: () => void;
   onSubmit: () => void;
-  onGuestInfo: () => void;
   onTerms: () => void;
   role: 'buyer'|'seller';
   setRole: (v: 'buyer'|'seller') => void;
@@ -420,7 +410,7 @@ const DesktopLayout = memo(function DesktopLayout({
   screen, name, setName, phone, setPhone, email, setEmail,
   password, setPassword, passwordConfirm, setPasswordConfirm, pwVisible, setPwVisible,
   error, isLoading,
-  onLogin, onSignup, onSubmit, onGuestInfo, onTerms,
+  onLogin, onSignup, onSubmit, onTerms,
   role, setRole,
   university, setUniversity,
   storeName, setStoreName,
@@ -586,7 +576,6 @@ const DesktopLayout = memo(function DesktopLayout({
               {isLoading ? <span className="um-spinner" /> : screen === "login" ? "Log in" : "Create account"}
             </button>
             <div className="um-divider-row"><span className="um-divider-txt">or</span></div>
-            <button type="button" className="um-guest-btn" onClick={onGuestInfo}>Guest</button>
             <p className="um-legal" style={{ marginTop: "auto", paddingTop: 8 }}>
               By continuing, you agree to our <button type="button" className="um-legal-link" onClick={onTerms}>Terms &amp; Conditions</button>
             </p>
@@ -615,7 +604,6 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
   const [isLoading, setIsLoading] = useState(false);
   const isSubmittingRef = React.useRef(false);
   const [showTerms, setShowTerms] = useState(false);
-  const [showGuestInfo, setShowGuestInfo] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successName, setSuccessName] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -921,33 +909,6 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
     }
   }
 
-  function handleGuest() {
-    (async () => {
-      setIsLoading(true);
-      try {
-        try { localStorage.removeItem('unimart:token'); } catch (e) {}
-        try { localStorage.setItem('unimart:guest', '1'); } catch (e) {}
-        const suffix = Math.floor(1000 + Math.random() * 9000);
-        const guestUser = { id: `guest-${Date.now()}`, name: `Guest${suffix}`, guest: true, role: 'guest' as const, createdAt: new Date().toISOString() };
-        try { localStorage.setItem('unimart:user', JSON.stringify(guestUser)); } catch (e) {}
-        try { localStorage.setItem('unimart:onboarded', '1'); } catch (e) {}
-        try { setUser(guestUser); } catch (e) {}
-        setSuccessName(guestUser.name);
-        setSuccessMessage('Continuing as guest. Redirecting...');
-        setShowSuccess(true);
-        setTimeout(() => {
-          setShowSuccess(false);
-          try { window.dispatchEvent(new Event('unimart:authChanged')); } catch (e) {}
-          if (onDone) onDone('guest');
-          router.replace('/');
-        }, 900);
-      } catch (err) {
-        console.error('Guest login failed:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    })();
-  }
 
   if (!mounted) return null;
 
@@ -959,7 +920,6 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
           <WelcomeScreen
             onSignup={() => goTo("signup")}
             onLogin={() => goTo("login")}
-            onGuestInfo={() => setShowGuestInfo(true)}
             onTerms={() => setShowTerms(true)}
           />
         )}
@@ -976,7 +936,6 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
             isLoading={isLoading}
             onBack={() => goTo("welcome")}
             onSubmit={screen === "login" ? handleLogin : handleSignup}
-            onGuestInfo={() => setShowGuestInfo(true)}
             onTerms={() => setShowTerms(true)}
             onSwitchMode={() => goTo(screen === "login" ? "signup" : "login")}
             role={role}
@@ -1006,7 +965,6 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
           onLogin={() => goTo("login")}
           onSignup={() => goTo("signup")}
           onSubmit={screen === "login" ? handleLogin : handleSignup}
-          onGuestInfo={() => setShowGuestInfo(true)}
           onTerms={() => setShowTerms(true)}
           role={role}
           setRole={setRole}
@@ -1020,13 +978,6 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
       </div>
 
       {showTerms && <TermsModal onClose={() => setShowTerms(false)} />}
-      {showGuestInfo && (
-        <GuestInfo
-          onClose={() => setShowGuestInfo(false)}
-          onSignup={() => { setShowGuestInfo(false); goTo("signup"); }}
-          onContinueGuest={() => { setShowGuestInfo(false); handleGuest(); }}
-        />
-      )}
 
       {showSuccess && (
         <div className="um-success-overlay">
@@ -1191,19 +1142,6 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
         .um-btn-ghost:hover { color: var(--um-text-2); }
 
         /* small guest button used in welcome/login/signup to reduce visual weight */
-        .um-guest-btn {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          padding: 10px 14px;
-          font-size: 14px;
-          border-radius: 10px;
-          background: transparent;
-          color: var(--um-text-2);
-          border: 1px solid var(--um-border);
-          cursor: pointer;
-        }
-        .um-guest-btn:hover { background: var(--um-border); }
 
         .um-spinner {
           width: 18px; height: 18px;

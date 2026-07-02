@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
@@ -19,6 +18,7 @@ import {
   Shield,
   Zap,
   Heart,
+  Home,
 } from "lucide-react";
 import {
   FaFacebook,
@@ -368,6 +368,25 @@ export default function ListingPage() {
   return (
     // CHANGE 1: replaced "pdp-shell" (undefined class) with explicit Tailwind + safe-area bottom padding
     <div className="min-h-screen bg-[#f5f5f5] font-sans pb-[calc(5.5rem+env(safe-area-inset-bottom))]">
+
+      {/* ===== Sticky page header ===== */}
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-100">
+        <div
+          className="max-w-3xl mx-auto px-3 flex items-center justify-between"
+          style={{ paddingTop: "max(0.625rem, env(safe-area-inset-top))", paddingBottom: "0.625rem" }}
+        >
+          <Link
+            href="/"
+            aria-label="Back to home"
+            className="flex items-center gap-1.5 -ml-1.5 px-2 py-1.5 rounded-full text-gray-700 hover:bg-gray-50 hover:text-teal-600 transition"
+          >
+            <Home className="w-5 h-5" />
+            <span className="text-sm font-medium">Home</span>
+          </Link>
+          <span className="text-sm font-semibold text-gray-900 truncate max-w-[45%]">Product details</span>
+          <div className="w-16 shrink-0" aria-hidden="true" />
+        </div>
+      </header>
 
       {/* ===== Image hero — normal flow, NOT sticky ===== */}
       {/* CHANGE 2: removed "pdp-image-hero" (was causing sticky behaviour) */}
