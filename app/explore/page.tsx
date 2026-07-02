@@ -178,39 +178,6 @@ export default function JoinPage() {
         .d4 { animation-delay: 0.35s; }
         .d5 { animation-delay: 0.45s; }
 
-        /* ── Fixed home bar ── */
-        .home-bar {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          z-index: 100;
-          background: rgba(255,255,255,0.92);
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
-          border-bottom: 1px solid #e2e8f0;
-          padding: 0 16px;
-          height: 52px;
-          display: flex;
-          align-items: center;
-        }
-        .home-btn {
-          display: inline-flex;
-          align-items: center;
-          gap: 7px;
-          background: none;
-          border: none;
-          cursor: pointer;
-          padding: 7px 12px;
-          border-radius: 10px;
-          font-family: inherit;
-          font-weight: 600;
-          font-size: 14px;
-          color: #0f172a;
-          transition: background 0.18s;
-        }
-        .home-btn:hover { background: #f1f5f9; }
-
         /* ── Responsive CTA grid ── */
         .cta-grid {
           display: grid;
@@ -263,18 +230,7 @@ export default function JoinPage() {
 
       <div style={{ minHeight: "100vh", background: "#f8fafc", fontFamily: "system-ui, -apple-system, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" }}>
 
-        {/* ── Fixed Home Bar (just the button, nothing else) ── */}
-        <div className="home-bar">
-          <button className="home-btn" onClick={() => router.push("/")}>
-            <IconHome size={17} color="#0d9488" />
-            Home
-          </button>
-        </div>
-
-        {/* ── Content (padded below fixed bar) ── */}
-        <main style={{ maxWidth: 1060, margin: "0 auto", padding: "72px 16px 80px" }}>
-
-          {/* Page header removed as requested */}
+        <main style={{ maxWidth: 1060, margin: "0 auto", padding: "32px 16px 80px" }}>
 
           {/* CTA Cards */}
           <div className="cta-grid fade-up d2" style={{ marginBottom: 48 }}>
