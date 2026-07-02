@@ -274,19 +274,7 @@ export default function JoinPage() {
         {/* ── Content (padded below fixed bar) ── */}
         <main style={{ maxWidth: 1060, margin: "0 auto", padding: "72px 16px 80px" }}>
 
-          {/* Page Header */}
-          <div className="fade-up d1" style={{ marginBottom: 40 }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "#ccfbf1", color: "#0f766e", borderRadius: 999, padding: "5px 12px", fontSize: 11, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 18 }}>
-              <IconHeart size={12} color="#0f766e" />
-              Fair Prices · Real Products · No Scams
-            </div>
-            <h1 style={{ margin: "0 0 14px", fontSize: "clamp(1.75rem, 6vw, 3rem)", fontWeight: 800, color: "#0f172a", letterSpacing: "-0.02em", lineHeight: 1.15, fontFamily: "inherit" }}>
-              Sell smarter.<br />Buy cheaper.
-            </h1>
-            <p style={{ margin: 0, fontSize: "clamp(13px, 3.5vw, 16px)", color: "#475569", lineHeight: 1.75, maxWidth: 600 }}>
-              Uni-Mart is a marketplace built on trust and transparency. Whether you're a seller looking for honest customers or a buyer hunting for the best deals — every price is real and every product is exactly what you expect.
-            </p>
-          </div>
+          {/* Page header removed as requested */}
 
           {/* CTA Cards */}
           <div className="cta-grid fade-up d2" style={{ marginBottom: 48 }}>
