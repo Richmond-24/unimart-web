@@ -909,7 +909,6 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
     }
   }
 
-
   if (!mounted) return null;
 
   const authContent = (
@@ -978,7 +977,6 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
       </div>
 
       {showTerms && <TermsModal onClose={() => setShowTerms(false)} />}
-
       {showSuccess && (
         <div className="um-success-overlay">
           <div className="um-success-card">
