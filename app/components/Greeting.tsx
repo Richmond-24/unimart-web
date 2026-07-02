@@ -87,7 +87,7 @@ export default function Greeting() {
       newMoodIcon = <Cloud size={18} />;
     } else if (h < 21) {
       newGreeting = "Good evening";
-      newBg = "from-orange-600 to-orange-800";
+      newBg = "from-[#fb6f20] to-[#e85d0a]";
       newMoodIcon = <Moon size={18} />;
     } else {
       newGreeting = "Good night";

@@ -98,7 +98,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // Validate token with backend
         try {
-          const res = await apiFetch<{ user?: User; data?: any; success?: boolean }>('/auth/me');
+          const res = await apiFetch<{ user?: User; data?: any; success?: boolean }>('/auth/me', {
+            headers: { Authorization: `Bearer ${storedToken}` },
+          });
           if (res && (res.user || res.data)) {
             const userData = res.user || res.data;
             setUser(userData);
@@ -152,7 +154,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!token) return false;
 
     try {
-      const res = await apiFetch<{ user?: User; data?: any }>('/auth/me');
+      const res = await apiFetch<{ user?: User; data?: any }>('/auth/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (res && (res.user || res.data)) {
         const userData = res.user || res.data;
         setUser(userData);

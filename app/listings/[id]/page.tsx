@@ -204,7 +204,8 @@ export default function ListingPage() {
     try { window.dispatchEvent(new Event('unimart:cartUpdated')); } catch (e) {}
 
     const token = typeof window !== 'undefined' ? localStorage.getItem('unimart:token') : null;
-    const backendSave = token
+    const hasBackendProduct = !!listing?.productId || !!listing?.backendProductId || !!listing?.product?._id;
+    const backendSave = token && hasBackendProduct
       ? apiFetch('/cart/add', {
           method: 'POST',
           body: { productId, quantity: 1 },

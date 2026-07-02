@@ -2,11 +2,64 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ChevronLeft, Send } from "lucide-react";
+import { ChevronLeft, Send, MessageCircle } from "lucide-react";
 import apiFetch from "../../../../lib/apiClient";
 import { connectSocket, getSocket } from "../../../../lib/socket";
 import LoadingSpinner from "../../../components/LoadingSpinner";
 import { useAuth } from "../../../context/AuthContext";
+
+// ---- pure helpers (no state, safe to keep outside the component) ----
+
+function dateLabelFor(timestamp: number | string) {
+  const d = new Date(Number(timestamp));
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+
+  if (d.toDateString() === today.toDateString()) return "Today";
+  if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+  return d.toLocaleDateString([], { month: "short", day: "numeric" });
+}
+
+function timeFor(timestamp: number | string) {
+  if (!timestamp) return "";
+  return new Date(Number(timestamp)).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function isMine(message: any) {
+  return message.senderId === "me" || message.senderId === "buyer";
+}
+
+// Groups flat messages into { label, items: [{ ...message, showTail }] } chunks
+// so consecutive messages from the same sender sit tighter, with a tail only
+// on the last message of each run. Pure function, derived on every render.
+function groupMessages(messages: any[]) {
+  const groups: { label: string; items: any[] }[] = [];
+
+  messages.forEach((message, index) => {
+    const label = message.timestamp ? dateLabelFor(message.timestamp) : "";
+    const prev = messages[index - 1];
+    const next = messages[index + 1];
+
+    const sameGroupAsPrev =
+      prev && isMine(prev) === isMine(message) && (!label || dateLabelFor(prev.timestamp) === label);
+    const sameGroupAsNext =
+      next && isMine(next) === isMine(message) && (!label || dateLabelFor(next.timestamp) === label);
+
+    const item = { ...message, showTail: !sameGroupAsNext };
+
+    if (!sameGroupAsPrev || groups.length === 0 || groups[groups.length - 1].label !== label) {
+      groups.push({ label, items: [item] });
+    } else {
+      groups[groups.length - 1].items.push(item);
+    }
+  });
+
+  return groups;
+}
 
 export default function ListingChatPage() {
   const params = useParams();
@@ -60,15 +113,19 @@ export default function ListingChatPage() {
     (async () => {
       try {
         const sellerId = listing?.sellerId || listing?.seller || listing?.sellerUserId || listing?.sellerUid;
-        if (!sellerId) throw new Error("Seller is unavailable");
+        const sellerEmail = listing?.sellerEmail || listing?.email;
+        if (!sellerId && !sellerEmail) throw new Error("Seller is unavailable");
+
+        const payload: any = {
+          productId: id,
+          initialMessage: `Hi, I'm interested in ${listing?.title || 'this item'}.`,
+        };
+        if (sellerId) payload.sellerId = sellerId;
+        else payload.sellerEmail = sellerEmail;
 
         const res = await apiFetch("/conversations", {
           method: "POST",
-          body: {
-            sellerId,
-            productId: id,
-            initialMessage: `Hi, I'm interested in ${listing?.title || 'this item'}.`,
-          },
+          body: payload,
         });
 
         const conv = res?.data || res?.conversation || res;
@@ -193,47 +250,76 @@ export default function ListingChatPage() {
   };
 
   const chatTitle = conversation?.productName || listing?.title || "Seller chat";
-  const chatSubtitle = connected ? "Seller is online" : "Connecting to chat...";
+  const sellerInitial = (chatTitle || "S").trim().charAt(0).toUpperCase();
+  const messageGroups = groupMessages(messages);
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-md">
-        <div className="max-w-4xl mx-auto flex items-center gap-3 px-4 py-3">
+    <div className="min-h-screen bg-[#FAF7F1]">
+      {/* Header */}
+      <div className="sticky top-0 z-30 bg-[#142420]">
+        <div className="mx-auto flex max-w-4xl items-center gap-3 px-4 py-3">
           <button
             type="button"
             onClick={() => router.back()}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
+            aria-label="Go back"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/80 transition hover:bg-white/10 active:scale-95"
           >
-            <ChevronLeft className="w-5 h-5" />
+            <ChevronLeft className="h-5 w-5" />
           </button>
+
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#147D6F] text-sm font-semibold text-white">
+            {sellerInitial}
+          </div>
+
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-slate-900">Chat with seller</p>
-            <p className="text-xs text-slate-500">{chatSubtitle}</p>
+            <p className="truncate text-sm font-semibold text-white">{chatTitle}</p>
+            <p className="flex items-center gap-1.5 text-xs text-white/50">
+              <span
+                className={`inline-block h-1.5 w-1.5 rounded-full ${connected ? "bg-[#5DCAA5]" : "bg-white/30"}`}
+              />
+              {connected ? "Seller is online" : "Connecting to chat..."}
+            </p>
           </div>
         </div>
       </div>
 
-      <main className="max-w-4xl mx-auto px-4 pb-28 pt-4">
+      <main className="mx-auto max-w-4xl px-4 pb-32 pt-4">
+        {/* Deal strip — ticket-stub style listing context */}
         {listing && (
-          <div className="mb-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex gap-3">
-              <div className="h-16 w-16 overflow-hidden rounded-3xl bg-slate-100">
+          <div className="relative mb-6 overflow-hidden rounded-2xl bg-white shadow-[0_1px_0_rgba(20,36,32,0.04)] ring-1 ring-black/5">
+            <div className="flex items-center gap-3 p-3">
+              <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-[#EFE8D8]">
                 {listing.imageUrls?.[0] ? (
-                  <img src={listing.imageUrls[0]} alt={listing.title || "Product"} className="h-full w-full object-cover" />
+                  <img
+                    src={listing.imageUrls[0]}
+                    alt={listing.title || "Product"}
+                    className="h-full w-full object-cover"
+                  />
                 ) : (
-                  <div className="flex h-full items-center justify-center text-slate-500">📦</div>
+                  <div className="flex h-full items-center justify-center text-lg">📦</div>
                 )}
               </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-slate-900 line-clamp-2">{listing.title}</p>
-                <p className="mt-2 text-sm text-slate-500">₵{listing.price ?? listing.price}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#8a8579]">
+                  You&apos;re chatting about
+                </p>
+                <p className="truncate text-sm font-semibold text-[#142420]">{listing.title}</p>
               </div>
+              <div className="shrink-0 rounded-full bg-[#E1F5EE] px-3 py-1 text-sm font-semibold text-[#085041]">
+                ₵{listing.price}
+              </div>
+            </div>
+
+            {/* perforated tear edge */}
+            <div className="relative h-0 border-t border-dashed border-[#E3DED0]">
+              <span className="absolute -left-2.5 -top-2.5 h-5 w-5 rounded-full bg-[#FAF7F1]" />
+              <span className="absolute -right-2.5 -top-2.5 h-5 w-5 rounded-full bg-[#FAF7F1]" />
             </div>
           </div>
         )}
 
         {error && (
-          <div className="rounded-3xl border border-orange-200 bg-orange-50 p-4 text-sm text-orange-700">
+          <div className="mb-4 rounded-2xl border border-[#F0997B]/40 bg-[#FAECE7] p-4 text-sm text-[#712B13]">
             {error}
           </div>
         )}
@@ -247,67 +333,103 @@ export default function ListingChatPage() {
         )}
 
         {!loading && !conversation && !error && (
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 text-center text-slate-600">
-            Preparing your chat. Please wait a moment.
+          <div className="rounded-2xl border border-[#E3DED0] bg-white p-6 text-center text-sm text-[#5C6B64]">
+            Preparing your chat. This won&apos;t take long.
           </div>
         )}
 
+        {/* Message thread */}
         {conversation && (
-          <div className="mb-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div ref={listRef} className="max-h-[62vh] overflow-y-auto space-y-3 px-1 py-2">
-              {messages.length === 0 ? (
-                <div className="rounded-3xl bg-slate-100 p-5 text-center text-sm text-slate-500">
-                  Say hello to the seller and ask about availability, delivery or student discounts.
+          <div ref={listRef} className="max-h-[62vh] space-y-5 overflow-y-auto px-0.5 py-1">
+            {messages.length === 0 ? (
+              <div className="flex flex-col items-center gap-3 rounded-2xl bg-white/60 px-6 py-14 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#EFE8D8] text-[#8a8579]">
+                  <MessageCircle className="h-5 w-5" />
                 </div>
-              ) : (
-                messages.map((message, index) => {
-                  const mine = message.senderId === "me" || message.senderId === "buyer";
-                  return (
-                    <div
-                      key={index}
-                      className={`flex ${mine ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div className={`max-w-[84%] rounded-3xl px-4 py-3 text-sm leading-6 ${mine ? 'bg-teal-500 text-white' : 'bg-slate-100 text-slate-900'}`}>
-                        {message.text}
-                        <div className="mt-2 text-[10px] text-slate-400 text-right">
-                          {message.timestamp ? new Date(Number(message.timestamp)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                        </div>
-                      </div>
+                <p className="text-sm text-[#5C6B64]">
+                  Say hello and ask about availability, delivery, or student discounts.
+                </p>
+              </div>
+            ) : (
+              messageGroups.map((group, gIndex) => (
+                <div key={gIndex}>
+                  {group.label && (
+                    <div className="mb-3 flex justify-center">
+                      <span className="rounded-full bg-[#EFE8D8] px-3 py-1 text-[11px] font-medium text-[#5C6B64]">
+                        {group.label}
+                      </span>
                     </div>
-                  );
-                })
-              )}
-            </div>
+                  )}
+                  <div className="space-y-1">
+                    {group.items.map((message: any, mIndex: number) => {
+                      const mine = isMine(message);
+                      return (
+                        <div key={mIndex} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
+                          <div
+                            className={`max-w-[78%] px-4 py-2.5 text-sm leading-6 ${
+                              mine
+                                ? "bg-[#147D6F] text-white"
+                                : "bg-white text-[#142420] ring-1 ring-black/5"
+                            } ${
+                              mine
+                                ? `rounded-2xl ${message.showTail ? "rounded-br-md" : ""}`
+                                : `rounded-2xl ${message.showTail ? "rounded-bl-md" : ""}`
+                            }`}
+                          >
+                            {message.text}
+                            {message.showTail && (
+                              <div
+                                className={`mt-1 text-[10px] ${mine ? "text-white/60" : "text-[#8a8579]"} ${
+                                  mine ? "text-right" : "text-left"
+                                }`}
+                              >
+                                {timeFor(message.timestamp)}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         )}
       </main>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-4xl items-center gap-2">
+      {/* Composer */}
+      <div className="fixed inset-x-0 bottom-0 z-40 bg-gradient-to-t from-[#FAF7F1] via-[#FAF7F1] to-transparent px-4 pb-4 pt-6">
+        <div className="mx-auto flex max-w-4xl items-center gap-2 rounded-full bg-white p-1.5 shadow-[0_2px_12px_rgba(20,36,32,0.08)] ring-1 ring-black/5">
           <input
             value={input}
             onChange={(event) => setInput(event.target.value)}
-            onKeyDown={(event) => { if (event.key === 'Enter') sendMessage(); }}
-            placeholder={isAuthenticated ? 'Write a message to the seller...' : 'Sign in to start chatting'}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") sendMessage();
+            }}
+            placeholder={isAuthenticated ? "Write a message to the seller..." : "Sign in to start chatting"}
             disabled={!isAuthenticated}
-            className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+            className="w-full flex-1 bg-transparent px-4 py-2.5 text-sm text-[#142420] placeholder:text-[#8a8579] outline-none disabled:cursor-not-allowed"
           />
           <button
             type="button"
             disabled={!isAuthenticated || !input.trim()}
             onClick={sendMessage}
-            className="inline-flex h-12 items-center justify-center rounded-3xl bg-teal-600 px-4 text-sm font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+            aria-label="Send message"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#147D6F] text-white transition hover:bg-[#0F6E56] active:scale-95 disabled:cursor-not-allowed disabled:bg-[#D3D1C7] disabled:text-[#8a8579]"
           >
-            <Send className="w-4 h-4" />
+            <Send className="h-4 w-4" />
           </button>
         </div>
         {!isAuthenticated && (
-          <div className="mt-3 text-center text-sm text-slate-500">
+          <div className="mt-3 text-center text-sm text-[#5C6B64]">
             <button
               type="button"
-              onClick={() => router.push('/auth')}
-              className="font-semibold text-teal-600 underline"
-            >Sign in</button>{' '}
+              onClick={() => router.push("/auth")}
+              className="font-semibold text-[#147D6F] underline underline-offset-2"
+            >
+              Sign in
+            </button>{" "}
             to message sellers and keep your chat saved.
           </div>
         )}
