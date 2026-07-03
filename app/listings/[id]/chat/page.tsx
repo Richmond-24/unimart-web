@@ -76,6 +76,19 @@ export default function ListingChatPage() {
   const [connected, setConnected] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
 
+  // --- Fixed header height tracking (so content is offset correctly) ---
+  const [headerHeight, setHeaderHeight] = useState(64); // sensible fallback
+  const headerRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const measure = () => {
+      if (headerRef.current) setHeaderHeight(headerRef.current.offsetHeight);
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+
   useEffect(() => {
     let active = true;
     if (!id) return;
@@ -255,8 +268,12 @@ export default function ListingChatPage() {
 
   return (
     <div className="min-h-screen bg-[#FAF7F1]">
-      {/* Header */}
-      <div className="sticky top-0 z-30 bg-[#142420]">
+      {/* Header — fixed (not sticky) with opaque background so there's no gap during mobile overscroll */}
+      <header
+        ref={headerRef}
+        className="fixed top-0 left-0 right-0 z-30 bg-[#142420]"
+        style={{ paddingTop: "env(safe-area-inset-top)" }}
+      >
         <div className="mx-auto flex max-w-4xl items-center gap-3 px-4 py-3">
           <button
             type="button"
@@ -281,7 +298,10 @@ export default function ListingChatPage() {
             </p>
           </div>
         </div>
-      </div>
+      </header>
+
+      {/* Spacer so the fixed header doesn't overlap content below it */}
+      <div style={{ height: headerHeight }} aria-hidden="true" />
 
       <main className="mx-auto max-w-4xl px-4 pb-32 pt-4">
         {/* Deal strip — ticket-stub style listing context */}

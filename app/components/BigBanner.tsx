@@ -47,13 +47,7 @@ export default function BigBanner() {
           </div>
         </div>
 
-        {/* Perforated seam: horizontal on mobile, vertical from sm up */}
-        <div className="relative flex-shrink-0 border-t-2 sm:border-t-0 sm:border-l-2 border-dashed border-orange-300/70 mx-5 sm:mx-0">
-          <span className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 sm:top-0 sm:left-1/2 sm:-translate-y-1/2 sm:translate-x-[-50%] w-4 h-4 rounded-full bg-white" />
-          <span className="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 sm:top-auto sm:bottom-0 sm:left-1/2 sm:right-auto sm:translate-y-1/2 sm:translate-x-[-50%] w-4 h-4 rounded-full bg-white" />
-        </div>
-
-        {/* Right: the stub / CTA */}
+        {/* Right: the CTA */}
         <Link
           href="/search?category=flash-deals"
           className="flex-shrink-0 bg-orange-50 px-6 py-4 sm:py-5 flex flex-row sm:flex-col items-center justify-center gap-2 sm:gap-1.5 hover:bg-orange-100 transition"

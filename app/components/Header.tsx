@@ -42,6 +42,7 @@ import {
   Bike,
   Dumbbell,
   Heart,
+  ShoppingCart,
   Settings,
   LogOut,
   Globe,
@@ -58,6 +59,7 @@ const NAV_LINKS = [
   { label: "Search", href: "/search", icon: Search },
   { label: "Explore", href: "/explore", icon: Compass },
   { label: "Orders", href: "/orders", icon: Package },
+  { label: "Cart", href: "/cart", icon: ShoppingCart },
   { label: "Messages", href: "/messages", icon: MessageCircle },
   { label: "Notifications", href: "/notifications", icon: Bell },
   { label: "Profile", href: "/profile", icon: User },
@@ -361,7 +363,15 @@ export default function Header() {
                                 pathname === link.href ? "bg-teal-50 text-teal-700" : "text-gray-700"
                               }`}
                             >
-                              <Icon className="w-4 h-4 text-teal-600" strokeWidth={2} />
+                              <div className="relative">
+                                <Icon className="w-4 h-4 text-teal-600" strokeWidth={2} />
+                                {link.href === '/messages' && messageCount > 0 && (
+                                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1">{messageCount > 9 ? '9+' : messageCount}</span>
+                                )}
+                                {link.href === '/notifications' && notificationCount > 0 && (
+                                  <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1">{notificationCount > 99 ? '99+' : notificationCount}</span>
+                                )}
+                              </div>
                               <span>{link.label}</span>
                             </Link>
                           );

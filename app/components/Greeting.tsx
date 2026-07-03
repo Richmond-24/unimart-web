@@ -371,7 +371,7 @@ export default function Greeting() {
                 className="bg-teal-500/20 backdrop-blur-md rounded-full px-3 py-1.5 text-xs font-bold text-teal-200 flex items-center gap-1 border border-teal-400/30"
               >
                 <Star size={12} />
-                <span>Lvl {level}</span>
+                {/* Level number removed per design request */}
               </motion.div>
 
               {/* Coin counter */}

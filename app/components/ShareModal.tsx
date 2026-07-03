@@ -114,10 +114,7 @@ export default function ShareModal({ listing, open, onClose, onShare }: Props) {
           })}
         </div>
 
-        <div className="mt-4 flex gap-2">
-          <button onClick={handleDeviceShare} className="flex-1 py-2 rounded-lg bg-teal-600 text-white flex items-center justify-center gap-2">Share</button>
-          <button onClick={handleCopy} className="py-2 px-3 rounded-lg bg-white border border-gray-200 flex items-center justify-center text-sm">Copy</button>
-        </div>
+        {/* Share + Copy actions removed: sharing handled via platform buttons above */}
       </div>
     </div>
   );
