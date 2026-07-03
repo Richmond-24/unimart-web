@@ -74,9 +74,19 @@ const CATEGORIES = [
   { label: "Sports & Fitness", href: "/search?category=sports", icon: Dumbbell },
 ];
 
+// University abbreviation mapping
+const UNIVERSITY_ABBREVIATIONS: Record<string, string> = {
+  "UG": "UG",
+  "KNUST": "KNUST",
+  "UCC": "UCC",
+  "UDS": "UDS",
+  "UEW": "UEW",
+  "UPSA": "UPSA",
+  "UENR": "UENR",
+  "Not a student": "General",
+};
+
 export default function Header() {
-  const [location, setLocation] = useState("Sunyani, Bono");
-  const [detecting, setDetecting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -89,17 +99,18 @@ export default function Header() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [cartCount, setCartCount] = useState<number>(0);
   const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [userUniversity, setUserUniversity] = useState<string>("");
 
   // Hamburger menu state
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement | null>(null);
-  const watchIdRef = useRef<number | null>(null);
 
   const router = useRouter();
   const pathname = usePathname();
   const hideHeader =
     (typeof pathname === "string" && pathname.startsWith("/seller")) ||
+    (typeof pathname === "string" && /^\/listings\/[^/]+\/chat$/.test(pathname)) ||
     (typeof pathname === "string" && /^\/listings\/[^/]+$/.test(pathname));
 
   // Close dropdown/menu on outside click
@@ -125,112 +136,47 @@ export default function Header() {
     setMenuOpen(false);
   }, [pathname]);
 
-  // Location detection
+  // Load user's university from localStorage
   useEffect(() => {
     try {
       const stored = localStorage.getItem("unimart:user");
       if (stored) {
         const u = JSON.parse(stored);
-        if (u && u.location) { setLocation(u.location); return; }
+        if (u && u.university) {
+          setUserUniversity(u.university);
+          const abbr = UNIVERSITY_ABBREVIATIONS[u.university] || u.university;
+          setUniversity(abbr);
+          return;
+        }
       }
     } catch (e) {}
-    const seen = localStorage.getItem("unimart:locationDetected");
-    if (!seen) detectLocation(true);
-    return () => {
-      try {
-        if (watchIdRef.current !== null && navigator?.geolocation) {
-          navigator.geolocation.clearWatch(watchIdRef.current);
-          watchIdRef.current = null;
-        }
-      } catch (e) {}
-    };
+    // Default to General if no university found
+    setUniversity("General");
   }, []);
 
   async function detectLocation(onFirstLoad = false) {
     try {
-      setDetecting(true);
       if (!navigator.geolocation) { await fallbackToIP(onFirstLoad); return; }
       try {
         // @ts-ignore
         const perm = navigator.permissions ? await navigator.permissions.query({ name: "geolocation" }) : null;
-        if (perm && perm.state === "denied") { await fallbackToIP(onFirstLoad); setDetecting(false); return; }
+        if (perm && perm.state === "denied") { await fallbackToIP(onFirstLoad); return; }
       } catch (e) {}
       navigator.geolocation.getCurrentPosition(
         async (pos) => {
           const { latitude, longitude } = pos.coords;
-          try {
-            const display = await reverseGeocode(latitude, longitude);
-            if (display) setLocation(display);
-            else setLocation(`${latitude.toFixed(2)}, ${longitude.toFixed(2)}`);
-          } catch { setLocation(`${latitude.toFixed(2)}, ${longitude.toFixed(2)}`); }
           if (onFirstLoad) localStorage.setItem("unimart:locationDetected", "1");
-          setDetecting(false);
         },
-        async () => { await fallbackToIP(onFirstLoad); setDetecting(false); },
+        async () => { await fallbackToIP(onFirstLoad); },
         { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
       );
-      try {
-        const id = navigator.geolocation.watchPosition(
-          async (pos) => {
-            try {
-              const display = await reverseGeocode(pos.coords.latitude, pos.coords.longitude);
-              if (display) setLocation(display);
-            } catch (e) {}
-          },
-          () => {},
-          { enableHighAccuracy: false, maximumAge: 30000, timeout: 10000 }
-        );
-        watchIdRef.current = id as unknown as number;
-      } catch (e) {}
-    } catch { setDetecting(false); }
+    } catch (e) {}
   }
 
   async function fallbackToIP(onFirstLoad: boolean) {
     try {
-      try {
-        const res = await fetch("https://ipapi.co/json/");
-        if (res.ok) {
-          const data = await res.json();
-          const lat = data.latitude || null;
-          const lon = data.longitude || null;
-          if (lat && lon) {
-            try { const display = await reverseGeocode(lat, lon); if (display) { setLocation(display); if (onFirstLoad) localStorage.setItem("unimart:locationDetected", "1"); return; } } catch (e) {}
-          }
-          const city = data.city || data.region || data.country_name;
-          if (city) { setLocation(city); if (onFirstLoad) localStorage.setItem("unimart:locationDetected", "1"); return; }
-        }
-      } catch (e) {}
       if (onFirstLoad) localStorage.setItem("unimart:locationDetected", "1");
     } catch {}
-  }
-
-  async function reverseGeocode(lat: number | string, lon: number | string) {
-    const key = process.env.NEXT_PUBLIC_OPENCAGE_KEY;
-    if (key) {
-      try {
-        const res = await fetch(`https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(`${lat},${lon}`)}&key=${key}&no_annotations=1&language=en`);
-        if (res.ok) {
-          const j = await res.json();
-          if (j?.results?.length) {
-            const comp = j.results[0].components || {};
-            const city = comp.city || comp.town || comp.village || comp.hamlet || comp.suburb || comp.municipality || comp.county || comp.state;
-            if (city) return city;
-            if (j.results[0].formatted) return j.results[0].formatted;
-          }
-        }
-      } catch (e) {}
-    }
-    try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=16&addressdetails=1`, { headers: { "User-Agent": "UniMartApp/1.0", "Accept-Language": "en" } });
-      if (res.ok) {
-        const data = await res.json();
-        const addr = data.address || {};
-        const best = [addr.village, addr.town, addr.locality, addr.hamlet, addr.neighbourhood, addr.suburb, addr.city, addr.county, addr.state, addr.country].find((v: any) => v && String(v).trim().length) || null;
-        if (best) return best;
-        if (data.display_name) return data.display_name;
-      }
-    } catch {}
-    return null;
   }
 
   useEffect(() => {
@@ -631,12 +577,9 @@ export default function Header() {
             )}
 
             <div className="flex items-center gap-2 text-sm shrink-0">
-              <MapPin className="text-white/90 w-3.5 h-3.5" strokeWidth={2} />
-              <span className="text-white/80 hidden sm:inline">Deliver to</span>
-              <strong className="text-white truncate max-w-[150px]">{location}</strong>
-              <button onClick={() => detectLocation(false)} className="text-white/80 text-xs font-medium hover:text-white ml-1">
-                {detecting ? "..." : "Change"}
-              </button>
+              <GraduationCap className="text-white/90 w-3.5 h-3.5" strokeWidth={2} />
+              <span className="text-white/80 hidden sm:inline">Campus</span>
+              <strong className="text-white truncate max-w-[150px]">{university}</strong>
             </div>
           </div>
         </div>

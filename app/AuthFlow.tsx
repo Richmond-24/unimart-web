@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import ReactDOM from "react-dom";
 import { useAuth } from "./context/AuthContext";
 import TermsModal from "./components/TermsModal";
+import SuccessModal from "./components/SuccessModal";
 import apiFetch from "../lib/apiClient";
 import detectUserLocation from "../lib/location";
 import { persistAuthToken } from "../lib/authCookie";
@@ -608,6 +609,8 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
   const [showSuccess, setShowSuccess] = useState(false);
   const [successName, setSuccessName] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [successType, setSuccessType] = useState<"signup" | "login">("signup");
+  const [successUserRole, setSuccessUserRole] = useState<"buyer" | "seller">("buyer");
   const [storeName, setStoreName] = useState("");
   const [storeBio, setStoreBio] = useState("");
 
@@ -763,19 +766,23 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
       setIsLoading(false);
       setSuccessName(name.split(" ")[0]);
       setSuccessMessage('Account created successfully. Redirecting...');
+      setSuccessType('signup');
+      const newUserRole = role === 'seller' ? 'seller' : 'buyer';
+      setSuccessUserRole(newUserRole);
       setShowSuccess(true);
 
       // Trigger auth change event and navigate based on role
       setTimeout(() => {
         setShowSuccess(false);
         try { window.dispatchEvent(new Event('unimart:authChanged')); } catch (e) {}
-        const userRole = res?.user?.role === 'seller' ? 'seller' : 'buyer';
         if (onDone) {
-          onDone(userRole);
+          onDone(newUserRole);
         } else {
-          router.replace('/');
+          // Route based on user role
+          const redirectPath = newUserRole === 'seller' ? '/seller' : '/';
+          router.replace(redirectPath);
         }
-      }, 300);
+      }, 2500);
       
     } catch (err: any) { 
       const backendMsg = err?.payload?.message || err?.message || 'Network error';
@@ -891,19 +898,23 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
       setIsLoading(false);
       setSuccessName(res.user?.name ? res.user.name.split(" ")[0] : "Welcome");
       setSuccessMessage('Logged in successfully. Redirecting...');
+      setSuccessType('login');
+      const userRole = res?.user?.role === 'seller' ? 'seller' : 'buyer';
+      setSuccessUserRole(userRole);
       setShowSuccess(true);
 
       // Trigger auth change event and navigate based on role
       setTimeout(() => {
         setShowSuccess(false);
         try { window.dispatchEvent(new Event('unimart:authChanged')); } catch (e) {}
-        const userRole = res?.user?.role === 'seller' ? 'seller' : 'buyer';
         if (onDone) {
           onDone(userRole);
         } else {
-          router.replace('/');
+          // Route based on user role
+          const redirectPath = userRole === 'seller' ? '/seller' : '/';
+          router.replace(redirectPath);
         }
-      }, 300);
+      }, 2500);
       
     } catch (err: any) { 
       const backendMsg = err?.payload?.message || err?.message || 'Network error';
@@ -984,17 +995,13 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
       </div>
 
       {showTerms && <TermsModal onClose={() => setShowTerms(false)} />}
-      {showSuccess && (
-        <div className="um-success-overlay">
-          <div className="um-success-card">
-            <div className="um-success-check">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.8" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-            </div>
-            <h3 className="um-success-title">{successName ? `Welcome, ${successName}!` : "Welcome back!"}</h3>
-            <p className="um-success-sub">{successMessage || "You're now signed in to Uni-Mart"}</p>
-          </div>
-        </div>
-      )}
+      <SuccessModal
+        userName={successName}
+        message={successMessage}
+        type={successType}
+        isOpen={showSuccess}
+        onClose={() => setShowSuccess(false)}
+      />
 
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');

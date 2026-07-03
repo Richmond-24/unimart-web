@@ -4,7 +4,6 @@ import React, { useEffect, useState } from "react";
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import apiFetch from "../../../lib/apiClient";
-import { useCart } from "../../context/CartContext";
 
 export default function CategoryPage() {
   const params = useParams();
@@ -12,8 +11,6 @@ export default function CategoryPage() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [title, setTitle] = useState(slug);
-  const [addingToCart, setAddingToCart] = useState<string | null>(null);
-  const { addToCart } = useCart();
 
   useEffect(() => {
     let mounted = true;
@@ -89,31 +86,6 @@ export default function CategoryPage() {
     return () => { mounted = false };
   }, [slug]);
 
-  const handleQuickAddToCart = async (e: React.MouseEvent, product: any) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    const productId = product._id || product.id;
-    setAddingToCart(productId);
-
-    try {
-      await addToCart({
-        id: productId,
-        title: product.title,
-        price: product.price,
-        image: product.imageUrls?.[0] || null,
-      });
-
-      // Show success feedback
-      setTimeout(() => {
-        setAddingToCart(null);
-      }, 1000);
-    } catch (err) {
-      console.error('Failed to add to cart:', err);
-      setAddingToCart(null);
-    }
-  };
-
   return (
     <div className="py-8">
       <h1 className="text-2xl font-semibold mb-4">{title}</h1>
@@ -140,41 +112,15 @@ export default function CategoryPage() {
             }
           } catch (e) { avg = null; }
 
-          const isAddingToCart = addingToCart === lid;
-
           return (
             <Link key={lid} href={`/listings/${lid}`} className="block group">
               <div className="flex flex-col">
-                <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-slate-100 mb-2 shadow-sm group">
+                <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-slate-100 mb-2 shadow-sm">
                   {p.imageUrls?.length ? (
                     <img src={p.imageUrls[0]} alt={p.title} className="object-cover w-full h-full" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">No image</div>
                   )}
-                  
-                  {/* Quick add to cart button on hover */}
-                  <button
-                    onClick={(e) => handleQuickAddToCart(e, p)}
-                    disabled={isAddingToCart}
-                    className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl"
-                    title="Add to cart"
-                  >
-                    <div className="bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2 px-3 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 text-sm">
-                      {isAddingToCart ? (
-                        <>
-                          <span className="inline-block animate-spin">⏳</span>
-                          Adding...
-                        </>
-                      ) : (
-                        <>
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                          </svg>
-                          Add to Cart
-                        </>
-                      )}
-                    </div>
-                  </button>
                 </div>
                 <div className="px-0.5">
                   <div className="flex items-center justify-between gap-1 mb-0.5">

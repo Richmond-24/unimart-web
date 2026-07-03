@@ -3,7 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 import { AuthProvider } from "./context/AuthContext";
-import { CartProvider } from "./context/CartContext";
 import AppInitializer from "./components/AppInitializer";
 import AppGate from "./components/AppGate";
 import Header from "./components/Header";
@@ -63,36 +62,34 @@ export default function RootLayout({
       </head>
       <body suppressHydrationWarning className="min-h-full flex flex-col">
         <AuthProvider>
-          <CartProvider>
-            <SocketProvider>
-              {/* App init - shows splash/auth overlay */}
-              <AppInitializer />
+          <SocketProvider>
+            {/* App init - shows splash/auth overlay */}
+            <AppInitializer />
 
-              {/* Fixed Header (global) */}
-              <Header />
+            {/* Fixed Header (global) */}
+            <Header />
 
-              {/* Push content below header using runtime-measured CSS variables */}
-              <div id="site-content" style={{ paddingTop: 'calc(var(--header-height) + env(safe-area-inset-top))', paddingBottom: 'calc(var(--footer-height) + env(safe-area-inset-bottom))' }} className="flex flex-col flex-1">
+            {/* Push content below header using runtime-measured CSS variables */}
+            <div id="site-content" style={{ paddingTop: 'calc(var(--header-height) + env(safe-area-inset-top))', paddingBottom: 'calc(var(--footer-height) + env(safe-area-inset-bottom))' }} className="flex flex-col flex-1">
 
-                <main className="flex-1">
-                  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <AppGate>
-                      {children}
-                    </AppGate>
-                  </div>
-                </main>
+              <main className="flex-1">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                  <AppGate>
+                    {children}
+                  </AppGate>
+                </div>
+              </main>
 
-              </div>
+            </div>
 
-              {/* Mobile bottom nav (Temu-style, global) */}
-              <Footer />
+            {/* Mobile bottom nav (Temu-style, global) */}
+            <Footer />
 
-              {/* Global AI assistant */}
-              <SocketChatHost />
-              <MessageListener />
-              <WelcomeBadgeModal />
-            </SocketProvider>
-          </CartProvider>
+            {/* Global AI assistant */}
+            <SocketChatHost />
+            <MessageListener />
+            <WelcomeBadgeModal />
+          </SocketProvider>
         </AuthProvider>
       </body>
     </html>
