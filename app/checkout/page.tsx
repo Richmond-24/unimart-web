@@ -287,23 +287,52 @@ export default function SocialCheckout() {
     friendsBought: Array.isArray(c.friendsBought) ? c.friendsBought : [],
   });
 
+  const readLocalCart = (): CartItem[] => {
+    try {
+      const raw = localStorage.getItem('unimart:cart');
+      const cur = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(cur)) return [];
+      return cur.map(mapLocalToCartItem);
+    } catch (e) {
+      return [];
+    }
+  };
+
+  const mergeCartItems = (backendItems: CartItem[], localItems: CartItem[]) => {
+    const map = new Map<string, CartItem>();
+    backendItems.forEach((item) => {
+      if (!item?.id) return;
+      map.set(item.id, { ...item, qty: Number(item.qty || 1) });
+    });
+    localItems.forEach((item) => {
+      if (!item?.id) return;
+      if (map.has(item.id)) {
+        const existing = map.get(item.id)!;
+        map.set(item.id, {
+          ...existing,
+          qty: Number(existing.qty || 0) + Number(item.qty || 1),
+        });
+      } else {
+        map.set(item.id, item);
+      }
+    });
+    return Array.from(map.values());
+  };
+
   const loadCart = async () => {
     try {
+      const localItems = readLocalCart();
       if (typeof window !== 'undefined' && localStorage.getItem('unimart:token')) {
         try {
           const res = await apiFetch('/cart');
           if (res && res.success && res.data) {
-            setCart((Array.isArray(res.data.items) ? res.data.items : []).map(mapBackendToCartItem));
+            const backendItems = (Array.isArray(res.data.items) ? res.data.items : []).map(mapBackendToCartItem);
+            setCart(mergeCartItems(backendItems, localItems));
             return;
           }
         } catch (e) {}
       }
-      try {
-        const raw = localStorage.getItem('unimart:cart');
-        const cur = raw ? JSON.parse(raw) : [];
-        if (Array.isArray(cur)) setCart(cur.map(mapLocalToCartItem));
-        else setCart([]);
-      } catch (e) { setCart([]); }
+      setCart(localItems);
     } catch (e) { setCart([]); }
   };
 

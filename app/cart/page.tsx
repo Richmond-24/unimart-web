@@ -22,28 +22,54 @@ export default function CartPage() {
     }));
   };
 
+  const readLocalCart = () => {
+    try {
+      const raw = localStorage.getItem("unimart:cart");
+      const cur = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(cur)) return [];
+      return cur.map((c: any) => ({ id: c.id, title: c.title, price: c.price || 0, qty: c.qty || 1, image: c.image || null }));
+    } catch (e) {
+      return [];
+    }
+  };
+
+  const mergeCartItems = (backendItems: any[], localItems: any[]) => {
+    const map = new Map<string, any>();
+    backendItems.forEach((item) => {
+      if (!item?.id) return;
+      map.set(item.id, { ...item, qty: Number(item.qty || 1) });
+    });
+    localItems.forEach((item) => {
+      if (!item?.id) return;
+      if (map.has(item.id)) {
+        const existing = map.get(item.id);
+        map.set(item.id, {
+          ...existing,
+          qty: Number(existing.qty || 0) + Number(item.qty || 1),
+        });
+      } else {
+        map.set(item.id, item);
+      }
+    });
+    return Array.from(map.values());
+  };
+
   const load = async () => {
     setLoading(true);
+    const localItems = readLocalCart();
     try {
       if (typeof window !== "undefined" && localStorage.getItem("unimart:token")) {
         try {
           const res = await apiFetch("/cart");
           if (res && res.success && res.data) {
-            setItems(unifyBackendItems(res.data));
+            const backendItems = unifyBackendItems(res.data);
+            setItems(mergeCartItems(backendItems, localItems));
             setLoading(false);
             return;
           }
         } catch (e) {}
       }
-      try {
-        const raw = localStorage.getItem("unimart:cart");
-        const cur = raw ? JSON.parse(raw) : [];
-        if (Array.isArray(cur)) {
-          setItems(cur.map((c: any) => ({ id: c.id, title: c.title, price: c.price || 0, qty: c.qty || 1, image: c.image || null })));
-        } else setItems([]);
-      } catch (e) {
-        setItems([]);
-      }
+      setItems(localItems);
     } finally {
       setLoading(false);
     }

@@ -16,7 +16,6 @@ import {
   Utensils,
   PenTool,
   Wrench,
-  ShoppingBag,
   MapPin,
   GraduationCap,
   ChevronDown,
@@ -60,6 +59,7 @@ const NAV_LINKS = [
   { label: "Explore", href: "/explore", icon: Compass },
   { label: "Orders", href: "/orders", icon: Package },
   { label: "Messages", href: "/messages", icon: MessageCircle },
+  { label: "Notifications", href: "/notifications", icon: Bell },
   { label: "Profile", href: "/profile", icon: User },
 ];
 
@@ -97,8 +97,8 @@ export default function Header() {
   const [university, setUniversity] = useState("General");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const [cartCount, setCartCount] = useState<number>(0);
-  const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [messageCount, setMessageCount] = useState<number>(0);
+  const [notificationCount, setNotificationCount] = useState<number>(0);
   const [userUniversity, setUserUniversity] = useState<string>("");
 
   // Hamburger menu state
@@ -219,55 +219,44 @@ export default function Header() {
 
   useEffect(() => {
     let mounted = true;
-    const load = async () => {
+    const loadMessageCount = async () => {
       try {
-        let count = 0;
-        if (typeof window !== "undefined" && localStorage.getItem("unimart:token")) {
-          try {
-            const res = await apiFetch("/cart");
-            if (res?.success && res.data) {
-              const itemsArr = Array.isArray(res.data.items) ? res.data.items : [];
-              count = itemsArr.reduce((s: number, it: any) => s + Number(it.quantity ?? it.qty ?? 1), 0);
-            }
-          } catch (e) {}
-        }
-        if ((count === 0) && typeof window !== "undefined") {
-          try {
-            const raw = localStorage.getItem("unimart:cart");
-            const cur = raw ? JSON.parse(raw) : [];
-            count = Array.isArray(cur) ? cur.reduce((s: number, i: any) => s + Number(i.qty ?? i.quantity ?? 1), 0) : 0;
-          } catch (e) {}
-        }
-        if (mounted) setCartCount(count || 0);
-      } catch (e) { if (mounted) setCartCount(0); }
+        let total = 0;
+        const res = await apiFetch('/conversations');
+        const convs = Array.isArray(res?.conversations ? res.conversations : res) ? (res?.conversations || res) : [];
+        total = convs.reduce((sum: number, conv: any) => sum + Number(conv.unreadForUser || 0), 0);
+        if (mounted) setMessageCount(total);
+      } catch (e) {
+        if (mounted) setMessageCount(0);
+      }
     };
-    load();
-    const onStorage = (e: StorageEvent) => { if (e.key === "unimart:cart") load(); };
-    const onCustom = () => load();
-    window.addEventListener("storage", onStorage);
-    window.addEventListener("unimart:cartUpdated", onCustom as EventListener);
-    return () => { mounted = false; window.removeEventListener("storage", onStorage); window.removeEventListener("unimart:cartUpdated", onCustom as EventListener); };
+    loadMessageCount();
+    const onMessageUpdate = (e: any) => setMessageCount(Number(e?.detail?.count || 0));
+    window.addEventListener("unimart:messageCount", onMessageUpdate as EventListener);
+    return () => { mounted = false; window.removeEventListener("unimart:messageCount", onMessageUpdate as EventListener); };
   }, []);
 
   useEffect(() => {
-    const onUnread = (e: any) => { setUnreadCount(Number(e?.detail?.count || 0)); };
-    window.addEventListener("unimart:unreadCount", onUnread as EventListener);
-    return () => window.removeEventListener("unimart:unreadCount", onUnread as EventListener);
+    const onNotification = (e: any) => { setNotificationCount(Number(e?.detail?.count || 0)); };
+    window.addEventListener("unimart:notificationCount", onNotification as EventListener);
+    return () => window.removeEventListener("unimart:notificationCount", onNotification as EventListener);
   }, []);
 
   useEffect(() => {
     let mounted = true;
-    async function loadUnread() {
+    async function loadNotificationCount() {
       try {
         let userId = null;
-        try { const raw = localStorage.getItem("unimart:user"); if (raw) userId = JSON.parse(raw)?._id || null; } catch (e) {}
+        try { const raw = localStorage.getItem("unimart:user"); if (raw) userId = JSON.parse(raw)?._id || JSON.parse(raw)?.id || null; } catch (e) {}
         if (!userId) return;
         const res = await apiFetch(`/notifications?userId=${encodeURIComponent(userId)}&unreadOnly=true`);
         if (!mounted) return;
-        if (res && typeof res.unreadCount === "number") setUnreadCount(res.unreadCount || 0);
-      } catch (e) {}
+        if (res && typeof res.unreadCount === "number") setNotificationCount(res.unreadCount || 0);
+      } catch (e) {
+        if (mounted) setNotificationCount(0);
+      }
     }
-    loadUnread();
+    loadNotificationCount();
     return () => { mounted = false; };
   }, []);
 
@@ -429,9 +418,19 @@ export default function Header() {
               {/* Messages */}
               <button onClick={() => router.push("/messages")} className="relative p-2 rounded-full hover:bg-white/10 transition">
                 <MessageCircle className="w-5 h-5 text-white" strokeWidth={2} />
-                {unreadCount > 0 && (
+                {messageCount > 0 && (
                   <span className="absolute top-1 right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
-                    {unreadCount > 9 ? '9+' : unreadCount}
+                    {messageCount > 9 ? '9+' : messageCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Notifications */}
+              <button onClick={() => router.push("/notifications")} className="relative p-2 rounded-full hover:bg-white/10 transition">
+                <Bell className="w-5 h-5 text-white" strokeWidth={2} />
+                {notificationCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                    {notificationCount > 99 ? '99+' : notificationCount}
                   </span>
                 )}
               </button>
@@ -468,15 +467,6 @@ export default function Header() {
                 )}
               </div>
 
-              {/* Cart */}
-              <button onClick={() => router.push("/cart")} className="relative shrink-0 p-2 rounded-full hover:bg-white/10 transition">
-                <ShoppingBag className="w-5 h-5 text-white" strokeWidth={2} />
-                {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
-                    {cartCount > 99 ? '99+' : cartCount}
-                  </span>
-                )}
-              </button>
             </div>
           </div>
 
