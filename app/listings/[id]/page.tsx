@@ -31,11 +31,13 @@ import apiFetch from "../../../lib/apiClient";
 import LoadingSpinner from "../../../app/components/LoadingSpinner";
 import CommentsSection from "../../../app/components/CommentsSection";
 import ShareModal from "../../../app/components/ShareModal";
+import { useCart } from "../../../app/context/CartContext";
 
 // ================== Main Component ==================
 export default function ListingPage() {
   const params = useParams();
   const router = useRouter();
+  const { addToCart } = useCart();
   const id = params?.id;
 
   const [listing, setListing] = useState<any | null>(null);
@@ -181,47 +183,22 @@ export default function ListingPage() {
     if (!listing) return;
     setCartAdded(true);
 
-    const productId = listing._id || listing.id;
-    const item = {
-      id: productId,
-      title: listing.title,
-      price: listing.price,
-      qty: 1,
-      image: listing.imageUrls && listing.imageUrls[0],
-    };
-
     try {
-      const key = 'unimart:cart';
-      const cur = JSON.parse(localStorage.getItem(key) || '[]');
-      const idx = cur.findIndex((c: any) => c.id === item.id);
-      if (idx >= 0) cur[idx].qty = (cur[idx].qty || 1) + 1;
-      else cur.push(item);
-      localStorage.setItem(key, JSON.stringify(cur));
-    } catch (e) {
-      console.warn('Failed to update local cart fallback:', e);
-    }
+      // Use the cart context to add the product
+      await addToCart({
+        id: listing._id || listing.id,
+        title: listing.title,
+        price: listing.price,
+        image: listing.imageUrls && listing.imageUrls[0],
+      });
 
-    try { window.dispatchEvent(new Event('unimart:cartUpdated')); } catch (e) {}
-
-    const token = typeof window !== 'undefined' ? localStorage.getItem('unimart:token') : null;
-    const hasBackendProduct = !!listing?.productId || !!listing?.backendProductId || !!listing?.product?._id;
-    const backendSave = token && hasBackendProduct
-      ? apiFetch('/cart/add', {
-          method: 'POST',
-          body: { productId, quantity: 1 },
-        }).catch((err) => {
-          console.error('Add to cart backend failed:', err);
-        })
-      : Promise.resolve();
-
-    try {
+      // Navigate to cart
       await router.push('/cart');
-      await backendSave;
-    } catch (e) {
-      console.error('Navigation to cart failed:', e);
+    } catch (err) {
+      console.error('Failed to add to cart:', err);
+    } finally {
+      setTimeout(() => setCartAdded(false), 1200);
     }
-
-    setTimeout(() => setCartAdded(false), 1200);
   };
 
   // --- Contact seller ---

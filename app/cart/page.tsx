@@ -1,109 +1,19 @@
 
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { useRouter } from "next/navigation";
-import apiFetch from "../../lib/apiClient";
+import { useCart } from "../context/CartContext";
 
 export default function CartPage() {
   const router = useRouter();
-  const [items, setItems] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const unifyBackendItems = (backend: any) => {
-    if (!backend) return [];
-    const src = Array.isArray(backend.items) ? backend.items : [];
-    return src.map((it: any) => ({
-      id: it.product?._id || it.product?.id || (it.product && it.product.toString && it.product.toString()) || it._id,
-      title: it.product?.title || it.title || "Item",
-      price: it.product?.price ?? it.price ?? 0,
-      qty: it.quantity ?? it.qty ?? 1,
-      image: (it.product?.images && it.product.images[0]) || it.product?.image || it.image || null,
-    }));
-  };
-
-  const load = async () => {
-    setLoading(true);
-    try {
-      if (typeof window !== "undefined" && localStorage.getItem("unimart:token")) {
-        try {
-          const res = await apiFetch("/cart");
-          if (res && res.success && res.data) {
-            setItems(unifyBackendItems(res.data));
-            setLoading(false);
-            return;
-          }
-        } catch (e) {}
-      }
-      try {
-        const raw = localStorage.getItem("unimart:cart");
-        const cur = raw ? JSON.parse(raw) : [];
-        if (Array.isArray(cur)) {
-          setItems(cur.map((c: any) => ({ id: c.id, title: c.title, price: c.price || 0, qty: c.qty || 1, image: c.image || null })));
-        } else setItems([]);
-      } catch (e) {
-        setItems([]);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    load();
-    const onCustom = () => load();
-    window.addEventListener("unimart:cartUpdated", onCustom as EventListener);
-    window.addEventListener("storage", (e) => { if (e.key === "unimart:cart") load(); });
-    return () => { window.removeEventListener("unimart:cartUpdated", onCustom as EventListener); };
-  }, []);
-
-  const updateQty = async (id: string, qty: number) => {
-    if (qty <= 0) return removeItem(id);
-    try {
-      if (localStorage.getItem("unimart:token")) {
-        await apiFetch("/cart/update", { method: "PUT", body: JSON.stringify({ productId: id, quantity: qty }) });
-        try { window.dispatchEvent(new Event("unimart:cartUpdated")); } catch (e) {}
-        await load();
-        return;
-      }
-    } catch (e) {}
-    try {
-      const raw = localStorage.getItem("unimart:cart");
-      const cur = raw ? JSON.parse(raw) : [];
-      const idx = cur.findIndex((c: any) => c.id === id);
-      if (idx >= 0) {
-        cur[idx].qty = qty;
-        localStorage.setItem("unimart:cart", JSON.stringify(cur));
-        try { window.dispatchEvent(new Event("unimart:cartUpdated")); } catch (e) {}
-        setItems(cur.map((c: any) => ({ id: c.id, title: c.title, price: c.price || 0, qty: c.qty || 1, image: c.image || null })));
-      }
-    } catch (e) {}
-  };
-
-  const removeItem = async (id: string) => {
-    try {
-      if (localStorage.getItem("unimart:token")) {
-        await apiFetch(`/cart/${id}`, { method: "DELETE" });
-        try { window.dispatchEvent(new Event("unimart:cartUpdated")); } catch (e) {}
-        await load();
-        return;
-      }
-    } catch (e) {}
-    try {
-      const raw = localStorage.getItem("unimart:cart");
-      const cur = raw ? JSON.parse(raw) : [];
-      const next = cur.filter((c: any) => c.id !== id);
-      localStorage.setItem("unimart:cart", JSON.stringify(next));
-      try { window.dispatchEvent(new Event("unimart:cartUpdated")); } catch (e) {}
-      setItems(next.map((c: any) => ({ id: c.id, title: c.title, price: c.price || 0, qty: c.qty || 1, image: c.image || null })));
-    } catch (e) {}
-  };
+  const { items, isLoading, removeFromCart, updateQuantity } = useCart();
 
   const subtotal = items.reduce((s, it) => s + Number(it.price || 0) * Number(it.qty || 1), 0);
   const itemCount = items.reduce((s, it) => s + Number(it.qty || 1), 0);
 
   /* ── Skeleton loader ── */
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="cart-root">
         <style>{styles}</style>
@@ -202,7 +112,7 @@ export default function CartPage() {
                   <div className="qty-stepper">
                     <button
                       className="qty-btn"
-                      onClick={() => updateQty(it.id, (it.qty || 1) - 1)}
+                      onClick={() => updateQuantity(it.id, (it.qty || 1) - 1)}
                       aria-label="Decrease quantity"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>
@@ -210,7 +120,7 @@ export default function CartPage() {
                     <span className="qty-value">{it.qty}</span>
                     <button
                       className="qty-btn"
-                      onClick={() => updateQty(it.id, (it.qty || 1) + 1)}
+                      onClick={() => updateQuantity(it.id, (it.qty || 1) + 1)}
                       aria-label="Increase quantity"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
@@ -222,7 +132,7 @@ export default function CartPage() {
                     <span className="item-line-total">GHS {(Number(it.price) * Number(it.qty)).toFixed(2)}</span>
                     <button
                       className="remove-btn"
-                      onClick={() => removeItem(it.id)}
+                      onClick={() => removeFromCart(it.id)}
                       aria-label={`Remove ${it.title}`}
                     >
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>

@@ -4,12 +4,15 @@
 import React, { useEffect, useState } from "react";
 import apiFetch from "../../lib/apiClient";
 import Link from "next/link";
+import { useCart } from "../context/CartContext";
 
 export default function ProductGrid(props: { horizontal?: boolean } = {}) {
   const { horizontal } = props;
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [addingToCart, setAddingToCart] = useState<string | null>(null);
+  const { addToCart } = useCart();
 
   useEffect(() => {
     let mounted = true;
@@ -33,6 +36,31 @@ export default function ProductGrid(props: { horizontal?: boolean } = {}) {
       mounted = false;
     };
   }, []);
+
+  const handleQuickAddToCart = async (e: React.MouseEvent, product: any) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const productId = product._id || product.id;
+    setAddingToCart(productId);
+
+    try {
+      await addToCart({
+        id: productId,
+        title: product.title,
+        price: product.price,
+        image: product.imageUrls?.[0] || null,
+      });
+
+      // Show success feedback
+      setTimeout(() => {
+        setAddingToCart(null);
+      }, 1000);
+    } catch (err) {
+      console.error('Failed to add to cart:', err);
+      setAddingToCart(null);
+    }
+  };
 
   return (
     <section className="py-8">
@@ -69,6 +97,8 @@ export default function ProductGrid(props: { horizontal?: boolean } = {}) {
             }
           } catch (e) { avg = null; }
 
+          const isAddingToCart = addingToCart === lid;
+
           return (
             <Link
               key={lid}
@@ -78,7 +108,7 @@ export default function ProductGrid(props: { horizontal?: boolean } = {}) {
               {/* Airbnb-style card: no box shadow on container, just clean image + text */}
               <div className="flex flex-col">
                 {/* Square image — same rounded-xl style as CampusTrending */}
-                <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-slate-100 mb-2 shadow-sm">
+                <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-slate-100 mb-2 shadow-sm group">
                   {p.imageUrls?.length ? (
                     <img
                       src={p.imageUrls[0]}
@@ -88,6 +118,30 @@ export default function ProductGrid(props: { horizontal?: boolean } = {}) {
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">No image</div>
                   )}
+                  
+                  {/* Quick add to cart button on hover */}
+                  <button
+                    onClick={(e) => handleQuickAddToCart(e, p)}
+                    disabled={isAddingToCart}
+                    className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl"
+                    title="Add to cart"
+                  >
+                    <div className="bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50">
+                      {isAddingToCart ? (
+                        <>
+                          <span className="inline-block animate-spin">⏳</span>
+                          Adding...
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                          </svg>
+                          Add to Cart
+                        </>
+                      )}
+                    </div>
+                  </button>
                 </div>
 
                 {/* Info below image */}
