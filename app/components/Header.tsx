@@ -345,7 +345,6 @@ export default function Header() {
                     {/* Header */}
                     <div className="bg-gradient-to-r from-[#0D9488] to-[#0f766e] px-5 py-4">
                       <p className="text-white font-bold text-base tracking-tight">Uni-Mart</p>
-                      <p className="text-white/70 text-xs mt-0.5">Campus marketplace</p>
                     </div>
 
                     {/* Quick links */}
@@ -419,7 +418,6 @@ export default function Header() {
               </Link>
               <div className="flex flex-col">
                 <span className="font-bold text-white text-lg leading-tight">Uni-Mart</span>
-                <span className="text-xs text-white/80">Campus marketplace</span>
               </div>
             </div>
 

@@ -29,8 +29,31 @@ function timeFor(timestamp: number | string) {
   });
 }
 
-function isMine(message: any) {
-  return message.senderId === "me" || message.senderId === "buyer";
+function isValidMongoId(value: any) {
+  return typeof value === 'string' && /^[0-9a-fA-F]{24}$/.test(value);
+}
+
+function resolveSellerId(listing: any) {
+  if (!listing) return null;
+  if (isValidMongoId(listing.sellerId)) return listing.sellerId;
+  if (isValidMongoId(listing.sellerUserId)) return listing.sellerUserId;
+  if (isValidMongoId(listing.sellerUid)) return listing.sellerUid;
+  if (isValidMongoId(listing.userId)) return listing.userId;
+  if (typeof listing.seller === 'object') {
+    return (
+      listing.seller._id || listing.seller.id || listing.seller.userId || listing.seller.uid
+    )?.toString?.() || null;
+  }
+  if (isValidMongoId(listing.seller)) return listing.seller;
+  return null;
+}
+
+function isMine(message: any, currentUserId?: string | null) {
+  if (!message) return false;
+  if (currentUserId && (message.senderId === currentUserId || message.sender === currentUserId)) {
+    return true;
+  }
+  return message.senderId === 'me' || message.sender === 'me' || message.senderId === 'buyer';
 }
 
 // Groups flat messages into { label, items: [{ ...message, showTail }] } chunks
@@ -64,7 +87,7 @@ function groupMessages(messages: any[]) {
 export default function ListingChatPage() {
   const params = useParams();
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const id = params?.id;
 
   const [listing, setListing] = useState<any>(null);
@@ -125,8 +148,8 @@ export default function ListingChatPage() {
 
     (async () => {
       try {
-        const sellerId = listing?.sellerId || listing?.seller || listing?.sellerUserId || listing?.sellerUid;
-        const sellerEmail = listing?.sellerEmail || listing?.email;
+        const sellerId = resolveSellerId(listing);
+        const sellerEmail = listing?.sellerEmail || listing?.email || listing?.seller?.email;
         if (!sellerId && !sellerEmail) throw new Error("Seller is unavailable");
 
         const payload: any = {
@@ -141,7 +164,8 @@ export default function ListingChatPage() {
           body: payload,
         });
 
-        const conv = res?.data || res?.conversation || res;
+        const conv = res?.conversation || res?.data?.conversation || res?.data || res;
+        if (!conv) throw new Error('Conversation response was invalid');
         if (active) setConversation(conv);
       } catch (err) {
         console.error("Unable to start chat session", err);

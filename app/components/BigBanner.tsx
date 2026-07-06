@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
 function BoltIcon({ className }: { className?: string }) {
@@ -22,8 +23,28 @@ function BoltIcon({ className }: { className?: string }) {
 }
 
 export default function BigBanner() {
+  const [bounce, setBounce] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollY = window.scrollY;
+      // Create a bouncing effect based on scroll position
+      // The bounce oscillates between -8 and 8 pixels
+      const bounceAmount = Math.sin(scrollY * 0.01) * 8;
+      setBounce(bounceAmount);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   return (
-    <div className="w-full rounded-2xl shadow-md overflow-hidden bg-orange-600 relative">
+    <div
+      className="w-full rounded-2xl shadow-md overflow-hidden bg-orange-600 relative transition-transform duration-300 ease-out"
+      style={{
+        transform: `translateY(${bounce}px)`,
+      }}
+    >
       {/* Faint decorative bolts scattered in the background */}
       <BoltIcon className="pointer-events-none absolute -top-3 left-1/3 w-10 h-10 text-orange-500/30 rotate-12" />
       <BoltIcon className="pointer-events-none absolute bottom-1 left-[58%] w-6 h-6 text-orange-400/30 -rotate-12" />
