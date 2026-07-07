@@ -1,7 +1,8 @@
+
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
-import { X, Send, HelpCircle, ChevronDown, Sparkles, Mail, RefreshCw, AlertCircle, Minimize2, Maximize2 } from 'lucide-react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { X, Send, HelpCircle, ChevronDown, Sparkles, Mail, RefreshCw, AlertCircle, Minimize2, Maximize2, WifiOff, Clock } from 'lucide-react';
 import apiFetch from '../../lib/apiClient';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -15,8 +16,25 @@ export default function RiriChat({ onClose, init = {} }: any) {
   const [suggestions, setSuggestions] = useState<{ products: any[]; services: any[] }>({ products: [], services: [] });
   const [isExpanded, setIsExpanded] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [isOffline, setIsOffline] = useState(false);
   const boxRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const maxRetries = 3;
+
+  // Check online status
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     boxRef.current?.scrollTo({ top: boxRef.current.scrollHeight });
@@ -27,30 +45,48 @@ export default function RiriChat({ onClose, init = {} }: any) {
   }, []);
 
   const send = async () => {
-    if (!input.trim() || loading) return;
+    if (!input.trim() || loading || isOffline) return;
     
     const userMsg = { id: `u${Date.now()}`, role: 'user', text: input };
     setMessages((m) => [...m, userMsg]);
     setInput('');
     setLoading(true);
     setError(null);
+    setRetryCount(0);
 
+    try {
+      await sendMessageWithRetry(userMsg.text);
+    } catch (e: any) {
+      console.error('Chat error:', e);
+      handleChatError(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const sendMessageWithRetry = async (messageText: string, attempt: number = 1) => {
     try {
       const conversationHistory = messages.map((m) => ({ role: m.role, content: m.text }));
       
       const res = await apiFetch('/riri/chat', {
         method: 'POST',
         body: { 
-          message: userMsg.text, 
-          conversationId: init.conversationId,
-          conversationHistory 
+          message: messageText, 
+          conversationId: init.conversationId || 'temp-conversation',
+          conversationHistory,
+          // Send a sanitized version to avoid ObjectId issues
+          userId: init.userId || null,
         },
       });
 
       const data = res?.data || res;
       
       if (res?.status === 500) {
-        throw new Error('Server error. Please try again later.');
+        throw new Error('Server error. Please try again.');
+      }
+
+      if (res?.status === 401) {
+        throw new Error('Please log in to continue.');
       }
 
       const reply = data?.data?.response || data?.response || (data?.data?.text ?? 'Sorry, I\'m having trouble.');
@@ -65,21 +101,49 @@ export default function RiriChat({ onClose, init = {} }: any) {
         const polite = "I'm sorry — I don't have a confident answer to that. Please contact our customer service for further assistance.";
         setMessages((m) => [...m, { id: `s${Date.now()}-2`, role: 'assistant', text: polite }]);
       }
-    } catch (e: any) {
-      console.error('Chat error:', e);
-      setError(e.message || 'Failed to get response from RIRI');
-      setMessages((m) => [...m, { 
-        id: `s${Date.now()}`, 
-        role: 'assistant', 
-        text: 'I\'m having trouble connecting right now. Please try again in a moment.' 
-      }]);
-    } finally {
-      setLoading(false);
+
+      setRetryCount(0);
+    } catch (error: any) {
+      if (attempt < maxRetries && error.message.includes('500')) {
+        // Retry with exponential backoff
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 8000);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return sendMessageWithRetry(messageText, attempt + 1);
+      }
+      throw error;
     }
   };
 
+  const handleChatError = (error: any) => {
+    let errorMessage = 'Failed to get response from RIRI.';
+    
+    if (error.message?.includes('ObjectId')) {
+      errorMessage = 'We\'re experiencing technical difficulties. Our team is working on it. Please try again in a few minutes.';
+    } else if (error.message?.includes('log in')) {
+      errorMessage = 'Please log in to use the chat feature.';
+    } else if (isOffline) {
+      errorMessage = 'You appear to be offline. Please check your internet connection.';
+    }
+
+    setError(errorMessage);
+    setMessages((m) => [...m, { 
+      id: `s${Date.now()}`, 
+      role: 'assistant', 
+      text: errorMessage + ' You can try again or contact support for immediate assistance.' 
+    }]);
+
+    // Provide a fallback option
+    setTimeout(() => {
+      setMessages((m) => [...m, { 
+        id: `s${Date.now()}-fallback`, 
+        role: 'assistant', 
+        text: 'In the meantime, you can browse our products directly or reach out to our support team for help.' 
+      }]);
+    }, 1000);
+  };
+
   const contactSupport = () => {
-    window.open('mailto:support@unimart.example', '_blank');
+    window.open('mailto:support@unimart.example?subject=RIRI%20Chat%20Support%20Request', '_blank');
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -93,6 +157,18 @@ export default function RiriChat({ onClose, init = {} }: any) {
     setMessages([{ id: 's1', role: 'assistant', text: 'Hi! I\'m RIRI — how can I help you today?' }]);
     setSuggestions({ products: [], services: [] });
     setError(null);
+    setRetryCount(0);
+  };
+
+  const handleRetry = () => {
+    setError(null);
+    setRetryCount(0);
+    // Resend the last user message
+    const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
+    if (lastUserMsg) {
+      setInput(lastUserMsg.text);
+      setTimeout(() => send(), 100);
+    }
   };
 
   return (
@@ -112,14 +188,24 @@ export default function RiriChat({ onClose, init = {} }: any) {
               <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-white animate-pulse" />
+              <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${
+                isOffline ? 'bg-yellow-400' : 'bg-green-400 animate-pulse'
+              }`} />
             </div>
             <div>
               <h2 className="text-white font-semibold text-lg tracking-tight">RIRI Assistant</h2>
-              <p className="text-white/70 text-xs">AI-powered shopping guide</p>
+              <p className="text-white/70 text-xs">
+                {isOffline ? 'Offline' : 'AI-powered shopping guide'}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-1">
+            {isOffline && (
+              <div className="flex items-center gap-1 mr-1 px-2 py-1 bg-yellow-400/20 rounded-lg">
+                <WifiOff className="w-3 h-3 text-yellow-200" />
+                <span className="text-xs text-white/80">Offline</span>
+              </div>
+            )}
             <button
               onClick={() => setIsExpanded(!isExpanded)}
               className="text-white/80 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/10"
@@ -178,9 +264,20 @@ export default function RiriChat({ onClose, init = {} }: any) {
 
           {error && (
             <div className="flex justify-center animate-in slide-in-from-bottom-2 duration-300">
-              <div className="bg-red-50 border border-red-200 px-4 py-3 rounded-xl flex items-center gap-2 text-sm text-red-700">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                <span>{error}</span>
+              <div className="bg-red-50 border border-red-200 px-4 py-3 rounded-xl max-w-[90%]">
+                <div className="flex items-start gap-2 text-sm text-red-700">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p>{error}</p>
+                    <button
+                      onClick={handleRetry}
+                      className="mt-2 text-xs text-red-600 hover:text-red-800 font-medium underline-offset-2 hover:underline transition-colors flex items-center gap-1"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      Try again
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -258,13 +355,13 @@ export default function RiriChat({ onClose, init = {} }: any) {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask RIRI anything..."
+                placeholder={isOffline ? 'You are offline...' : 'Ask RIRI anything...'}
                 className="w-full px-4 py-2.5 pr-12 rounded-xl border border-gray-200/80 focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20 bg-white/80 backdrop-blur-sm transition-all duration-200 text-sm sm:text-base outline-none disabled:opacity-50"
-                disabled={loading}
+                disabled={loading || isOffline}
               />
               <button
                 onClick={send}
-                disabled={!input.trim() || loading}
+                disabled={!input.trim() || loading || isOffline}
                 className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-teal-500 text-white hover:bg-teal-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 <Send className="w-4 h-4" />
@@ -287,7 +384,10 @@ export default function RiriChat({ onClose, init = {} }: any) {
               New conversation
             </button>
             <span className="text-xs text-gray-300">|</span>
-            <span className="text-xs text-gray-400">Powered by AI</span>
+            <span className="text-xs text-gray-400 flex items-center gap-1">
+              <Clock className="w-3 h-3" />
+              {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
           </div>
         </div>
       </div>
