@@ -9,6 +9,8 @@ import Header from "./components/Header";
 import Footer from "./components/Footer";
 import SocketChatHost from "./components/SocketChatHost";
 import MessageListener from "./components/MessageListener";
+import RiriHost from "./components/RiriHost";
+import RiriButton from "./components/RiriButton";
 import SocketProvider from "./components/SocketProvider";
 import WelcomeBadgeModal from "./components/WelcomeBadgeModal";
 
@@ -85,8 +87,12 @@ export default function RootLayout({
             {/* Mobile bottom nav (Temu-style, global) */}
             <Footer />
 
+            {/* Floating RIRI assistant button (home page only) */}
+            <RiriButton />
+
             {/* Global AI assistant */}
             <SocketChatHost />
+            <RiriHost />
             <MessageListener />
             <WelcomeBadgeModal />
           </SocketProvider>
