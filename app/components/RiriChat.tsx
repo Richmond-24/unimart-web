@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Send, HelpCircle, ChevronDown, Sparkles, Mail, RefreshCw } from 'lucide-react';
+import { X, Send, HelpCircle, ChevronDown, Sparkles, Mail, RefreshCw, AlertCircle, Minimize2, Maximize2 } from 'lucide-react';
 import apiFetch from '../../lib/apiClient';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -14,6 +14,7 @@ export default function RiriChat({ onClose, init = {} }: any) {
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<{ products: any[]; services: any[] }>({ products: [], services: [] });
   const [isExpanded, setIsExpanded] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const boxRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -22,42 +23,56 @@ export default function RiriChat({ onClose, init = {} }: any) {
   }, [messages, suggestions]);
 
   useEffect(() => {
-    // Focus input on mount
     setTimeout(() => inputRef.current?.focus(), 100);
   }, []);
 
   const send = async () => {
     if (!input.trim() || loading) return;
+    
     const userMsg = { id: `u${Date.now()}`, role: 'user', text: input };
     setMessages((m) => [...m, userMsg]);
     setInput('');
     setLoading(true);
+    setError(null);
 
     try {
       const conversationHistory = messages.map((m) => ({ role: m.role, content: m.text }));
+      
       const res = await apiFetch('/riri/chat', {
         method: 'POST',
-        body: { message: userMsg.text, conversationId: init.conversationId, conversationHistory },
+        body: { 
+          message: userMsg.text, 
+          conversationId: init.conversationId,
+          conversationHistory 
+        },
       });
 
       const data = res?.data || res;
+      
+      if (res?.status === 500) {
+        throw new Error('Server error. Please try again later.');
+      }
+
       const reply = data?.data?.response || data?.response || (data?.data?.text ?? 'Sorry, I\'m having trouble.');
 
       setMessages((m) => [...m, { id: `s${Date.now()}`, role: 'assistant', text: reply }]);
 
-      // Show lightweight suggestions if provided
       const matches = data?.data?.matches || { products: [], services: [] };
       setSuggestions({ products: matches.products || [], services: matches.services || [] });
 
-      // If assistant signals no confident answer, follow up politely and provide contact option
       const noAnswer = data?.data?.noAnswer || data?.data?.feedbackRequired;
       if (noAnswer) {
         const polite = "I'm sorry — I don't have a confident answer to that. Please contact our customer service for further assistance.";
         setMessages((m) => [...m, { id: `s${Date.now()}-2`, role: 'assistant', text: polite }]);
       }
-    } catch (e) {
-      console.error(e);
-      setMessages((m) => [...m, { id: `s${Date.now()}`, role: 'assistant', text: 'Error contacting RIRI' }]);
+    } catch (e: any) {
+      console.error('Chat error:', e);
+      setError(e.message || 'Failed to get response from RIRI');
+      setMessages((m) => [...m, { 
+        id: `s${Date.now()}`, 
+        role: 'assistant', 
+        text: 'I\'m having trouble connecting right now. Please try again in a moment.' 
+      }]);
     } finally {
       setLoading(false);
     }
@@ -72,6 +87,12 @@ export default function RiriChat({ onClose, init = {} }: any) {
       e.preventDefault();
       send();
     }
+  };
+
+  const resetConversation = () => {
+    setMessages([{ id: 's1', role: 'assistant', text: 'Hi! I\'m RIRI — how can I help you today?' }]);
+    setSuggestions({ products: [], services: [] });
+    setError(null);
   };
 
   return (
@@ -98,12 +119,17 @@ export default function RiriChat({ onClose, init = {} }: any) {
               <p className="text-white/70 text-xs">AI-powered shopping guide</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <button
               onClick={() => setIsExpanded(!isExpanded)}
               className="text-white/80 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/10"
+              title={isExpanded ? 'Minimize' : 'Expand'}
             >
-              <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${isExpanded ? '' : 'rotate-180'}`} />
+              {isExpanded ? (
+                <Minimize2 className="w-5 h-5" />
+              ) : (
+                <Maximize2 className="w-5 h-5" />
+              )}
             </button>
             <button
               onClick={onClose}
@@ -116,9 +142,9 @@ export default function RiriChat({ onClose, init = {} }: any) {
 
         {/* Messages */}
         <div ref={boxRef} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-gradient-to-b from-gray-50/50 to-white/50">
-          {messages.map((m) => (
+          {messages.map((m, index) => (
             <div
-              key={m.id}
+              key={m.id || index}
               className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2 duration-300`}
             >
               <div
@@ -150,6 +176,15 @@ export default function RiriChat({ onClose, init = {} }: any) {
             </div>
           )}
 
+          {error && (
+            <div className="flex justify-center animate-in slide-in-from-bottom-2 duration-300">
+              <div className="bg-red-50 border border-red-200 px-4 py-3 rounded-xl flex items-center gap-2 text-sm text-red-700">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{error}</span>
+              </div>
+            </div>
+          )}
+
           {suggestions.products.length > 0 && (
             <div className="mt-4 animate-in slide-in-from-bottom-4 duration-500">
               <div className="flex items-center gap-2 mb-3">
@@ -157,9 +192,9 @@ export default function RiriChat({ onClose, init = {} }: any) {
                 <span className="text-sm font-medium text-gray-700">Recommended for you</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {suggestions.products.slice(0, 4).map((p) => (
+                {suggestions.products.slice(0, 4).map((p, idx) => (
                   <Link
-                    key={p.id}
+                    key={p.id || idx}
                     href={p.url || '#'}
                     className="group flex items-center gap-3 p-3 rounded-xl bg-white border border-gray-100/80 hover:border-teal-200 hover:shadow-md transition-all duration-200"
                   >
@@ -170,6 +205,10 @@ export default function RiriChat({ onClose, init = {} }: any) {
                           alt={p.title || 'Product'}
                           fill
                           className="object-cover group-hover:scale-105 transition-transform duration-200"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                          }}
                         />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
@@ -220,7 +259,7 @@ export default function RiriChat({ onClose, init = {} }: any) {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Ask RIRI anything..."
-                className="w-full px-4 py-2.5 pr-12 rounded-xl border border-gray-200/80 focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20 bg-white/80 backdrop-blur-sm transition-all duration-200 text-sm sm:text-base outline-none"
+                className="w-full px-4 py-2.5 pr-12 rounded-xl border border-gray-200/80 focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20 bg-white/80 backdrop-blur-sm transition-all duration-200 text-sm sm:text-base outline-none disabled:opacity-50"
                 disabled={loading}
               />
               <button
@@ -239,17 +278,16 @@ export default function RiriChat({ onClose, init = {} }: any) {
               <span className="hidden sm:inline">Support</span>
             </button>
           </div>
-          <div className="mt-2 flex justify-center">
+          <div className="mt-2 flex justify-center gap-4">
             <button
-              onClick={() => {
-                setMessages([{ id: 's1', role: 'assistant', text: 'Hi! I\'m RIRI — how can I help you today?' }]);
-                setSuggestions({ products: [], services: [] });
-              }}
+              onClick={resetConversation}
               className="text-xs text-gray-400 hover:text-teal-600 transition-colors flex items-center gap-1"
             >
               <RefreshCw className="w-3 h-3" />
-              Start new conversation
+              New conversation
             </button>
+            <span className="text-xs text-gray-300">|</span>
+            <span className="text-xs text-gray-400">Powered by AI</span>
           </div>
         </div>
       </div>

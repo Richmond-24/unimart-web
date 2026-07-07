@@ -75,6 +75,7 @@ export default function ProductGrid(props: { horizontal?: boolean } = {}) {
               href={`/listings/${lid}`}
               className="block group"
             >
+
               {/* Airbnb-style card: no box shadow on container, just clean image + text */}
               <div className="flex flex-col">
                 {/* Square image — same rounded-xl style as CampusTrending */}
@@ -106,6 +107,7 @@ export default function ProductGrid(props: { horizontal?: boolean } = {}) {
                       </div>
                     )}
                   </div>
+                  
 
                   {/* Product title */}
                   <p className="text-[12px] text-slate-500 leading-snug line-clamp-1 mb-1">
