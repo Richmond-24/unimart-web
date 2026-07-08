@@ -91,7 +91,7 @@ export default function CommentsSection({ listingId }: { listingId: string }) {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Your name (optional)"
-                className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
+                className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl placeholder:text-slate-500 placeholder:opacity-100 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
               />
               <select
                 value={rating}
@@ -110,7 +110,7 @@ export default function CommentsSection({ listingId }: { listingId: string }) {
               onChange={(e) => setText(e.target.value)}
               placeholder="Share your experience or ask a question..."
               rows={3}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl resize-y focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl resize-y placeholder:text-slate-500 placeholder:opacity-100 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
             />
             <div className="flex flex-col sm:flex-row gap-3 justify-end">
               <button

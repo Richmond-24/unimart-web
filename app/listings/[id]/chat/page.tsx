@@ -10,8 +10,26 @@ import { useAuth } from "../../../context/AuthContext";
 
 // ---- pure helpers (no state, safe to keep outside the component) ----
 
-function dateLabelFor(timestamp: number | string) {
-  const d = new Date(Number(timestamp));
+function parseTimestamp(value: any): Date | null {
+  if (value == null) return null;
+  if (value instanceof Date) {
+    return isNaN(value.getTime()) ? null : value;
+  }
+  if (typeof value === "number") {
+    const date = new Date(value);
+    return isNaN(date.getTime()) ? null : date;
+  }
+  if (typeof value === "string") {
+    const numeric = Number(value);
+    const date = !Number.isNaN(numeric) ? new Date(numeric) : new Date(value);
+    return isNaN(date.getTime()) ? null : date;
+  }
+  return null;
+}
+
+function dateLabelFor(timestamp: any) {
+  const d = parseTimestamp(timestamp);
+  if (!d) return "";
   const today = new Date();
   const yesterday = new Date();
   yesterday.setDate(today.getDate() - 1);
@@ -21,9 +39,10 @@ function dateLabelFor(timestamp: number | string) {
   return d.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
-function timeFor(timestamp: number | string) {
-  if (!timestamp) return "";
-  return new Date(Number(timestamp)).toLocaleTimeString([], {
+function timeFor(timestamp: any) {
+  const d = parseTimestamp(timestamp);
+  if (!d) return "";
+  return d.toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
   });

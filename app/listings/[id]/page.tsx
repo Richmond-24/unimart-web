@@ -190,7 +190,7 @@ export default function ListingPage() {
   };
 
   // --- Add to cart ---
-  const handleAddCart = async () => {
+  const handleAddCart = async (redirectTo: string = '/cart') => {
     if (!listing) return;
     setCartAdded(true);
 
@@ -228,8 +228,8 @@ export default function ListingPage() {
       : Promise.resolve();
 
     try {
-      await router.push('/cart');
       await backendSave;
+      await router.push(redirectTo);
     } catch (e) {
       console.error('Navigation to cart failed:', e);
     }
@@ -741,7 +741,7 @@ export default function ListingPage() {
             <span className="text-[10px] font-medium mt-0.5">Chat</span>
           </button>
           <button
-            onClick={handleAddCart}
+            onClick={() => handleAddCart()}
             className={`flex-1 py-3 rounded-full font-bold text-sm transition flex items-center justify-center gap-1.5 border-2 ${
               cartAdded
                 ? "bg-emerald-50 border-emerald-500 text-emerald-700"
@@ -752,7 +752,7 @@ export default function ListingPage() {
             {cartAdded ? "Added" : "Add to cart"}
           </button>
           <button
-            onClick={async () => { await handleAddCart(); }}
+            onClick={async () => { await handleAddCart('/checkout'); }}
             className="flex-[1.15] py-3 rounded-full font-bold text-sm text-white bg-gradient-to-r from-[#fb6f20] to-[#e85d0a] hover:brightness-105 shadow-md shadow-orange-500/30 transition flex items-center justify-center gap-1.5"
           >
             Buy now

@@ -290,8 +290,8 @@ export default function CartPage() {
               </div>
 
               {/* Checkout is disabled — removed per request */}
-              <button className="btn-primary btn-full" disabled title="Checkout disabled">
-                Checkout disabled
+              <button className="btn-primary btn-full" onClick={() => router.push('/checkout')}>
+                Checkout securely
               </button>
 
               {/* Trust badges */}

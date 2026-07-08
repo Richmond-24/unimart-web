@@ -89,6 +89,13 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 
+input::placeholder,
+textarea::placeholder,
+select::placeholder {
+  color: rgba(71, 85, 105, 0.75);
+  opacity: 1;
+}
+
 /* ── Responsive app shell ─────────────────────────────── */
 
 #site-content {

@@ -1,6 +1,6 @@
+
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 
 function BoltIcon({ className }: { className?: string }) {
@@ -23,27 +23,9 @@ function BoltIcon({ className }: { className?: string }) {
 }
 
 export default function BigBanner() {
-  const [bounce, setBounce] = useState(0);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollY = window.scrollY;
-      // Create a bouncing effect based on scroll position
-      // The bounce oscillates between -8 and 8 pixels
-      const bounceAmount = Math.sin(scrollY * 0.01) * 8;
-      setBounce(bounceAmount);
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
   return (
     <div
-      className="w-full rounded-2xl shadow-md overflow-hidden bg-orange-600 relative transition-transform duration-300 ease-out"
-      style={{
-        transform: `translateY(${bounce}px)`,
-      }}
+      className="w-full rounded-2xl shadow-md overflow-hidden bg-orange-600 relative animate-banner-bounce"
     >
       {/* Faint decorative bolts scattered in the background */}
       <BoltIcon className="pointer-events-none absolute -top-3 left-1/3 w-10 h-10 text-orange-500/30 rotate-12" />
@@ -52,7 +34,7 @@ export default function BigBanner() {
       <div className="flex flex-col sm:flex-row items-stretch">
         {/* Left: the deal */}
         <div className="flex-1 min-w-0 px-5 py-5 sm:px-6 flex items-center gap-4">
-          <div className="flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-orange-400 flex items-center justify-center rotate-[-6deg] shadow-inner">
+          <div className="flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-orange-400 flex items-center justify-center rotate-[-6deg] shadow-inner animate-bolt-wiggle">
             <BoltIcon className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
           </div>
           <div className="min-w-0">
@@ -79,6 +61,33 @@ export default function BigBanner() {
           </span>
         </Link>
       </div>
+
+      <style jsx>{`
+        @keyframes bannerBounce {
+          0%,
+          100% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(-10px);
+          }
+        }
+        @keyframes boltWiggle {
+          0%,
+          100% {
+            transform: rotate(-6deg) scale(1);
+          }
+          50% {
+            transform: rotate(-6deg) scale(1.12);
+          }
+        }
+        .animate-banner-bounce {
+          animation: bannerBounce 2s ease-in-out infinite;
+        }
+        .animate-bolt-wiggle {
+          animation: boltWiggle 1s ease-in-out infinite;
+        }
+      `}</style>
     </div>
   );
 }

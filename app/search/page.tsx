@@ -221,7 +221,7 @@ export default function SearchPage() {
                 onChange={handleInputChange}
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch(inputValue)}
                 onFocus={() => setShowSuggestions(true)}
-                className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" 
+                className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm placeholder:text-slate-500 placeholder:opacity-100 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" 
               />
               
               {/* Autocomplete Dropdown */}

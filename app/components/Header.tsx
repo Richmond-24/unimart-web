@@ -509,7 +509,7 @@ export default function Header() {
                       }
                     } else if (e.key === "Escape") { setShowSuggestions(false); setActiveSuggestion(-1); }
                   }}
-                  className="w-full bg-white border border-gray-200 rounded-full py-2.5 pl-10 pr-4 text-sm outline-none focus:border-teal-300 focus:ring-1 focus:ring-teal-300 transition"
+                  className="w-full bg-white border border-gray-200 rounded-full py-2.5 pl-10 pr-4 text-sm outline-none placeholder:text-slate-500 placeholder:opacity-100 focus:border-teal-300 focus:ring-1 focus:ring-teal-300 transition"
                   placeholder="Search for products, brands, and more..."
                 />
               </div>
@@ -529,7 +529,7 @@ export default function Header() {
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       onInput={(e) => fetchSuggestions((e.target as HTMLInputElement).value)}
-                      className="w-full bg-gray-100 border border-gray-200 rounded-full py-2.5 pl-10 pr-4 text-sm outline-none"
+                      className="w-full bg-gray-100 border border-gray-200 rounded-full py-2.5 pl-10 pr-4 text-sm outline-none placeholder:text-slate-500 placeholder:opacity-100"
                       placeholder="Search for products, brands, and more..."
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {

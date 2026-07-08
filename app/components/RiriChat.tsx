@@ -7,7 +7,33 @@ import apiFetch from '../../lib/apiClient';
 import Link from 'next/link';
 import Image from 'next/image';
 
-export default function RiriChat({ onClose, init = {} }: any) {
+type LogoAnimationType = 'bounce' | 'float' | 'pulse' | 'wiggle' | 'none';
+type LogoAnimationSpeed = 'slow' | 'normal' | 'fast';
+
+interface RiriChatProps {
+  onClose: () => void;
+  init?: any;
+  /** Animation style for the RIRI logo icon. Default: 'bounce' */
+  logoAnimationType?: LogoAnimationType;
+  /** How fast the logo animates. Default: 'normal' */
+  logoAnimationSpeed?: LogoAnimationSpeed;
+  /** Turn the logo animation off entirely. Default: true */
+  logoAnimated?: boolean;
+}
+
+const SPEED_DURATIONS: Record<LogoAnimationSpeed, string> = {
+  slow: '2.4s',
+  normal: '1.6s',
+  fast: '0.9s',
+};
+
+export default function RiriChat({
+  onClose,
+  init = {},
+  logoAnimationType = 'bounce',
+  logoAnimationSpeed = 'normal',
+  logoAnimated = true,
+}: RiriChatProps) {
   const [messages, setMessages] = useState<Array<any>>([
     { id: 's1', role: 'assistant', text: 'Hi! I\'m RIRI — how can I help you today?' },
   ]);
@@ -171,6 +197,9 @@ export default function RiriChat({ onClose, init = {} }: any) {
     }
   };
 
+  const animationClass =
+    logoAnimated && logoAnimationType !== 'none' ? `riri-logo-${logoAnimationType}` : '';
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/40 backdrop-blur-sm transition-all duration-300 animate-in fade-in">
       <div className="absolute inset-0" onClick={onClose} />
@@ -185,8 +214,11 @@ export default function RiriChat({ onClose, init = {} }: any) {
         <div className="relative px-4 sm:px-6 py-4 border-b border-gray-100/80 flex items-center justify-between bg-gradient-to-r from-teal-600 to-emerald-600 rounded-t-2xl">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-white" />
+              <div
+                className={`w-9 h-9 sm:w-10 sm:h-10 md:w-11 md:h-11 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center ${animationClass}`}
+                style={{ animationDuration: SPEED_DURATIONS[logoAnimationSpeed] }}
+              >
+                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 md:w-5 md:h-5 text-white" />
               </div>
               <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${
                 isOffline ? 'bg-yellow-400' : 'bg-green-400 animate-pulse'
@@ -391,6 +423,75 @@ export default function RiriChat({ onClose, init = {} }: any) {
           </div>
         </div>
       </div>
+
+      <style jsx global>{`
+        @keyframes ririBounce {
+          0%,
+          100% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(-6px);
+          }
+        }
+        @keyframes ririFloat {
+          0%,
+          100% {
+            transform: translateY(0) rotate(0deg);
+          }
+          50% {
+            transform: translateY(-4px) rotate(3deg);
+          }
+        }
+        @keyframes ririPulse {
+          0%,
+          100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          50% {
+            transform: scale(1.12);
+            opacity: 0.85;
+          }
+        }
+        @keyframes ririWiggle {
+          0%,
+          100% {
+            transform: rotate(-8deg);
+          }
+          50% {
+            transform: rotate(8deg);
+          }
+        }
+        .riri-logo-bounce {
+          animation-name: ririBounce;
+          animation-timing-function: ease-in-out;
+          animation-iteration-count: infinite;
+        }
+        .riri-logo-float {
+          animation-name: ririFloat;
+          animation-timing-function: ease-in-out;
+          animation-iteration-count: infinite;
+        }
+        .riri-logo-pulse {
+          animation-name: ririPulse;
+          animation-timing-function: ease-in-out;
+          animation-iteration-count: infinite;
+        }
+        .riri-logo-wiggle {
+          animation-name: ririWiggle;
+          animation-timing-function: ease-in-out;
+          animation-iteration-count: infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .riri-logo-bounce,
+          .riri-logo-float,
+          .riri-logo-pulse,
+          .riri-logo-wiggle {
+            animation: none !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
