@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation";
 import { ChevronLeft, Send, Loader2, MessageCircle, AlertCircle } from "lucide-react";
 import apiFetch from "../../../../lib/apiClient";
 import { connectSocket } from "../../../../lib/socket";
-import LoadingSpinner from "../../components/LoadingSpinner";
 
 interface Message {
   _id?: string;
@@ -233,7 +232,6 @@ export default function SellerMessagesPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <LoadingSpinner size={40} />
       </div>
     );
   }
@@ -316,7 +314,6 @@ export default function SellerMessagesPage() {
           <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
             {messagesLoading ? (
               <div className="flex justify-center items-center h-full">
-                <LoadingSpinner size={30} />
               </div>
             ) : messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-gray-400">
