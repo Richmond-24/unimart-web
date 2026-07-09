@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 function BoltIcon({ className }: { className?: string }) {
@@ -23,9 +24,68 @@ function BoltIcon({ className }: { className?: string }) {
 }
 
 export default function BigBanner() {
+  const [transform, setTransform] = useState({ x: 0, y: 0, rotate: 0 });
+  const [isScrolling, setIsScrolling] = useState(false);
+
+  const lastScrollY = useRef(0);
+  const scrollTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rafId = useRef<number | null>(null);
+
+  useEffect(() => {
+    lastScrollY.current = window.scrollY;
+
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      const delta = currentScrollY - lastScrollY.current;
+      lastScrollY.current = currentScrollY;
+
+      setIsScrolling(true);
+
+      // Cancel any pending frame to avoid stacking updates
+      if (rafId.current) cancelAnimationFrame(rafId.current);
+
+      rafId.current = requestAnimationFrame(() => {
+        // Clamp velocity so fast scrolls don't fling it off-screen
+        const clampedDelta = Math.max(-40, Math.min(40, delta));
+        const shakeX = clampedDelta * 0.4;
+        const shakeRotate = clampedDelta * 0.3;
+
+        setTransform({
+          x: shakeX,
+          y: -Math.abs(clampedDelta) * 0.15,
+          rotate: shakeRotate,
+        });
+      });
+
+      // Reset "scrolling" state after user stops, so idle bounce resumes
+      if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
+      scrollTimeout.current = setTimeout(() => {
+        setIsScrolling(false);
+        setTransform({ x: 0, y: 0, rotate: 0 });
+      }, 150);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
+      if (rafId.current) cancelAnimationFrame(rafId.current);
+    };
+  }, []);
+
   return (
     <div
-      className="w-full rounded-2xl shadow-md overflow-hidden bg-orange-600 relative animate-banner-bounce"
+      className={`w-full rounded-2xl shadow-md overflow-hidden bg-orange-600 relative ${
+        isScrolling ? "" : "animate-banner-bounce"
+      }`}
+      style={{
+        transform: isScrolling
+          ? `translate(${transform.x}px, ${transform.y}px) rotate(${transform.rotate}deg)`
+          : undefined,
+        transition: isScrolling
+          ? "transform 90ms ease-out"
+          : "transform 300ms ease-out",
+      }}
     >
       {/* Faint decorative bolts scattered in the background */}
       <BoltIcon className="pointer-events-none absolute -top-3 left-1/3 w-10 h-10 text-orange-500/30 rotate-12" />
