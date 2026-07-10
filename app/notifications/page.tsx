@@ -130,8 +130,24 @@ export default function NotificationsPage() {
           {notifications.map((note) => {
             const Icon = ICONS[note.type] || Bell;
             const label = TYPE_LABELS[note.type] || "Update";
+
+            const handleClickNotification = () => {
+              // Mark as read
+              if (!note.read) {
+                markAsRead(note._id || note.id);
+              }
+              // Navigate to chat for message notifications
+              if (note.type === 'new_message' && note.data?.conversationId) {
+                router.push(`/messages`);
+              }
+            };
+
             return (
-              <article key={note._id || note.id} className={`rounded-3xl border p-5 ${note.read ? 'border-slate-200 bg-white' : 'border-teal-200 bg-teal-50 shadow-sm'}`}>
+              <article
+                key={note._id || note.id}
+                className={`rounded-3xl border p-5 cursor-pointer hover:shadow-md transition-shadow ${note.read ? 'border-slate-200 bg-white' : 'border-teal-200 bg-teal-50 shadow-sm'}`}
+                onClick={handleClickNotification}
+              >
                 <div className="flex items-start gap-4">
                   <div className="mt-1 shrink-0 rounded-2xl bg-white p-3 text-teal-700 shadow-sm">
                     <Icon className="w-5 h-5" />
@@ -149,7 +165,7 @@ export default function NotificationsPage() {
                 </div>
                 <div className="mt-4 flex flex-wrap items-center gap-2">
                   {!note.read && (
-                    <button onClick={() => markAsRead(note._id || note.id)} className="inline-flex items-center gap-2 rounded-full bg-teal-700 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-800 transition">
+                    <button onClick={(e) => { e.stopPropagation(); markAsRead(note._id || note.id); }} className="inline-flex items-center gap-2 rounded-full bg-teal-700 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-800 transition">
                       <CheckCircle2 className="w-4 h-4" /> Mark read
                     </button>
                   )}

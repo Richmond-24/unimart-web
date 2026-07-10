@@ -32,6 +32,11 @@ function MessagesContent() {
   const searchParams = useSearchParams();
   const selectedConvId = searchParams.get("convId");
 
+  // Get current user ID for sender detection
+  const currentUserId = typeof window !== 'undefined'
+    ? (() => { try { const u = JSON.parse(localStorage.getItem('unimart:user') || '{}'); return u?._id || u?.id || ''; } catch { return ''; } })()
+    : '';
+
   const [conversations, setConversations] = useState<ConvData[]>([]);
   const [selectedConv, setSelectedConv] = useState<ConvData | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -110,11 +115,16 @@ function MessagesContent() {
           if (selectedConv && data.conversationId === selectedConv._id) {
             const newMessage = data.message || {
               _id: `msg-${Date.now()}`,
-              sender: data.from === "buyer" ? selectedConv.buyer?._id : "seller",
+              sender: data.from === "buyer" ? selectedConv.buyer?._id : currentUserId,
               text: data.message?.text || "New message",
               timestamp: new Date().toISOString(),
             };
-            setMessages((prev) => [...prev, newMessage]);
+            // Deduplicate
+            setMessages((prev) => {
+              const exists = prev.some(p => p._id && p._id === newMessage._id);
+              if (exists) return prev;
+              return [...prev, newMessage];
+            });
             scrollToBottom();
           }
         } catch (err) {
@@ -251,9 +261,8 @@ function MessagesContent() {
             <button
               key={conv._id}
               onClick={() => handleSelectConversation(conv)}
-              className={`w-full text-left p-3 border-b hover:bg-gray-50 transition-colors ${
-                selectedConv?._id === conv._id ? "bg-teal-50 border-l-4 border-l-teal-600" : ""
-              }`}
+              className={`w-full text-left p-3 border-b hover:bg-gray-50 transition-colors ${selectedConv?._id === conv._id ? "bg-teal-50 border-l-4 border-l-teal-600" : ""
+                }`}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
@@ -307,33 +316,29 @@ function MessagesContent() {
               </div>
             ) : (
               messages.map((msg, idx) => {
-                const isMine =
-                  msg.sender === "seller" ||
-                  msg.senderId === "seller" ||
-                  (!msg.sender && !msg.senderId);
+                const senderId = (msg.sender as any)?._id || msg.sender || msg.senderId || '';
+                const isMine = String(senderId) === String(currentUserId);
                 return (
                   <div
                     key={msg._id || msg.id || idx}
                     className={`flex ${isMine ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`max-w-xs px-4 py-2.5 rounded-lg ${
-                        isMine
+                      className={`max-w-xs px-4 py-2.5 rounded-lg ${isMine
                           ? "bg-teal-600 text-white rounded-br-none"
                           : "bg-white border border-gray-200 text-gray-900 rounded-bl-none"
-                      }`}
+                        }`}
                     >
                       <p className="break-words text-sm">{msg.text}</p>
                       <p
-                        className={`text-xs mt-1 ${
-                          isMine ? "text-teal-100" : "text-gray-500"
-                        }`}
+                        className={`text-xs mt-1 ${isMine ? "text-teal-100" : "text-gray-500"
+                          }`}
                       >
                         {msg.timestamp
                           ? new Date(msg.timestamp).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
                           : ""}
                       </p>
                     </div>
@@ -364,7 +369,7 @@ function MessagesContent() {
             />
             <button
               onClick={sendMessage}
-              disabled={!input.trim() || sending || !connected}
+              disabled={!input.trim() || sending}
               className="px-4 py-2.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
             >
               {sending ? (

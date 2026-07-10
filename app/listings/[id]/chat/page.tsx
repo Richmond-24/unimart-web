@@ -31,8 +31,10 @@ interface ChatParticipant {
 export default function BuyerChatPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
   const { isAuthenticated, user } = useAuth();
   const id = params?.id;
+  const convIdParam = searchParams?.get('convId') || null;
 
   const [listing, setListing] = useState<any>(null);
   const [conversation, setConversation] = useState<any>(null);
@@ -63,15 +65,14 @@ export default function BuyerChatPage() {
     let mounted = true;
     if (!id) return;
 
-    setLoading(true);
     (async () => {
       try {
         const res = await apiFetch(`/public/listings/${id}`);
         if (!mounted) return;
         setListing(res?.data || res || null);
       } catch (err) {
-        console.error("Failed to load product for chat", err);
-        if (mounted) setError("Unable to load product details. Please try again.");
+        console.warn("Listing not found for chat, will try conversation fallback", err);
+        // Don't set error here — we'll recover via convId
       }
     })();
 
@@ -80,20 +81,60 @@ export default function BuyerChatPage() {
     };
   }, [id]);
 
-  // Create or get conversation
+  // Create or get conversation — fall back to direct conv fetch if listing missing
   useEffect(() => {
-    if (!id || !listing || !isAuthenticated) {
-      if (!isAuthenticated) {
-        setError("Please sign in to chat with the seller.");
-      }
+    if (!isAuthenticated) {
+      setError("Please sign in to chat with the seller.");
+      setLoading(false);
       return;
     }
+    if (!id) return;
 
     let mounted = true;
-    setLoading(true);
 
     (async () => {
       try {
+        setLoading(true);
+
+        // If we have a convId from URL params, try loading the conversation directly first
+        if (convIdParam) {
+          try {
+            const convRes = await apiFetch(`/conversations/${convIdParam}`);
+            const conv = convRes?.conversation || convRes?.data || convRes;
+            if (conv && conv._id) {
+              if (mounted) {
+                setConversation(conv);
+                // Extract seller info from conversation
+                const sInfo = conv.seller || {
+                  _id: '',
+                  name: 'Seller',
+                  photoURL: '',
+                };
+                setSellerInfo(sInfo);
+                // If listing wasn't loaded, use conversation data as fallback
+                if (!listing) {
+                  setListing({
+                    title: conv.productName || 'Product',
+                    images: conv.productImage ? [conv.productImage] : [],
+                    price: conv.price,
+                    seller: conv.seller,
+                  });
+                }
+              }
+              return; // Successfully loaded via convId
+            }
+          } catch (convErr) {
+            console.warn("Failed to load conversation by convId:", convErr);
+            // Fall through to create a new conversation
+          }
+        }
+
+        // If no convId or it failed, create/get conversation from listing
+        if (!listing) {
+          if (mounted) setError("Unable to load product details. Please try again.");
+          return;
+        }
+
         const payload: any = {
           productId: id,
         };
@@ -143,7 +184,7 @@ export default function BuyerChatPage() {
     return () => {
       mounted = false;
     };
-  }, [id, listing, isAuthenticated]);
+  }, [id, listing, isAuthenticated, convIdParam]);
 
   // Load messages and setup socket
   useEffect(() => {
@@ -161,7 +202,10 @@ export default function BuyerChatPage() {
           setMessages(msgs);
           // Check if seller has replied
           const hasSellerMessage = msgs.some(
-            (m: any) => m.sender !== user?.id && m.senderId !== user?.id
+            (m: any) => {
+              const senderId = m.sender?._id || m.sender || m.senderId;
+              return String(senderId) !== String(user?.id) && String(senderId) !== String(user?._id);
+            }
           );
           setIsWaitingForReply(!hasSellerMessage);
         }
@@ -186,13 +230,23 @@ export default function BuyerChatPage() {
     };
 
     const handleNewMessage = (msg: any) => {
-      if (!msg || !msg.text || String(msg.conversationId || msg.conversationID) !== String(conversationId))
-        return;
+      if (!msg || !msg.text) return;
+      // Accept messages for this conversation
+      const msgConvId = String(msg.conversationId || msg.conversationID || msg.conversation || '');
+      if (msgConvId && msgConvId !== String(conversationId)) return;
 
       if (mounted) {
-        setMessages((prev) => [...prev, msg]);
+        // Deduplicate: check if message already exists
+        setMessages((prev) => {
+          const exists = prev.some(
+            (p) => (p._id && p._id === msg._id) || (p.id && p.id === msg.id)
+          );
+          if (exists) return prev;
+          return [...prev, msg];
+        });
         // If we got a message from someone else (seller), we're no longer waiting
-        if (msg.sender !== user?.id && msg.senderId !== user?.id) {
+        const senderId = msg.sender?._id || msg.sender || msg.senderId;
+        if (String(senderId) !== String(user?.id) && String(senderId) !== String(user?._id)) {
           setIsWaitingForReply(false);
         }
         scrollToBottom();
@@ -341,23 +395,21 @@ export default function BuyerChatPage() {
               className={`flex ${isMine ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-xs sm:max-w-sm px-4 py-2.5 rounded-lg ${
-                  isMine
+                className={`max-w-xs sm:max-w-sm px-4 py-2.5 rounded-lg ${isMine
                     ? "bg-teal-600 text-white rounded-br-none"
                     : "bg-white border border-gray-200 text-gray-900 rounded-bl-none"
-                }`}
+                  }`}
               >
                 <p className="break-words">{msg.text}</p>
                 <p
-                  className={`text-xs mt-1 ${
-                    isMine ? "text-teal-100" : "text-gray-500"
-                  }`}
+                  className={`text-xs mt-1 ${isMine ? "text-teal-100" : "text-gray-500"
+                    }`}
                 >
                   {msg.timestamp
                     ? new Date(msg.timestamp).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
                     : ""}
                 </p>
               </div>

@@ -9,6 +9,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 interface Conversation {
   _id: string;
   id?: string;
+  product?: string | { _id?: string };
   productName?: string;
   productImage?: string;
   price?: number;
@@ -62,9 +63,10 @@ export default function MessagesPage() {
   }, [searchQuery, convs]);
 
   const openChat = (conv: Conversation) => {
-    // Find the product ID from the conversation
-    // For now, navigate to messages with conversation ID
-    const productId = conv.productName || conv._id;
+    // Use the product ObjectId, falling back to conversation ID for direct routing
+    const productId =
+      (typeof conv.product === 'object' ? conv.product?._id : conv.product) ||
+      conv._id;
     router.push(`/listings/${productId}/chat?convId=${conv._id}`);
   };
 
