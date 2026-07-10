@@ -52,7 +52,7 @@ import {
   Tag,
   Store,
 } from "lucide-react";
-import apiFetch from "../../lib/apiClient";
+import apiClient from "../../lib/apiClient";
 
 const NAV_LINKS = [
   { label: "Home", href: "/", icon: Home },
@@ -102,6 +102,7 @@ export default function Header() {
   const [messageCount, setMessageCount] = useState<number>(0);
   const [notificationCount, setNotificationCount] = useState<number>(0);
   const [userUniversity, setUserUniversity] = useState<string>("");
+  const [isLoadingMessages, setIsLoadingMessages] = useState(true);
 
   // Hamburger menu state
   const [menuOpen, setMenuOpen] = useState(false);
@@ -186,14 +187,24 @@ export default function Header() {
     return () => { if (suggDebounce.current) window.clearTimeout(suggDebounce.current); };
   }, []);
 
+  // FIXED: Use apiClient as a function instead of .get()
   const fetchSuggestions = (q: string) => {
     if (suggDebounce.current) window.clearTimeout(suggDebounce.current);
     if (!q || q.trim().length < 1) { setSuggestions([]); setShowSuggestions(false); return; }
     suggDebounce.current = window.setTimeout(async () => {
       try {
-        const res = await apiFetch(`/search/suggestions?q=${encodeURIComponent(q)}`);
-        if (res?.success && Array.isArray(res.data)) { setSuggestions(res.data.slice(0, 8)); setShowSuggestions(true); setActiveSuggestion(-1); }
-      } catch (e) { setSuggestions([]); setShowSuggestions(false); }
+        const res = await apiClient(`/search/suggestions?q=${encodeURIComponent(q)}`, { 
+          method: 'GET' 
+        });
+        if (res?.success && Array.isArray(res.data)) { 
+          setSuggestions(res.data.slice(0, 8)); 
+          setShowSuggestions(true); 
+          setActiveSuggestion(-1); 
+        }
+      } catch (e) { 
+        setSuggestions([]); 
+        setShowSuggestions(false); 
+      }
     }, 250) as unknown as number;
   };
 
@@ -219,46 +230,176 @@ export default function Header() {
     };
   }, []);
 
+  // Load message count - using direct fetch to avoid apiClient error logging
   useEffect(() => {
     let mounted = true;
+
     const loadMessageCount = async () => {
       try {
-        let total = 0;
-        const res = await apiFetch('/conversations');
-        const convs = Array.isArray(res?.conversations ? res.conversations : res) ? (res?.conversations || res) : [];
-        total = convs.reduce((sum: number, conv: any) => sum + Number(conv.unreadForUser || 0), 0);
-        if (mounted) setMessageCount(total);
+        setIsLoadingMessages(true);
+        
+        // Check if user is logged in
+        const token = localStorage.getItem('unimart:token');
+        if (!token) {
+          if (mounted) {
+            setMessageCount(0);
+            setIsLoadingMessages(false);
+          }
+          return;
+        }
+
+        // Get the API base URL from environment or use default
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://unimart-backend-6pld.onrender.com';
+        
+        // Direct fetch - this won't trigger the apiClient error logging
+        try {
+          const response = await fetch(`${apiBase}/api/conversations`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (!mounted) return;
+          
+          if (response.ok) {
+            const data = await response.json();
+            let total = 0;
+            const convs = Array.isArray(data?.conversations ? data.conversations : data) ? (data?.conversations || data) : [];
+            total = convs.reduce((sum: number, conv: any) => sum + Number(conv.unreadForUser || 0), 0);
+            setMessageCount(total);
+          } else {
+            // Silently fail - don't log
+            setMessageCount(0);
+          }
+        } catch (err) {
+          // Silent fail - don't log
+          if (mounted) {
+            setMessageCount(0);
+          }
+        }
       } catch (e) {
-        if (mounted) setMessageCount(0);
+        // Silent catch - don't log anything
+        if (mounted) {
+          setMessageCount(0);
+        }
+      } finally {
+        if (mounted) {
+          setIsLoadingMessages(false);
+        }
       }
     };
+
     loadMessageCount();
-    const onMessageUpdate = (e: any) => setMessageCount(Number(e?.detail?.count || 0));
+
+    // Listen for auth changes
+    const onMessageUpdate = (e: any) => {
+      if (mounted) {
+        setMessageCount(Number(e?.detail?.count || 0));
+        setIsLoadingMessages(false);
+      }
+    };
+    
+    const onAuthChange = () => {
+      loadMessageCount();
+    };
+
     window.addEventListener("unimart:messageCount", onMessageUpdate as EventListener);
-    return () => { mounted = false; window.removeEventListener("unimart:messageCount", onMessageUpdate as EventListener); };
+    window.addEventListener("unimart:authChanged", onAuthChange);
+    window.addEventListener("storage", (e) => {
+      if (e.key === 'unimart:token') {
+        loadMessageCount();
+      }
+    });
+
+    return () => { 
+      mounted = false; 
+      window.removeEventListener("unimart:messageCount", onMessageUpdate as EventListener);
+      window.removeEventListener("unimart:authChanged", onAuthChange);
+    };
   }, []);
 
+  // Load notification count with error handling
   useEffect(() => {
-    const onNotification = (e: any) => { setNotificationCount(Number(e?.detail?.count || 0)); };
+    let mounted = true;
+
+    const onNotification = (e: any) => { 
+      if (mounted) {
+        setNotificationCount(Number(e?.detail?.count || 0)); 
+      }
+    };
+
     window.addEventListener("unimart:notificationCount", onNotification as EventListener);
-    return () => window.removeEventListener("unimart:notificationCount", onNotification as EventListener);
+    
+    return () => {
+      mounted = false;
+      window.removeEventListener("unimart:notificationCount", onNotification as EventListener);
+    };
   }, []);
 
   useEffect(() => {
     let mounted = true;
+
     async function loadNotificationCount() {
       try {
         let userId = null;
-        try { const raw = localStorage.getItem("unimart:user"); if (raw) userId = JSON.parse(raw)?._id || JSON.parse(raw)?.id || null; } catch (e) {}
-        if (!userId) return;
-        const res = await apiFetch(`/notifications?userId=${encodeURIComponent(userId)}&unreadOnly=true`);
-        if (!mounted) return;
-        if (res && typeof res.unreadCount === "number") setNotificationCount(res.unreadCount || 0);
+        try { 
+          const raw = localStorage.getItem("unimart:user"); 
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            userId = parsed?._id || parsed?.id || null;
+          }
+        } catch (e) {}
+        
+        if (!userId) {
+          if (mounted) setNotificationCount(0);
+          return;
+        }
+
+        const token = localStorage.getItem('unimart:token');
+        if (!token) {
+          if (mounted) setNotificationCount(0);
+          return;
+        }
+
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://unimart-backend-6pld.onrender.com';
+
+        try {
+          const response = await fetch(
+            `${apiBase}/api/notifications?userId=${encodeURIComponent(userId)}&unreadOnly=true`,
+            {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+          
+          if (!mounted) return;
+          
+          if (response.ok) {
+            const res = await response.json();
+            if (res && typeof res.unreadCount === "number") {
+              setNotificationCount(res.unreadCount || 0);
+            } else {
+              setNotificationCount(0);
+            }
+          } else {
+            setNotificationCount(0);
+          }
+        } catch (err) {
+          // Silently ignore
+          if (mounted) {
+            setNotificationCount(0);
+          }
+        }
       } catch (e) {
         if (mounted) setNotificationCount(0);
       }
     }
+    
     loadNotificationCount();
+    
     return () => { mounted = false; };
   }, []);
 
@@ -364,11 +505,20 @@ export default function Header() {
                             >
                               <div className="relative">
                                 <Icon className="w-4 h-4 text-teal-600" strokeWidth={2} />
-                                {link.href === '/messages' && messageCount > 0 && (
-                                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1">{messageCount > 9 ? '9+' : messageCount}</span>
+                                {link.href === '/messages' && !isLoadingMessages && messageCount > 0 && (
+                                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1">
+                                    {messageCount > 9 ? '9+' : messageCount}
+                                  </span>
+                                )}
+                                {link.href === '/messages' && isLoadingMessages && (
+                                  <span className="absolute -top-2 -right-2 bg-gray-400 text-white text-[10px] font-bold rounded-full w-[16px] h-[16px] flex items-center justify-center animate-pulse">
+                                    ...
+                                  </span>
                                 )}
                                 {link.href === '/notifications' && notificationCount > 0 && (
-                                  <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1">{notificationCount > 99 ? '99+' : notificationCount}</span>
+                                  <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1">
+                                    {notificationCount > 99 ? '99+' : notificationCount}
+                                  </span>
                                 )}
                               </div>
                               <span>{link.label}</span>

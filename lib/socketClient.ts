@@ -21,7 +21,7 @@ function normalizeSocketUrl(url: string): string {
 const SOCKET_URL =
   (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_WS_URL)
     || (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_SOCKET_URL)
-    || (EXPLICIT_SOCKET_BASE ? normalizeSocketUrl(EXPLICIT_SOCKET_BASE) : 'https://unimart-backends-2.onrender.com');
+    || (EXPLICIT_SOCKET_BASE ? normalizeSocketUrl(EXPLICIT_SOCKET_BASE) : 'https://unimart-backend-6pld.onrender.com');
 
 function getSocketUrl() {
   return SOCKET_URL.replace(/\/+$/, '');

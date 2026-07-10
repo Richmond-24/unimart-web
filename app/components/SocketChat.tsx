@@ -1,162 +1,413 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
-import { connectSocket, getSocket } from "../../lib/socket";
-import apiFetch from "../../lib/apiClient";
+import React, { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import io, { Socket } from "socket.io-client";
+import apiClient from "../../lib/apiClient"; // ✅ Fixed: default import
+import { useAuth } from "../context/AuthContext";
 
-type Message = {
-  _id?: string;
+interface Message {
+  _id: string;
   senderId: string;
-  text: string;
-  timestamp?: string | number;
-  type?: string;
-};
+  receiverId: string;
+  content: string;
+  createdAt: string;
+  read: boolean;
+}
 
-export default function SocketChat({ conv, onClose }: { conv: any; onClose: () => void }) {
+interface SocketChatProps {
+  listingId: string;
+  sellerId: string;
+  listingTitle?: string;
+  onClose?: () => void;
+}
+
+export default function SocketChat({
+  listingId,
+  sellerId,
+  listingTitle,
+  onClose,
+}: SocketChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
-  const [connected, setConnected] = useState(false);
-  const [isDesktop, setIsDesktop] = useState(false);
-  const listRef = useRef<HTMLDivElement | null>(null);
+  const [newMessage, setNewMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [onlineStatus, setOnlineStatus] = useState<"online" | "offline" | "typing">("offline");
+  
+  const socketRef = useRef<Socket | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
+  const router = useRouter();
 
-  // Hide on desktop (640px+)
+  const currentUserId = user?._id || user?.id;
+  const isSeller = user?.role === "seller";
+
+  // Load messages from API
   useEffect(() => {
-    const checkDesktop = () => setIsDesktop(window.innerWidth >= 640);
-    checkDesktop();
-    window.addEventListener('resize', checkDesktop);
-    return () => window.removeEventListener('resize', checkDesktop);
-  }, []);
-
-  useEffect(() => {
-    // connectSocket now retrieves token from localStorage automatically
-    const socket = connectSocket();
-
-    const onConnect = () => setConnected(true);
-    const onDisconnect = () => setConnected(false);
-
-    if (socket) {
-      socket.on("connect", onConnect);
-      socket.on("disconnect", onDisconnect);
-    }
-
-    const joinRoom = () => {
-      if (!conv || !conv._id || !socket) return;
-      socket.emit("join_conversation", { conversationId: conv._id || conv.id });
-    };
-
-    const onNewMessage = (msg: Message) => {
-      setMessages((m) => [...m, msg]);
-      // scroll
-      setTimeout(() => { if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight; }, 50);
-    };
-
-    if (socket) {
-      socket.on("new_message", onNewMessage);
-    }
-
-    // load recent messages from backend
-    (async () => {
+    const loadMessages = async () => {
+      if (!listingId) return;
+      
       try {
-        const res = await apiFetch(`/conversations/${conv._id || conv.id}/messages?limit=50`);
-        const msgs = res?.data || [];
-        setMessages(msgs);
-        setTimeout(() => { if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight; }, 100);
-      } catch (e) {
-        console.error('Failed to load messages', e);
+        setIsLoading(true);
+        const response = await apiClient(`/api/messages/${listingId}`, {
+          method: "GET",
+        });
+        
+        if (response?.success && response.data) {
+          setMessages(response.data);
+        }
+      } catch (err) {
+        console.error("Failed to load messages:", err);
+        // Don't show error to user, just use empty array
+      } finally {
+        setIsLoading(false);
       }
-    })();
+    };
 
-    // join after connect
-    if (socket) {
-      if (socket.connected) joinRoom();
-      else socket.once('connect', joinRoom);
+    loadMessages();
+  }, [listingId]);
+
+  // Initialize socket connection
+  useEffect(() => {
+    const token = localStorage.getItem("unimart:token");
+    if (!token) {
+      setError("Please login to chat");
+      setIsLoading(false);
+      return;
     }
+
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "https://unimart-backend-6pld.onrender.com";
+    
+    socketRef.current = io(socketUrl, {
+      auth: { token },
+      transports: ["websocket", "polling"],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+    });
+
+    const socket = socketRef.current;
+
+    socket.on("connect", () => {
+      console.log("Socket connected");
+      setIsConnected(true);
+      setError(null);
+      
+      // Join conversation room
+      const roomId = [sellerId, currentUserId].sort().join("-");
+      socket.emit("joinConversation", { 
+        conversationId: roomId,
+        listingId,
+        sellerId,
+        buyerId: currentUserId,
+      });
+    });
+
+    socket.on("connect_error", (err) => {
+      console.error("Socket connection error:", err);
+      setIsConnected(false);
+      setError("Failed to connect to chat server");
+    });
+
+    socket.on("disconnect", () => {
+      console.log("Socket disconnected");
+      setIsConnected(false);
+    });
+
+    socket.on("receiveMessage", (message: Message) => {
+      setMessages((prev) => [...prev, message]);
+      scrollToBottom();
+    });
+
+    socket.on("messageRead", ({ messageId, readAt }) => {
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg._id === messageId ? { ...msg, read: true } : msg
+        )
+      );
+    });
+
+    socket.on("typing", ({ userId }) => {
+      if (userId !== currentUserId) {
+        setOnlineStatus("typing");
+        setTimeout(() => setOnlineStatus("online"), 3000);
+      }
+    });
+
+    socket.on("userOnline", ({ userId }) => {
+      if (userId !== currentUserId) {
+        setOnlineStatus("online");
+      }
+    });
+
+    socket.on("userOffline", ({ userId }) => {
+      if (userId !== currentUserId) {
+        setOnlineStatus("offline");
+      }
+    });
 
     return () => {
-      if (!socket) return;
-      try {
-        socket.off("connect", onConnect);
-        socket.off("disconnect", onDisconnect);
-        socket.off("new_message", onNewMessage);
-        socket.emit("leave_conversation", { conversationId: conv._id || conv.id });
-      } catch (e) {}
+      socket.disconnect();
+      socketRef.current = null;
     };
-  }, [conv]);
+  }, [sellerId, currentUserId, listingId]);
 
-  const sendMessage = () => {
-    if (!input.trim()) return;
-    const socket = getSocket();
-    const payload = { conversationId: conv._id || conv.id, text: input.trim(), type: 'text' };
-    // optimistic UI
-    const optimistic: Message = { senderId: 'me', text: input.trim(), timestamp: Date.now() };
-    setMessages((m) => [...m, optimistic]);
-    setInput("");
-    setTimeout(() => { if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight; }, 50);
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  };
+
+  const sendMessage = async () => {
+    if (!newMessage.trim()) return;
+    if (!isConnected) {
+      setError("Not connected to chat server");
+      return;
+    }
+    if (!currentUserId) {
+      setError("Please login to send messages");
+      return;
+    }
+
+    const messageContent = newMessage.trim();
+    setNewMessage("");
+    setError(null);
+
+    // Optimistic update
+    const tempMessage: Message = {
+      _id: `temp-${Date.now()}`,
+      senderId: currentUserId,
+      receiverId: sellerId,
+      content: messageContent,
+      createdAt: new Date().toISOString(),
+      read: false,
+    };
+    setMessages((prev) => [...prev, tempMessage]);
+
     try {
-      if (socket && socket.connected) {
-        socket.emit("send_message", payload, (ack: any) => {
-          // ack may contain saved message
-        });
-      } else {
-        // fallback: POST to backend sync endpoint
-        apiFetch(`/conversations/${conv._id || conv.id}/sync`, { method: 'POST', body: JSON.stringify({ messages: [payload] }), headers: { 'Content-Type': 'application/json' } }).catch(() => {});
-      }
-    } catch (e) {
-      console.error('sendMessage error', e);
+      const roomId = [sellerId, currentUserId].sort().join("-");
+      
+      socketRef.current?.emit("sendMessage", {
+        conversationId: roomId,
+        listingId,
+        content: messageContent,
+        senderId: currentUserId,
+        receiverId: sellerId,
+        sellerId: sellerId,
+        buyerId: currentUserId,
+      });
+
+      // Save message to API
+      await apiClient("/api/messages", {
+        method: "POST",
+        body: {
+          listingId,
+          content: messageContent,
+          receiverId: sellerId,
+          senderId: currentUserId,
+        },
+      });
+    } catch (err) {
+      console.error("Failed to send message:", err);
+      setError("Failed to send message. Please try again.");
+      // Remove optimistic message if failed
+      setMessages((prev) => prev.filter((msg) => msg._id !== tempMessage._id));
     }
   };
 
-  const productImage = conv?.productImage || conv?.product?.imageUrls?.[0] || conv?.image || conv?.productImageUrl || null;
-  const sellerName = conv?.sellerName || conv?.seller?.name || conv?.sellerName || '';
-  const sellerPhone = conv?.sellerPhone || conv?.seller?.phone || null;
+  const handleTyping = () => {
+    const roomId = [sellerId, currentUserId].sort().join("-");
+    socketRef.current?.emit("typing", {
+      conversationId: roomId,
+      userId: currentUserId,
+    });
+  };
+
+  const formatTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+
+    if (diff < 60000) return "Just now";
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+    if (diff < 172800000) return "Yesterday";
+    return date.toLocaleDateString();
+  };
+
+  const getMessageStatus = (message: Message) => {
+    if (message.senderId === currentUserId) {
+      return message.read ? "✓✓ Read" : "✓ Sent";
+    }
+    return "";
+  };
+
+  if (!currentUserId) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-8 bg-gray-50 rounded-xl">
+        <div className="text-center">
+          <p className="text-gray-600 mb-4">Please login to chat</p>
+          <button
+            onClick={() => router.push("/login")}
+            className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+          >
+            Login
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ position: 'fixed', right: 20, bottom: 20, width: 420, maxHeight: '75vh', zIndex: 9999, display: isDesktop ? 'none' : 'block' }}>
-      <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 14px 40px rgba(2,6,23,0.2)', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%' }}>
-        {/* Header */}
-        <div style={{ padding: '12px 14px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <div style={{ width: 48, height: 48, borderRadius: 10, overflow: 'hidden', background: '#f8fafc', flexShrink: 0 }}>
-              {productImage ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={productImage} alt="product" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0ea5a0', fontWeight: 700 }}>
-                  {conv?.productName ? String(conv.productName).slice(0,1) : 'C'}
+    <div className="flex flex-col h-full bg-white rounded-xl shadow-lg overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 bg-teal-600 text-white">
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+              <span className="text-lg font-bold">
+                {listingTitle?.charAt(0) || "C"}
+              </span>
+            </div>
+            <div
+              className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-teal-600 ${
+                onlineStatus === "online"
+                  ? "bg-green-500"
+                  : onlineStatus === "typing"
+                  ? "bg-yellow-500"
+                  : "bg-gray-400"
+              }`}
+            />
+          </div>
+          <div>
+            <h3 className="font-semibold">{listingTitle || "Chat"}</h3>
+            <p className="text-xs opacity-75">
+              {onlineStatus === "online"
+                ? "Online"
+                : onlineStatus === "typing"
+                ? "Typing..."
+                : "Offline"}
+            </p>
+          </div>
+        </div>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="p-1 hover:bg-white/10 rounded-full transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
+          </div>
+        ) : messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-gray-400">
+            <svg className="w-12 h-12 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            <p className="text-sm">No messages yet</p>
+            <p className="text-xs">Start the conversation!</p>
+          </div>
+        ) : (
+          messages.map((message, index) => {
+            const isOwnMessage = message.senderId === currentUserId;
+            const showDate = index === 0 || 
+              new Date(message.createdAt).toDateString() !== 
+              new Date(messages[index - 1].createdAt).toDateString();
+
+            return (
+              <React.Fragment key={message._id}>
+                {showDate && (
+                  <div className="flex justify-center my-4">
+                    <span className="px-3 py-1 text-xs bg-gray-200 text-gray-600 rounded-full">
+                      {new Date(message.createdAt).toLocaleDateString(undefined, {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </span>
+                  </div>
+                )}
+                <div
+                  className={`flex ${isOwnMessage ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    className={`max-w-[70%] rounded-lg px-4 py-2 ${
+                      isOwnMessage
+                        ? "bg-teal-600 text-white rounded-br-none"
+                        : "bg-white text-gray-800 rounded-bl-none shadow-sm border border-gray-100"
+                    }`}
+                  >
+                    <p className="break-words">{message.content}</p>
+                    <div
+                      className={`flex items-center gap-1 mt-1 text-xs ${
+                        isOwnMessage ? "text-teal-100" : "text-gray-400"
+                      }`}
+                    >
+                      <span>{formatTime(message.createdAt)}</span>
+                      {isOwnMessage && (
+                        <span className="ml-1">
+                          {message.read ? "✓✓" : "✓"}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              )}
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: 14, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 220 }}>{conv?.productName || 'Chat with seller'}</div>
-              <div style={{ fontSize: 12, color: '#6b7280' }}>{sellerName || (connected ? 'Connected' : 'Connecting...')}</div>
-            </div>
+              </React.Fragment>
+            );
+          })
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input */}
+      <div className="p-4 bg-white border-t border-gray-200">
+        {error && (
+          <div className="mb-2 p-2 bg-red-50 text-red-600 text-sm rounded">
+            {error}
           </div>
-
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            {sellerPhone && (
-              <a href={`tel:${sellerPhone}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#f8fafc', border: '1px solid #e6f6ef', color: '#065f46', padding: '8px 10px', borderRadius: 8, textDecoration: 'none', fontSize: 13 }}>📞 Call</a>
-            )}
-            <button onClick={onClose} aria-label="Close chat" style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>✕</button>
-          </div>
+        )}
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+              }
+            }}
+            onFocus={handleTyping}
+            placeholder="Type a message..."
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+            disabled={!isConnected}
+          />
+          <button
+            onClick={sendMessage}
+            disabled={!newMessage.trim() || !isConnected}
+            className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Send
+          </button>
         </div>
-
-        {/* Messages */}
-        <div ref={listRef} style={{ padding: 14, overflowY: 'auto', flex: 1, background: 'linear-gradient(180deg,#f8fafc, #ffffff)' }}>
-          {messages.map((m, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: (m.senderId === 'me' ? 'flex-end' : 'flex-start'), marginBottom: 10 }}>
-              <div style={{ background: m.senderId === 'me' ? '#059669' : '#ffffff', color: m.senderId === 'me' ? '#ffffff' : '#0f172a', padding: '10px 14px', borderRadius: 14, maxWidth: '78%', boxShadow: '0 6px 18px rgba(2,6,23,0.06)' }}>
-                <div style={{ fontSize: 14, lineHeight: '20px', wordBreak: 'break-word' }}>{m.text}</div>
-                <div style={{ fontSize: 11, color: m.senderId === 'me' ? 'rgba(255,255,255,0.85)' : '#94a3b8', marginTop: 8, textAlign: 'right' }}>{m.timestamp ? new Date(Number(m.timestamp)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Composer */}
-        <div style={{ padding: 12, borderTop: '1px solid #f1f5f9', display: 'flex', gap: 8, alignItems: 'center' }}>
-          <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Write a message to the seller..." style={{ flex: 1, padding: '10px 14px', borderRadius: 12, border: '1px solid #e6edf0', outline: 'none' }} onKeyDown={(e) => { if (e.key === 'Enter') sendMessage(); }} />
-          <button onClick={sendMessage} style={{ background: '#06b6d4', color: '#fff', border: 'none', padding: '10px 14px', borderRadius: 10, cursor: 'pointer', fontWeight: 700 }}>Send</button>
-        </div>
+        {!isConnected && (
+          <p className="mt-1 text-xs text-red-500">Reconnecting to chat server...</p>
+        )}
       </div>
     </div>
   );

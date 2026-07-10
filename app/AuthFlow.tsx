@@ -825,6 +825,7 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
     setIsLoading(true);
     try {
       console.debug("Attempting login with email:", email.substring(0, 3) + "***");
+      console.debug("API URL will be: " + process.env.NEXT_PUBLIC_API_URL + "/auth/login");
       
       const res = await apiFetch('/auth/login', { 
         method: 'POST', 

@@ -1,470 +1,386 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { ChevronLeft, Send, AlertCircle, Loader2 } from "lucide-react";
-import apiFetch from "../../../../lib/apiClient";
-import { connectSocket, getSocket } from "../../../../lib/socket";
-import LoadingSpinner from "../../../components/LoadingSpinner";
+import React, { useState, useEffect, useRef } from "react";
+import { useRouter, useParams } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft, Send, Phone, Video, Info } from "lucide-react";
+import { apiClient } from "../../../../lib/apiClient";
 import { useAuth } from "../../../context/AuthContext";
 
 interface Message {
-  _id?: string;
-  id?: string;
-  sender?: string;
-  senderId?: string;
-  senderName?: string;
-  text: string;
-  timestamp?: string | number;
-  type?: string;
-  read?: boolean;
-}
-
-interface ChatParticipant {
   _id: string;
-  id: string;
-  name: string;
-  photoURL?: string;
-  email?: string;
+  senderId: string;
+  receiverId: string;
+  content: string;
+  createdAt: string;
+  read: boolean;
 }
 
-export default function BuyerChatPage() {
-  const params = useParams();
-  const router = useRouter();
-  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-  const { isAuthenticated, user } = useAuth();
-  const id = params?.id;
-  const convIdParam = searchParams?.get('convId') || null;
+interface Listing {
+  _id: string;
+  title: string;
+  price: number;
+  images: string[];
+  sellerId: string;
+  sellerName: string;
+  sellerEmail?: string;
+}
 
-  const [listing, setListing] = useState<any>(null);
-  const [conversation, setConversation] = useState<any>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
+export default function ChatPage() {
+  const router = useRouter();
+  const params = useParams();
+  const listingId = params?.id as string;
+  const { user } = useAuth();
+  const [listing, setListing] = useState<Listing | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [input, setInput] = useState("");
-  const [connected, setConnected] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [sellerInfo, setSellerInfo] = useState<ChatParticipant | null>(null);
-  const [isWaitingForReply, setIsWaitingForReply] = useState(true);
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  const socketRef = useRef<any>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom
-  const scrollToBottom = () => {
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 50);
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+  const currentUserId = user?._id || user?.id;
+  const currentUserEmail = user?.email;
 
   // Load listing details
   useEffect(() => {
-    let mounted = true;
-    if (!id) return;
-
-    (async () => {
-      try {
-        const res = await apiFetch(`/public/listings/${id}`);
-        if (!mounted) return;
-        setListing(res?.data || res || null);
-      } catch (err) {
-        console.warn("Listing not found for chat, will try conversation fallback", err);
-        // Don't set error here — we'll recover via convId
-      }
-    })();
-
-    return () => {
-      mounted = false;
-    };
-  }, [id]);
-
-  // Create or get conversation — fall back to direct conv fetch if listing missing
-  useEffect(() => {
-    if (!isAuthenticated) {
-      setError("Please sign in to chat with the seller.");
-      setLoading(false);
-      return;
-    }
-    if (!id) return;
-
-    let mounted = true;
-
-    (async () => {
+    const loadListing = async () => {
+      if (!listingId) return;
+      
       try {
         setLoading(true);
-
-        // If we have a convId from URL params, try loading the conversation directly first
-        if (convIdParam) {
-          try {
-            const convRes = await apiFetch(`/conversations/${convIdParam}`);
-            const conv = convRes?.conversation || convRes?.data || convRes;
-            if (conv && conv._id) {
-              if (mounted) {
-                setConversation(conv);
-                // Extract seller info from conversation
-                const sInfo = conv.seller || {
-                  _id: '',
-                  name: 'Seller',
-                  photoURL: '',
-                };
-                setSellerInfo(sInfo);
-                // If listing wasn't loaded, use conversation data as fallback
-                if (!listing) {
-                  setListing({
-                    title: conv.productName || 'Product',
-                    images: conv.productImage ? [conv.productImage] : [],
-                    price: conv.price,
-                    seller: conv.seller,
-                  });
-                }
-              }
-              return; // Successfully loaded via convId
-            }
-          } catch (convErr) {
-            console.warn("Failed to load conversation by convId:", convErr);
-            // Fall through to create a new conversation
-          }
+        setError(null);
+        
+        const res = await apiClient.get(`/api/public/listings/${listingId}`, {
+          suppressErrorLog: true
+        });
+        
+        if (res?.success && res.data) {
+          setListing(res.data);
+        } else if (res?.data) {
+          setListing(res.data);
+        } else {
+          setError("Listing not found");
         }
+      } catch (err: any) {
+        console.warn('Failed to load listing:', err?.message || 'Unknown error');
+        setError("Failed to load listing");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-        // If no convId or it failed, create/get conversation from listing
-        if (!listing) {
-          if (mounted) setError("Unable to load product details. Please try again.");
+    loadListing();
+  }, [listingId]);
+
+  // Get or create conversation
+  useEffect(() => {
+    const getOrCreateConversation = async () => {
+      if (!listingId || !currentUserId || !listing) return;
+
+      try {
+        // Get the seller's email from the listing
+        const sellerEmail = listing.sellerEmail || listing.sellerId;
+        
+        if (!sellerEmail) {
+          console.warn('No seller email available');
           return;
         }
 
-        const payload: any = {
-          productId: id,
-        };
-
-        // Get seller ID from listing
-        const sellerId =
-          listing.sellerId ||
-          listing.sellerUserId ||
-          listing.sellerUid ||
-          listing.userId ||
-          (typeof listing.seller === "object" ? listing.seller._id || listing.seller.id : listing.seller);
-
-        if (sellerId) {
-          payload.sellerId = sellerId;
-        } else if (listing.sellerEmail) {
-          payload.sellerEmail = listing.sellerEmail;
-        } else {
-          throw new Error("Cannot determine seller");
+        const convIdParam = [listing.sellerId, currentUserId].sort().join("-");
+        
+        // Try to get existing conversation
+        try {
+          const convRes = await apiClient.get(`/api/conversations/${convIdParam}`, {
+            suppressErrorLog: true
+          });
+          
+          if (convRes?.success && convRes.data) {
+            setConversationId(convRes.data._id);
+            loadMessages(convRes.data._id);
+            return;
+          }
+        } catch (err: any) {
+          if (err.status === 404 || err.status === 400) {
+            console.debug('No existing conversation, creating new one');
+          } else {
+            console.warn('Error checking conversation:', err?.message || 'Unknown error');
+          }
         }
 
-        const res = await apiFetch("/conversations", {
-          method: "POST",
-          body: payload,
-        });
-
-        const conv = res?.conversation || res?.data?.conversation || res?.data || res;
-        if (!conv || !conv._id) throw new Error("Invalid conversation");
-
-        if (mounted) {
-          setConversation(conv);
-          // Extract seller info
-          const sInfo = conv.seller || {
-            _id: payload.sellerId,
-            name: listing.sellerName || "Seller",
-            photoURL: listing.sellerPhotoURL || listing.photoURL,
+        // Create new conversation with required fields
+        try {
+          const createPayload = {
+            listingId,
+            sellerId: listing.sellerId,
+            sellerEmail: sellerEmail,
+            buyerId: currentUserId,
+            buyerEmail: currentUserEmail,
+            title: listing.title,
+            price: listing.price,
           };
-          setSellerInfo(sInfo);
+          
+          console.log('Creating conversation with payload:', createPayload);
+          
+          const createRes = await apiClient.post("/api/conversations", createPayload, {
+            suppressErrorLog: true
+          });
+          
+          if (createRes?.success && createRes.data) {
+            setConversationId(createRes.data._id);
+            setMessages([]);
+          } else {
+            setError("Failed to start conversation");
+          }
+        } catch (createErr: any) {
+          console.warn('Failed to create conversation:', createErr?.message || 'Unknown error');
+          // Check if the error is due to missing sellerEmail
+          if (createErr?.message?.includes('sellerId or sellerEmail')) {
+            setError("Unable to start chat: Seller information is incomplete. Please try again later.");
+          } else {
+            setError("Failed to start conversation. Please try again.");
+          }
         }
-      } catch (err) {
-        console.error("Unable to start chat session", err);
-        if (mounted) setError("Could not start chat with the seller. Please try again.");
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-
-    return () => {
-      mounted = false;
-    };
-  }, [id, listing, isAuthenticated, convIdParam]);
-
-  // Load messages and setup socket
-  useEffect(() => {
-    if (!conversation?._id || !isAuthenticated) return;
-
-    const conversationId = conversation._id;
-    let mounted = true;
-
-    // Load initial messages
-    (async () => {
-      try {
-        const res = await apiFetch(`/conversations/${conversationId}/messages?limit=100`);
-        const msgs = (res?.data || res?.messages || []).reverse();
-        if (mounted) {
-          setMessages(msgs);
-          // Check if seller has replied
-          const hasSellerMessage = msgs.some(
-            (m: any) => {
-              const senderId = m.sender?._id || m.sender || m.senderId;
-              return String(senderId) !== String(user?.id) && String(senderId) !== String(user?._id);
-            }
-          );
-          setIsWaitingForReply(!hasSellerMessage);
-        }
-      } catch (err) {
-        console.error("Failed to load messages", err);
-      }
-    })();
-
-    // Setup Socket.IO
-    const socket = connectSocket();
-    socketRef.current = socket;
-
-    const handleConnect = () => {
-      setConnected(true);
-      if (socket) {
-        socket.emit("join_conversation", { conversationId });
+      } catch (err: any) {
+        console.warn('Error in conversation setup:', err?.message || 'Unknown error');
+        setError("Failed to set up conversation");
       }
     };
 
-    const handleDisconnect = () => {
-      setConnected(false);
-    };
-
-    const handleNewMessage = (msg: any) => {
-      if (!msg || !msg.text) return;
-      // Accept messages for this conversation
-      const msgConvId = String(msg.conversationId || msg.conversationID || msg.conversation || '');
-      if (msgConvId && msgConvId !== String(conversationId)) return;
-
-      if (mounted) {
-        // Deduplicate: check if message already exists
-        setMessages((prev) => {
-          const exists = prev.some(
-            (p) => (p._id && p._id === msg._id) || (p.id && p.id === msg.id)
-          );
-          if (exists) return prev;
-          return [...prev, msg];
-        });
-        // If we got a message from someone else (seller), we're no longer waiting
-        const senderId = msg.sender?._id || msg.sender || msg.senderId;
-        if (String(senderId) !== String(user?.id) && String(senderId) !== String(user?._id)) {
-          setIsWaitingForReply(false);
-        }
-        scrollToBottom();
-      }
-    };
-
-    if (socket) {
-      socket.on("connect", handleConnect);
-      socket.on("disconnect", handleDisconnect);
-      socket.on("new_message", handleNewMessage);
-
-      if (socket.connected) {
-        handleConnect();
-      } else {
-        socket.once("connect", handleConnect);
-      }
+    if (listing && currentUserId) {
+      getOrCreateConversation();
     }
+  }, [listingId, currentUserId, listing, currentUserEmail]);
 
-    return () => {
-      if (socket) {
-        socket.off("connect", handleConnect);
-        socket.off("disconnect", handleDisconnect);
-        socket.off("new_message", handleNewMessage);
-        socket.emit("leave_conversation", { conversationId });
+  // Load messages
+  const loadMessages = async (convId: string) => {
+    try {
+      setIsLoadingMessages(true);
+      const res = await apiClient.get(`/api/conversations/${convId}/messages?limit=100`, {
+        suppressErrorLog: true
+      });
+      
+      if (res?.success && res.data) {
+        setMessages(res.data);
       }
-      mounted = false;
-    };
-  }, [conversation?._id, isAuthenticated, user?.id]);
+    } catch (err: any) {
+      console.warn('Failed to load messages:', err?.message || 'Unknown error');
+      setMessages([]);
+    } finally {
+      setIsLoadingMessages(false);
+    }
+  };
 
+  // Send message
   const sendMessage = async () => {
-    if (!input.trim() || !conversation?._id || sending) return;
+    if (!newMessage.trim() || !conversationId || !currentUserId || !listing) return;
 
-    const text = input.trim();
-    setInput("");
-    setSending(true);
+    setIsSending(true);
+    const content = newMessage.trim();
+    setNewMessage("");
+
+    // Optimistic update
+    const tempMessage: Message = {
+      _id: `temp-${Date.now()}`,
+      senderId: currentUserId,
+      receiverId: listing.sellerId,
+      content,
+      createdAt: new Date().toISOString(),
+      read: false,
+    };
+    setMessages(prev => [...prev, tempMessage]);
 
     try {
-      // Add optimistic message
-      const optimisticMessage: Message = {
-        _id: `temp-${Date.now()}`,
-        sender: user?.id,
-        senderId: user?.id,
-        text,
-        timestamp: new Date().toISOString(),
-        type: "text",
-        read: false,
-      };
-
-      setMessages((prev) => [...prev, optimisticMessage]);
-      scrollToBottom();
-
-      // Send via API
-      const res = await apiFetch("/messages", {
-        method: "POST",
-        body: {
-          conversationId: conversation._id,
-          text,
-          type: "text",
-        },
+      const res = await apiClient.post("/api/messages", {
+        conversationId,
+        content,
+        senderId: currentUserId,
+        receiverId: listing.sellerId,
+        listingId,
+      }, {
+        suppressErrorLog: true
       });
-
-      if (!res?.success) {
-        throw new Error(res?.message || "Failed to send message");
+      
+      if (res?.success && res.data) {
+        setMessages(prev => 
+          prev.map(msg => 
+            msg._id === tempMessage._id ? res.data : msg
+          )
+        );
+      } else {
+        setMessages(prev => prev.filter(msg => msg._id !== tempMessage._id));
+        setError("Failed to send message");
       }
-
-      // Message will be updated via Socket.IO
-    } catch (err) {
-      console.error("Send message error:", err);
-      setError("Failed to send message. Please try again.");
-      // Re-add the message for retry
-      setInput(text);
-      setMessages((prev) => prev.slice(0, -1));
+    } catch (err: any) {
+      console.warn('Failed to send message:', err?.message || 'Unknown error');
+      setMessages(prev => prev.filter(msg => msg._id !== tempMessage._id));
+      setError("Failed to send message");
     } finally {
-      setSending(false);
+      setIsSending(false);
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
+  const formatTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+
+    if (diff < 60000) return "Just now";
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+    if (diff < 172800000) return "Yesterday";
+    return date.toLocaleDateString();
   };
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <LoadingSpinner size={40} />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
       </div>
     );
   }
 
-  if (error && !conversation) {
+  if (error || !listing) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="max-w-md p-6 text-center">
-          <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-500" />
-          <h2 className="text-lg font-semibold mb-2">Error</h2>
-          <p className="text-gray-600">{error}</p>
-          <button
-            onClick={() => router.back()}
-            className="mt-4 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
-          >
-            Go Back
-          </button>
-        </div>
+      <div className="flex flex-col items-center justify-center h-screen p-4">
+        <p className="text-red-600 mb-4">{error || "Listing not found"}</p>
+        <Link href="/" className="text-teal-600 hover:underline">
+          ← Back to home
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-screen bg-white">
+    <div className="flex flex-col h-screen bg-gray-50">
       {/* Header */}
-      <div className="sticky top-0 z-40 border-b bg-white px-4 py-3 sm:px-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button onClick={() => router.back()} className="p-1.5 hover:bg-gray-100 rounded-lg">
-              <ChevronLeft className="w-6 h-6" />
-            </button>
+      <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200 shadow-sm">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => router.back()}
+            className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+          >
+            <ArrowLeft className="w-6 h-6 text-gray-700" />
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center">
+              <span className="text-teal-600 font-bold">
+                {listing.title.charAt(0).toUpperCase()}
+              </span>
+            </div>
             <div>
-              <h1 className="font-semibold text-gray-900">{sellerInfo?.name || "Seller"}</h1>
-              <p className="text-xs text-gray-500">
-                {connected ? "Online" : "Offline"}
-              </p>
+              <h3 className="font-semibold text-gray-900">{listing.title}</h3>
+              <p className="text-xs text-gray-500">${listing.price}</p>
             </div>
           </div>
-          {!connected && <div className="text-xs text-gray-400">Connecting...</div>}
+        </div>
+        <div className="flex items-center gap-2">
+          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <Phone className="w-5 h-5 text-gray-600" />
+          </button>
+          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <Video className="w-5 h-5 text-gray-600" />
+          </button>
+          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <Info className="w-5 h-5 text-gray-600" />
+          </button>
         </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-        {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="text-gray-400 mb-2 text-4xl">💬</div>
-            <p className="text-gray-600 font-medium">Start a conversation</p>
-            <p className="text-sm text-gray-500">Send a message to the seller</p>
+      {/* Chat Area */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+        {isLoadingMessages ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
           </div>
-        )}
+        ) : messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-gray-400">
+            <p className="text-sm">No messages yet</p>
+            <p className="text-xs">Start the conversation!</p>
+          </div>
+        ) : (
+          messages.map((message, index) => {
+            const isOwnMessage = message.senderId === currentUserId;
+            const showDate = index === 0 || 
+              new Date(message.createdAt).toDateString() !== 
+              new Date(messages[index - 1].createdAt).toDateString();
 
-        {messages.map((msg, idx) => {
-          const isMine = msg.sender === user?.id || msg.senderId === user?.id;
-          return (
-            <div
-              key={msg._id || msg.id || idx}
-              className={`flex ${isMine ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`max-w-xs sm:max-w-sm px-4 py-2.5 rounded-lg ${isMine
-                    ? "bg-teal-600 text-white rounded-br-none"
-                    : "bg-white border border-gray-200 text-gray-900 rounded-bl-none"
-                  }`}
-              >
-                <p className="break-words">{msg.text}</p>
-                <p
-                  className={`text-xs mt-1 ${isMine ? "text-teal-100" : "text-gray-500"
-                    }`}
+            return (
+              <React.Fragment key={message._id}>
+                {showDate && (
+                  <div className="flex justify-center my-4">
+                    <span className="px-3 py-1 text-xs bg-gray-200 text-gray-600 rounded-full">
+                      {new Date(message.createdAt).toLocaleDateString(undefined, {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </span>
+                  </div>
+                )}
+                <div
+                  className={`flex ${isOwnMessage ? "justify-end" : "justify-start"}`}
                 >
-                  {msg.timestamp
-                    ? new Date(msg.timestamp).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
-                    : ""}
-                </p>
-              </div>
-            </div>
-          );
-        })}
-
-        {isWaitingForReply && messages.length > 0 && (
-          <div className="flex justify-center py-4">
-            <div className="px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-700 text-center">
-                Waiting for the seller to reply...
-              </p>
-            </div>
-          </div>
+                  <div
+                    className={`max-w-[70%] rounded-lg px-4 py-2 ${
+                      isOwnMessage
+                        ? "bg-teal-600 text-white rounded-br-none"
+                        : "bg-white text-gray-800 rounded-bl-none shadow-sm border border-gray-100"
+                    }`}
+                  >
+                    <p className="break-words">{message.content}</p>
+                    <div
+                      className={`flex items-center gap-1 mt-1 text-xs ${
+                        isOwnMessage ? "text-teal-100" : "text-gray-400"
+                      }`}
+                    >
+                      <span>{formatTime(message.createdAt)}</span>
+                      {isOwnMessage && (
+                        <span>{message.read ? "✓✓" : "✓"}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </React.Fragment>
+            );
+          })
         )}
-
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Error message */}
-      {error && (
-        <div className="px-4 py-2 bg-red-50 border-t border-red-200">
-          <p className="text-sm text-red-700">{error}</p>
-        </div>
-      )}
-
       {/* Input */}
-      <div className="border-t bg-white px-4 py-3 sm:px-6">
-        <button
-          onClick={() => router.push(`https://wa.me/${sellerInfo?._id || ''}?text=${encodeURIComponent('Hi, I saw your listing for ' + listing?.title)}`)}
-          className="w-full mb-3 py-2 px-4 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium transition-colors"
-        >
-          💬 Contact on WhatsApp
-        </button>
-
+      <div className="p-4 bg-white border-t border-gray-200">
         <div className="flex gap-2">
           <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type your message..."
-            className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none text-sm"
-            disabled={sending}
+            type="text"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+              }
+            }}
+            placeholder="Type a message..."
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+            disabled={isSending}
           />
           <button
             onClick={sendMessage}
-            disabled={!input.trim() || sending || !connected}
-            className="px-4 py-2.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+            disabled={!newMessage.trim() || isSending}
+            className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            {sending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Send className="w-4 h-4" />
-            )}
+            <Send className="w-4 h-4" />
+            Send
           </button>
         </div>
       </div>

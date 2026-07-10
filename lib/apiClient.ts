@@ -1,160 +1,120 @@
-export type ApiClientOptions = Omit<RequestInit, 'body'> & {
-  absolute?: boolean;
+
+// lib/apiClient.ts
+
+// Use the URL from env (which already includes /api)
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://unimart-backend-6pld.onrender.com/api';
+
+interface RequestOptions {
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
   body?: any;
-};
-
-const EXPLICIT_API_BASE =
-  (typeof process !== 'undefined' && (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL))
-    ? (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL)?.trim() || ''
-    : '';
-
-function normalizeBackendUrl(url: string): string {
-  return url
-    .trim()
-    .replace(/\/+$|\s+$/g, '')
-    .replace(/\/api$/i, '');
+  headers?: Record<string, string>;
+  suppressErrorLog?: boolean;
 }
 
-const API_BASE = EXPLICIT_API_BASE
-  ? normalizeBackendUrl(EXPLICIT_API_BASE)
-  : (typeof window !== 'undefined' ? '' : 'https://unimart-backends-2.onrender.com');
-
-function buildUrl(path: string, absolute?: boolean): string {
-  if (absolute) {
-    return path;
-  }
-
-  if (/^https?:\/\//i.test(path)) {
-    return path;
-  }
-
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  const hasApiPrefix = normalizedPath.startsWith('/api/');
-  const base = API_BASE;
-
-  if (base) {
-    return hasApiPrefix ? `${base}${normalizedPath}` : `${base}/api${normalizedPath}`;
-  }
-
-  return hasApiPrefix ? normalizedPath : `/api${normalizedPath}`;
-}
-
-async function parseResponse(response: Response) {
-  const text = await response.text();
-  try {
-    return text ? JSON.parse(text) : null;
-  } catch {
-    return text;
-  }
-}
-
-async function request<T = any>(method: string, path: string, opts: ApiClientOptions = {}): Promise<T> {
-  const url = buildUrl(path, opts.absolute);
+// Core request function
+async function request<T = any>(
+  endpoint: string,
+  options: RequestOptions = {}
+): Promise<T> {
+  // Ensure endpoint starts with /
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  // Build the full URL - DO NOT add /api here since it's already in the base URL
+  const url = `${API_BASE_URL}${cleanEndpoint}`;
+  
   const headers: Record<string, string> = {
-    ...((opts.headers as Record<string, string>) || {}),
+    'Content-Type': 'application/json',
+    ...options.headers,
   };
 
-  const isFormData = typeof FormData !== 'undefined' && opts.body instanceof FormData;
-  if (!isFormData && opts.body !== undefined && !Object.keys(headers).some((key) => key.toLowerCase() === 'content-type')) {
-    headers['Content-Type'] = 'application/json';
-  }
-
+  // Add auth token if available
   if (typeof window !== 'undefined') {
-    try {
-      const token = localStorage.getItem('unimart:token');
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-    } catch {
-      // ignore localStorage access errors
+    const token = localStorage.getItem('unimart:token');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
     }
   }
 
-  const init: RequestInit = {
-    method,
-    headers,
-    ...opts,
-  };
-
-  if (opts.body !== undefined) {
-    if (isFormData) {
-      init.body = opts.body;
-    } else if (typeof opts.body === 'string') {
-      init.body = opts.body;
-    } else {
-      init.body = JSON.stringify(opts.body);
-    }
-  }
-
-  console.debug('[apiClient] request', { method, url, init });
-
-  let response: Response;
   try {
-    response = await fetch(url, init);
-  } catch (err: any) {
-    const errorMsg = err.message || String(err);
-    console.error('[apiClient] fetch error:', errorMsg);
+    const response = await fetch(url, {
+      method: options.method || 'GET',
+      headers,
+      body: options.body ? JSON.stringify(options.body) : undefined,
+      credentials: 'include',
+    });
+
+    let payload: any = {};
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      try {
+        payload = await response.json();
+      } catch (e) {
+        payload = {};
+      }
+    }
+
+    if (!response.ok) {
+      const errorMessage = payload?.message || payload?.error || response.statusText || `HTTP ${response.status}`;
+      const error = new Error(errorMessage);
+      (error as any).status = response.status;
+      (error as any).payload = payload;
+      (error as any).url = url;
+      
+      // Only log if suppressErrorLog is not true
+      if (!options.suppressErrorLog) {
+        console.error('[apiClient] Error Response:', {
+          status: response.status,
+          statusText: response.statusText,
+          message: errorMessage,
+          payload: payload,
+          url: url,
+        });
+      }
+      
+      throw error;
+    }
+
+    return payload as T;
+  } catch (error: any) {
+    // Handle network errors
+    if (error.message === 'Failed to fetch' || error.message.includes('NetworkError')) {
+      const networkError = new Error('Cannot connect to server. Please check your internet connection.');
+      (networkError as any).isNetworkError = true;
+      (networkError as any).status = 0;
+      throw networkError;
+    }
     
-    // Provide helpful error message
-    if (errorMsg.includes('Failed to fetch') || errorMsg.includes('ERR_NAME_NOT_RESOLVED')) {
-      const error = new Error(
-        `Cannot reach backend server at ${API_BASE}. The server may be down or unreachable.`
-      );
-      (error as any).status = 0;
-      (error as any).originalError = err;
+    // If it's already our custom error with status, re-throw it
+    if (error.status) {
       throw error;
     }
     
-    throw err;
+    // Wrap unknown errors
+    const wrappedError = new Error(error.message || 'An unexpected error occurred');
+    (wrappedError as any).originalError = error;
+    throw wrappedError;
   }
-
-  const payload = await parseResponse(response);
-
-  if (!response.ok) {
-    const backendMessage =
-      payload && typeof payload === 'object' && 'message' in payload
-        ? String((payload as { message?: string }).message || '')
-        : '';
-
-    const error = new Error(
-      backendMessage || `API request failed: ${response.status} ${response.statusText} - ${url}`
-    );
-    (error as any).status = response.status;
-    (error as any).payload = payload;
-    console.error('[apiClient] error response', { status: response.status, payload });
-    throw error;
-  }
-
-  return payload as T;
 }
 
-export async function apiFetch<T = any>(path: string, opts: ApiClientOptions = {}) {
-  const method = opts.method ? String(opts.method).toUpperCase() : 'GET';
-  return request<T>(method, path, opts);
-}
+// Default export for apiFetch users
+export default request;
 
-export function get<T = any>(path: string, opts?: ApiClientOptions) {
-  return request<T>('GET', path, opts || {});
-}
-
-export function post<T = any>(path: string, body?: any, opts?: ApiClientOptions) {
-  return request<T>('POST', path, { ...opts, body });
-}
-
-export function put<T = any>(path: string, body?: any, opts?: ApiClientOptions) {
-  return request<T>('PUT', path, { ...opts, body });
-}
-
-export function del<T = any>(path: string, opts?: ApiClientOptions) {
-  return request<T>('DELETE', path, opts || {});
-}
-
-const apiClient = {
-  get,
-  post,
-  put,
-  delete: del,
+// Named export for apiClient with methods
+export const apiClient = {
+  get: <T = any>(endpoint: string, options?: Omit<RequestOptions, 'method'>) => 
+    request<T>(endpoint, { ...options, method: 'GET' }),
+  
+  post: <T = any>(endpoint: string, body?: any, options?: Omit<RequestOptions, 'method' | 'body'>) => 
+    request<T>(endpoint, { ...options, method: 'POST', body }),
+  
+  put: <T = any>(endpoint: string, body?: any, options?: Omit<RequestOptions, 'method' | 'body'>) => 
+    request<T>(endpoint, { ...options, method: 'PUT', body }),
+  
+  delete: <T = any>(endpoint: string, options?: Omit<RequestOptions, 'method'>) => 
+    request<T>(endpoint, { ...options, method: 'DELETE' }),
+  
+  patch: <T = any>(endpoint: string, body?: any, options?: Omit<RequestOptions, 'method' | 'body'>) => 
+    request<T>(endpoint, { ...options, method: 'PATCH', body }),
 };
 
-export default apiFetch;
-export { apiClient };
+// Also export as apiFetch for backward compatibility
+export { request as apiFetch };

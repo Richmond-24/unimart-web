@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -7,7 +6,31 @@ import {
   Zap, Sun, Cloud, Moon, Flame, Coins,
   ShoppingBag, MessageCircle, Gift, ChevronRight
 } from "lucide-react";
-import apiFetch from "../../lib/apiClient";
+import apiClient from "../../lib/apiClient";
+
+// Fix: Use proper Framer Motion types with 'as any' workaround for ease
+const containerVariants = {
+  hidden: { opacity: 0, y: 10 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      staggerChildren: 0.08,
+      delayChildren: 0.05,
+      duration: 0.45,
+      ease: "easeOut" as any,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 10 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.45, ease: "easeOut" as any },
+  },
+};
 
 export default function Greeting() {
   const [firstName, setFirstName] = useState<string | null>(null);
@@ -20,6 +43,8 @@ export default function Greeting() {
   const [cartCount, setCartCount] = useState<number | string>("—");
   const [xp, setXp] = useState<number>(0);
   const [xpToNext, setXpToNext] = useState<number>(500);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const xpPercent = xpToNext > 0 ? Math.min(100, Math.round((xp / xpToNext) * 100)) : 0;
 
   // Load and accumulate persistent XP on mount
@@ -74,27 +99,130 @@ export default function Greeting() {
   // Load live user data
   useEffect(() => {
     let mounted = true;
+    let retryCount = 0;
+    const maxRetries = 2;
+
     async function loadUser() {
       try {
-        const res = await apiFetch("/auth/me");
-        const u = res?.user || res?.data || null;
-        if (!mounted) return;
-        if (u) {
-          try { localStorage.setItem("unimart:user", JSON.stringify(u)); } catch (e) {}
-          const name = u?.firstName || (u?.name ? String(u.name).split(" ")[0] : null);
-          if (name) setFirstName(name as string);
+        setLoading(true);
+        setError(null);
+        
+        // Check if token exists
+        const token = localStorage.getItem('unimart:token');
+        if (!token) {
+          if (mounted) {
+            setLoading(false);
+            // Try to load from localStorage
+            try {
+              const raw = localStorage.getItem("unimart:user");
+              if (raw) {
+                const lu = JSON.parse(raw);
+                const name = lu?.firstName || (lu?.name ? String(lu.name).split(" ")[0] : null);
+                if (name) setFirstName(name as string);
+                setStreakDays(Number(lu?.streakDays || 0));
+                setCoins(lu?.coins ?? "—");
+                setMessagesCount((Array.isArray(lu?.messages) ? lu.messages.length : (lu?.unreadMessages ?? 0)) || 0);
+                setOffersCount(lu?.offersCount ?? 0);
+                setCartCount((Array.isArray(lu?.cart) ? lu.cart.length : (lu?.cartCount ?? 0)) || 0);
+                const storedXp = parseInt(localStorage.getItem("unimart:xp") || "0", 10);
+                setXp(storedXp || Number(lu?.xp || 0));
+                setXpToNext(500);
+              }
+            } catch (e) {
+              // ignore
+            }
+          }
+          return;
+        }
 
-          setStreakDays(Number(u?.streakDays || u?.currentStreak || u?.currentStreakDays || 0));
-          setCoins(u?.coins ?? u?.balance ?? "—");
-          setMessagesCount((Array.isArray(u?.messages) ? u.messages.length : (u?.unreadMessages ?? 0)) || 0);
-          setOffersCount(u?.offersCount ?? u?.flashSalesPurchases ?? 0);
-          setCartCount((Array.isArray(u?.cart) ? u.cart.length : (u?.cartCount ?? 0)) || 0);
+        // ✅ FIXED: Use apiClient as a function, not .get()
+        try {
+          const res = await apiClient('/auth/me', {
+            method: 'GET',
+            suppressErrorLog: true // Suppress logging for this call
+          });
+          
+          if (!mounted) return;
+          
+          const u = res?.user || res?.data || res;
+          if (u) {
+            try { localStorage.setItem("unimart:user", JSON.stringify(u)); } catch (e) {}
+            const name = u?.firstName || (u?.name ? String(u.name).split(" ")[0] : null);
+            if (name) setFirstName(name as string);
 
-          const storedXp = parseInt(localStorage.getItem("unimart:xp") || "0", 10);
-          const serverXp = Number(u?.xp || 0);
-          setXp(storedXp > 0 ? storedXp : serverXp);
-          setXpToNext(500);
-        } else {
+            setStreakDays(Number(u?.streakDays || u?.currentStreak || u?.currentStreakDays || 0));
+            setCoins(u?.coins ?? u?.balance ?? "—");
+            setMessagesCount((Array.isArray(u?.messages) ? u.messages.length : (u?.unreadMessages ?? 0)) || 0);
+            setOffersCount(u?.offersCount ?? u?.flashSalesPurchases ?? 0);
+            setCartCount((Array.isArray(u?.cart) ? u.cart.length : (u?.cartCount ?? 0)) || 0);
+
+            const storedXp = parseInt(localStorage.getItem("unimart:xp") || "0", 10);
+            const serverXp = Number(u?.xp || 0);
+            setXp(storedXp > 0 ? storedXp : serverXp);
+            setXpToNext(500);
+          }
+        } catch (err: any) {
+          // Handle specific error cases silently
+          if (err.status === 401) {
+            // Unauthorized - token invalid
+            localStorage.removeItem('unimart:token');
+            if (mounted) {
+              // Try to load from localStorage
+              try {
+                const raw = localStorage.getItem("unimart:user");
+                if (raw) {
+                  const lu = JSON.parse(raw);
+                  const name = lu?.firstName || (lu?.name ? String(lu.name).split(" ")[0] : null);
+                  if (name) setFirstName(name as string);
+                  setStreakDays(Number(lu?.streakDays || 0));
+                  setCoins(lu?.coins ?? "—");
+                  setMessagesCount((Array.isArray(lu?.messages) ? lu.messages.length : (lu?.unreadMessages ?? 0)) || 0);
+                  setOffersCount(lu?.offersCount ?? 0);
+                  setCartCount((Array.isArray(lu?.cart) ? lu.cart.length : (lu?.cartCount ?? 0)) || 0);
+                  const storedXp = parseInt(localStorage.getItem("unimart:xp") || "0", 10);
+                  setXp(storedXp || Number(lu?.xp || 0));
+                  setXpToNext(500);
+                }
+              } catch (e) {
+                // ignore
+              }
+            }
+          } else if (err.status === 0) {
+            // Network error - retry
+            if (retryCount < maxRetries && mounted) {
+              retryCount++;
+              setTimeout(loadUser, 2000 * retryCount);
+              return;
+            }
+            // Silent fail - don't show error
+          } else {
+            // Other errors - silent fail, use localStorage
+            if (mounted) {
+              try {
+                const raw = localStorage.getItem("unimart:user");
+                if (raw) {
+                  const lu = JSON.parse(raw);
+                  const name = lu?.firstName || (lu?.name ? String(lu.name).split(" ")[0] : null);
+                  if (name) setFirstName(name as string);
+                  setStreakDays(Number(lu?.streakDays || 0));
+                  setCoins(lu?.coins ?? "—");
+                  setMessagesCount((Array.isArray(lu?.messages) ? lu.messages.length : (lu?.unreadMessages ?? 0)) || 0);
+                  setOffersCount(lu?.offersCount ?? 0);
+                  setCartCount((Array.isArray(lu?.cart) ? lu.cart.length : (lu?.cartCount ?? 0)) || 0);
+                  const storedXp = parseInt(localStorage.getItem("unimart:xp") || "0", 10);
+                  setXp(storedXp || Number(lu?.xp || 0));
+                  setXpToNext(500);
+                }
+              } catch (e) {
+                // ignore
+              }
+            }
+          }
+        }
+      } catch (err) {
+        // Silent fail - don't show error
+        if (mounted) {
+          // Try localStorage as fallback
           try {
             const raw = localStorage.getItem("unimart:user");
             if (raw) {
@@ -106,15 +234,18 @@ export default function Greeting() {
               setMessagesCount((Array.isArray(lu?.messages) ? lu.messages.length : (lu?.unreadMessages ?? 0)) || 0);
               setOffersCount(lu?.offersCount ?? 0);
               setCartCount((Array.isArray(lu?.cart) ? lu.cart.length : (lu?.cartCount ?? 0)) || 0);
-
               const storedXp = parseInt(localStorage.getItem("unimart:xp") || "0", 10);
               setXp(storedXp || Number(lu?.xp || 0));
               setXpToNext(500);
             }
-          } catch (e) {}
+          } catch (e) {
+            // ignore
+          }
         }
-      } catch (e) {
-        // ignore failures; keep defaults
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
       }
     }
 
@@ -148,28 +279,97 @@ export default function Greeting() {
     setTimeout(() => setShowSlang(false), 1800);
   };
 
+  // Retry loading user data
+  const handleRetry = () => {
+    window.dispatchEvent(new Event('unimart:authChanged'));
+  };
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm px-5 py-6 sm:px-7 sm:py-8 min-h-[152px] flex items-center justify-center">
+          <div className="flex items-center gap-3">
+            <div className="w-6 h-6 border-2 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-sm text-gray-500">Loading...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+        <div className="bg-white rounded-3xl border border-red-200 shadow-sm px-5 py-6 sm:px-7 sm:py-8 min-h-[152px] flex items-center justify-between">
+          <div className="flex items-center gap-3 text-red-600">
+            <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center">
+              <span className="text-lg">⚠️</span>
+            </div>
+            <span className="text-sm">{error}</span>
+          </div>
+          <button
+            onClick={handleRetry}
+            className="px-4 py-2 bg-teal-600 text-white text-sm rounded-lg hover:bg-teal-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
       <motion.div
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, ease: "easeOut" }}
-        className="relative bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3 sm:px-5 sm:py-4"
+        initial={{ opacity: 0, y: -14, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        className="relative overflow-hidden bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300 px-5 py-6 sm:px-7 sm:py-8 min-h-[152px] sm:min-h-[176px] flex flex-col justify-center"
       >
-        <div className="flex items-center gap-3">
+        {/* Decorative ambient glow */}
+        <motion.div
+          aria-hidden
+          className="pointer-events-none absolute -top-16 -right-16 w-56 h-56 rounded-full bg-gradient-to-br from-emerald-200/40 to-teal-200/30 blur-3xl"
+          animate={{ scale: [1, 1.12, 1], opacity: [0.5, 0.8, 0.5] }}
+          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          aria-hidden
+          className="pointer-events-none absolute -bottom-14 left-10 w-40 h-40 rounded-full bg-amber-100/40 blur-3xl"
+          animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.7, 0.4] }}
+          transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+        />
+
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          className="relative flex items-center gap-4"
+        >
           {/* Avatar */}
           <motion.button
+            variants={itemVariants}
             onClick={handleAvatarClick}
-            whileTap={{ scale: 0.92 }}
+            whileTap={{ scale: 0.9 }}
+            whileHover={{ scale: 1.05 }}
             className="relative flex-shrink-0"
           >
-            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center text-white text-base font-bold shadow-sm ring-2 ring-white">
+            <motion.div
+              animate={{ boxShadow: ["0 0 0 0 rgba(16,185,129,0.35)", "0 0 0 8px rgba(16,185,129,0)"] }}
+              transition={{ duration: 2.4, repeat: Infinity, ease: "easeOut" }}
+              className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center text-white text-lg font-bold shadow-sm ring-2 ring-white font-display"
+            >
               {firstName ? firstName.charAt(0).toUpperCase() : "U"}
-            </div>
+            </motion.div>
             {streakDays > 0 && (
-              <div className="absolute -bottom-0.5 -right-0.5 bg-orange-500 rounded-full w-4 h-4 flex items-center justify-center ring-2 ring-white">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.4, type: "spring", stiffness: 400, damping: 12 }}
+                className="absolute -bottom-0.5 -right-0.5 bg-orange-500 rounded-full w-4.5 h-4.5 flex items-center justify-center ring-2 ring-white"
+              >
                 <Flame size={9} className="text-white" />
-              </div>
+              </motion.div>
             )}
 
             <AnimatePresence>
@@ -188,48 +388,58 @@ export default function Greeting() {
 
           {/* Greeting + name */}
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1 text-gray-400 text-[10px] font-semibold uppercase tracking-wider">
+            <motion.div
+              variants={itemVariants}
+              className="flex items-center gap-1 text-gray-400 text-[10px] font-semibold uppercase tracking-[0.15em]"
+            >
               {timeIcon}
               <span>{greeting}</span>
-            </div>
+            </motion.div>
             <motion.div
-              initial={{ opacity: 0, x: -6 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.3, delay: 0.1 }}
-              className="text-emerald-600 text-2xl sm:text-3xl font-extrabold truncate leading-tight tracking-tight"
+              variants={itemVariants}
+              className="font-display text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 text-3xl sm:text-4xl font-extrabold truncate leading-tight tracking-tight mt-0.5"
             >
               {firstName ? `Hey ${firstName}` : "Welcome to Uni-Mart"}
             </motion.div>
           </div>
 
           {/* Compact stat pills — desktop/tablet */}
-          <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
+          <motion.div variants={itemVariants} className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
             <StatPill icon={<Coins size={12} />} value={typeof coins === "number" ? coins.toLocaleString() : coins} tone="amber" />
             <StatPill icon={<ShoppingBag size={12} />} value={cartCount} tone="teal" />
             <StatPill icon={<MessageCircle size={12} />} value={messagesCount} tone="blue" />
             <StatPill icon={<Gift size={12} />} value={offersCount} tone="rose" />
-          </div>
+          </motion.div>
 
           {/* Coins only on mobile to save space */}
-          <div className="flex sm:hidden items-center gap-1 flex-shrink-0 bg-amber-50 text-amber-700 rounded-full px-2 py-1 text-xs font-bold">
+          <motion.div
+            variants={itemVariants}
+            className="flex sm:hidden items-center gap-1 flex-shrink-0 bg-amber-50 text-amber-700 rounded-full px-2.5 py-1.5 text-xs font-bold"
+          >
             <Coins size={12} />
             <span>{typeof coins === "number" ? coins.toLocaleString() : coins}</span>
-          </div>
+          </motion.div>
 
           <ChevronRight size={16} className="text-gray-300 flex-shrink-0 hidden sm:block" />
-        </div>
+        </motion.div>
 
         {/* Slim XP bar */}
-        <div className="mt-2.5 flex items-center gap-2">
-          <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+        <div className="relative mt-4 flex items-center gap-2">
+          <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${xpPercent}%` }}
-              transition={{ duration: 0.8, delay: 0.1, ease: "easeOut" }}
-              className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full"
-            />
+              transition={{ duration: 0.9, delay: 0.35, ease: "easeOut" }}
+              className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full relative overflow-hidden"
+            >
+              <motion.div
+                className="absolute inset-0 bg-white/30"
+                animate={{ x: ["-100%", "200%"] }}
+                transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut", delay: 1.2 }}
+              />
+            </motion.div>
           </div>
-          <span className="text-[10px] text-gray-400 font-mono flex-shrink-0 flex items-center gap-0.5">
+          <span className="text-[10px] text-gray-400 font-mono font-semibold flex-shrink-0 flex items-center gap-0.5">
             <Zap size={9} />
             {xp}/{xpToNext}
           </span>
@@ -255,9 +465,12 @@ function StatPill({
     rose: "bg-rose-50 text-rose-700",
   };
   return (
-    <div className={`flex items-center gap-1 rounded-full px-2 py-1 text-xs font-bold ${tones[tone]}`}>
+    <motion.div
+      whileHover={{ y: -2 }}
+      className={`flex items-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-bold ${tones[tone]}`}
+    >
       {icon}
       <span>{value}</span>
-    </div>
+    </motion.div>
   );
 }
