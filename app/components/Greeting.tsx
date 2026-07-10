@@ -153,7 +153,7 @@ export default function Greeting() {
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: "easeOut" }}
-        className="relative bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3 sm:px-5 sm:py-3.5"
+        className="relative bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3 sm:px-5 sm:py-4"
       >
         <div className="flex items-center gap-3">
           {/* Avatar */}
@@ -162,7 +162,7 @@ export default function Greeting() {
             whileTap={{ scale: 0.92 }}
             className="relative flex-shrink-0"
           >
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center text-white text-sm font-bold shadow-sm ring-2 ring-white">
+            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center text-white text-base font-bold shadow-sm ring-2 ring-white">
               {firstName ? firstName.charAt(0).toUpperCase() : "U"}
             </div>
             {streakDays > 0 && (
@@ -187,13 +187,18 @@ export default function Greeting() {
 
           {/* Greeting + name */}
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1 text-gray-400 text-[11px] font-medium">
+            <div className="flex items-center gap-1 text-gray-400 text-[10px] font-semibold uppercase tracking-wider">
               {timeIcon}
               <span>{greeting}</span>
             </div>
-            <div className="text-gray-900 text-base sm:text-lg font-bold truncate leading-tight">
+            <motion.div
+              initial={{ opacity: 0, x: -6 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+              className="text-emerald-600 text-2xl sm:text-3xl font-extrabold truncate leading-tight tracking-tight"
+            >
               {firstName ? firstName : "Welcome to Unimart"}
-            </div>
+            </motion.div>
           </div>
 
           {/* Compact stat pills — desktop/tablet */}

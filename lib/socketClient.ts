@@ -6,18 +6,25 @@ let socket: Socket | null = null;
 let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 5;
 
-const API_BASE =
+const EXPLICIT_SOCKET_BASE =
   (typeof process !== 'undefined' && (process.env.NEXT_PUBLIC_WS_URL || process.env.NEXT_PUBLIC_SOCKET_URL || process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL))
-    ? (process.env.NEXT_PUBLIC_WS_URL || process.env.NEXT_PUBLIC_SOCKET_URL || process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL)?.trim().replace(/\/+$/, '')
-    : 'https://unimart-backends-2.onrender.com';
+    ? (process.env.NEXT_PUBLIC_WS_URL || process.env.NEXT_PUBLIC_SOCKET_URL || process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL)?.trim() || ''
+    : '';
+
+function normalizeSocketUrl(url: string): string {
+  return url
+    .trim()
+    .replace(/\/+$|\s+$/g, '')
+    .replace(/\/api$/i, '');
+}
 
 const SOCKET_URL =
   (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_WS_URL)
     || (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_SOCKET_URL)
-    || API_BASE;
+    || (EXPLICIT_SOCKET_BASE ? normalizeSocketUrl(EXPLICIT_SOCKET_BASE) : 'https://unimart-backends-2.onrender.com');
 
 function getSocketUrl() {
-  return (SOCKET_URL || 'https://unimart-backends-2.onrender.com').replace(/\/+$/, '');
+  return SOCKET_URL.replace(/\/+$/, '');
 }
 
 export function connectSocket(token?: string) {

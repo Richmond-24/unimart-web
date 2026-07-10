@@ -5,13 +5,26 @@ export type ApiClientOptions = Omit<RequestInit, 'body'> & {
 
 const EXPLICIT_API_BASE =
   (typeof process !== 'undefined' && (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL))
-    ? (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL)?.trim().replace(/\/+$/, '')
+    ? (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL)?.trim() || ''
     : '';
 
-const API_BASE = EXPLICIT_API_BASE || (typeof window !== 'undefined' ? '' : 'https://unimart-backends-2.onrender.com');
+function normalizeBackendUrl(url: string): string {
+  return url
+    .trim()
+    .replace(/\/+$|\s+$/g, '')
+    .replace(/\/api$/i, '');
+}
+
+const API_BASE = EXPLICIT_API_BASE
+  ? normalizeBackendUrl(EXPLICIT_API_BASE)
+  : (typeof window !== 'undefined' ? '' : 'https://unimart-backends-2.onrender.com');
 
 function buildUrl(path: string, absolute?: boolean): string {
   if (absolute) {
+    return path;
+  }
+
+  if (/^https?:\/\//i.test(path)) {
     return path;
   }
 
