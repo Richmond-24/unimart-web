@@ -1,8 +1,10 @@
 
 // lib/apiClient.ts
 
-// Use the URL from env (which already includes /api)
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://unimart-backend-6pld.onrender.com/api';
+// ALWAYS add /api to the base URL - this overrides any env issue
+const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://unimart-backend-6pld.onrender.com';
+// Remove trailing slash if exists, then ALWAYS add /api
+const API_BASE_URL = `${baseUrl.replace(/\/$/, '')}/api`;
 
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
@@ -16,9 +18,7 @@ async function request<T = any>(
   endpoint: string,
   options: RequestOptions = {}
 ): Promise<T> {
-  // Ensure endpoint starts with /
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  // Build the full URL - DO NOT add /api here since it's already in the base URL
   const url = `${API_BASE_URL}${cleanEndpoint}`;
   
   const headers: Record<string, string> = {
@@ -26,7 +26,6 @@ async function request<T = any>(
     ...options.headers,
   };
 
-  // Add auth token if available
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('unimart:token');
     if (token) {
@@ -59,7 +58,6 @@ async function request<T = any>(
       (error as any).payload = payload;
       (error as any).url = url;
       
-      // Only log if suppressErrorLog is not true
       if (!options.suppressErrorLog) {
         console.error('[apiClient] Error Response:', {
           status: response.status,
@@ -75,7 +73,6 @@ async function request<T = any>(
 
     return payload as T;
   } catch (error: any) {
-    // Handle network errors
     if (error.message === 'Failed to fetch' || error.message.includes('NetworkError')) {
       const networkError = new Error('Cannot connect to server. Please check your internet connection.');
       (networkError as any).isNetworkError = true;
@@ -83,12 +80,10 @@ async function request<T = any>(
       throw networkError;
     }
     
-    // If it's already our custom error with status, re-throw it
     if (error.status) {
       throw error;
     }
     
-    // Wrap unknown errors
     const wrappedError = new Error(error.message || 'An unexpected error occurred');
     (wrappedError as any).originalError = error;
     throw wrappedError;
@@ -116,5 +111,4 @@ export const apiClient = {
     request<T>(endpoint, { ...options, method: 'PATCH', body }),
 };
 
-// Also export as apiFetch for backward compatibility
 export { request as apiFetch };
