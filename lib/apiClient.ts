@@ -6,6 +6,9 @@ const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://unimart-backend-6pld
 // Remove trailing slash if exists, then ALWAYS add /api
 const API_BASE_URL = `${baseUrl.replace(/\/$/, '')}/api`;
 
+// Debug: Log the API base URL
+console.log('[apiClient] API_BASE_URL:', API_BASE_URL);
+
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
   body?: any;
@@ -18,14 +21,20 @@ async function request<T = any>(
   endpoint: string,
   options: RequestOptions = {}
 ): Promise<T> {
+  // Ensure endpoint starts with /
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  // Build the full URL - /api is already in the base URL
   const url = `${API_BASE_URL}${cleanEndpoint}`;
+  
+  // Debug: Log the full URL
+  console.log('[apiClient] Full URL:', url);
   
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...options.headers,
   };
 
+  // Add auth token if available
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('unimart:token');
     if (token) {
@@ -58,6 +67,7 @@ async function request<T = any>(
       (error as any).payload = payload;
       (error as any).url = url;
       
+      // Only log if suppressErrorLog is not true
       if (!options.suppressErrorLog) {
         console.error('[apiClient] Error Response:', {
           status: response.status,

@@ -645,6 +645,7 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
       return;
     }
 
+    
     if (!email.includes("@") || !email.includes(".")) {
       setError("Please enter a valid email address");
       return;
