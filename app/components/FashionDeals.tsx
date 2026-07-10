@@ -37,14 +37,13 @@ export default function FashionDeals() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-3 gap-y-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-x-2 gap-y-3">
           {/* Skeleton */}
-          {loading && new Array(8).fill(0).map((_, i) => (
+          {loading && new Array(12).fill(0).map((_, i) => (
             <div key={i} className="animate-pulse">
-              <div className="w-full aspect-square bg-slate-100 rounded-xl mb-2" />
-              <div className="h-3 bg-slate-100 rounded w-3/4 mb-1.5" />
-              <div className="h-3 bg-slate-100 rounded w-1/2 mb-1.5" />
-              <div className="h-3 bg-slate-100 rounded w-1/3" />
+              <div className="w-full aspect-square bg-slate-100 rounded-lg mb-1" />
+              <div className="h-2 bg-slate-100 rounded w-3/4 mb-0.5" />
+              <div className="h-2 bg-slate-100 rounded w-1/2" />
             </div>
           ))}
 
@@ -67,14 +66,14 @@ export default function FashionDeals() {
             return (
               <Link key={lid} href={`/listings/${lid}`} className="block group">
                 <div className="flex flex-col">
-                  <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-slate-100 mb-2 shadow-sm">
+                  <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-slate-100 mb-1 shadow-xs">
                     {p.imageUrls?.length ? (
                       <img src={p.imageUrls[0]} alt={p.title} className="object-cover w-full h-full" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">No image</div>
+                      <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs">No image</div>
                     )}
                   </div>
-                  <div className="px-0.5">
+                  <div className="px-0">
                     <div className="flex items-center justify-between gap-1 mb-0.5">
                       <p className="text-[13px] font-semibold text-slate-900 truncate leading-tight">
                         {p.sellerName || p.seller || 'Campus Seller'}

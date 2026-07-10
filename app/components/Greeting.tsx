@@ -198,7 +198,7 @@ export default function Greeting() {
               transition={{ duration: 0.3, delay: 0.1 }}
               className="text-emerald-600 text-2xl sm:text-3xl font-extrabold truncate leading-tight tracking-tight"
             >
-              {firstName ? firstName : "Welcome to Unimart"}
+              {firstName ? `Hey ${firstName}` : "Welcome to Uni-Mart"}
             </motion.div>
           </div>
 

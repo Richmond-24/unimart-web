@@ -2,6 +2,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 
 function BagIcon({ className }: { className?: string }) {
   return (
@@ -29,8 +30,46 @@ function UsersIcon({ className }: { className?: string }) {
 }
 
 export default function BigBanner() {
+  const bannerRef = useRef<HTMLDivElement | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const [hasEntered, setHasEntered] = useState(false);
+
+  useEffect(() => {
+    const node = bannerRef.current;
+    if (!node) return;
+
+    // Respect reduced-motion users: show immediately, skip the animation state machine.
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReduced) {
+      setIsVisible(true);
+      setHasEntered(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          // Mark "entered" a beat after becoming visible so the entrance
+          // transition finishes before the attention nudge kicks in.
+          const timer = setTimeout(() => setHasEntered(true), 700);
+          return () => clearTimeout(timer);
+        }
+      },
+      { threshold: 0.25 }
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <div className="w-full rounded-2xl shadow-md overflow-hidden bg-gradient-to-br from-orange-600 via-orange-600 to-orange-500 relative">
+    <div
+      ref={bannerRef}
+      className={`w-full rounded-2xl shadow-md overflow-hidden bg-gradient-to-br from-orange-600 via-orange-600 to-orange-500 relative transition-all duration-700 ease-out ${
+        isVisible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-6 scale-[0.97]"
+      } ${hasEntered ? "animate-attention-nudge" : ""}`}
+    >
       {/* Shimmer sweep */}
       <div className="pointer-events-none absolute inset-0 animate-banner-shimmer bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
@@ -107,6 +146,25 @@ export default function BigBanner() {
             transform: translateY(-4px);
           }
         }
+        @keyframes attentionNudge {
+          0%,
+          100% {
+            transform: scale(1);
+          }
+          4% {
+            transform: scale(1.015);
+          }
+          8% {
+            transform: scale(1);
+          }
+          12% {
+            transform: scale(1.01);
+          }
+          16%,
+          100% {
+            transform: scale(1);
+          }
+        }
         .animate-banner-shimmer {
           animation: bannerShimmer 5s ease-in-out infinite;
         }
@@ -116,10 +174,14 @@ export default function BigBanner() {
         .animate-badge-float {
           animation: badgeFloat 3s ease-in-out infinite;
         }
+        .animate-attention-nudge {
+          animation: attentionNudge 6s ease-in-out infinite;
+        }
         @media (prefers-reduced-motion: reduce) {
           .animate-banner-shimmer,
           .animate-glow-pulse,
-          .animate-badge-float {
+          .animate-badge-float,
+          .animate-attention-nudge {
             animation: none;
           }
         }

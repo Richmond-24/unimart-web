@@ -88,7 +88,7 @@ export default function CategoryPage() {
 
   return (
     <div className="py-8">
-      <h1 className="text-2xl font-semibold mb-4">{title}</h1>
+      <div className="mb-6">\n        <h1 className="text-3xl font-bold text-[#0D9488] mb-2 capitalize">{title}</h1>\n        <div className="h-1 w-20 bg-gradient-to-r from-[#0D9488] to-[#0f766e] rounded-full"></div>\n      </div>
       {loading && <div className="text-sm text-slate-500">Loading…</div>}
       {!loading && items.length === 0 && <div className="text-sm text-slate-500">No products found.</div>}
 

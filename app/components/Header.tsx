@@ -423,16 +423,6 @@ export default function Header() {
 
             {/* RIGHT: Actions */}
             <div className="flex items-center gap-2">
-              {/* Messages */}
-              <button onClick={() => router.push("/messages")} className="relative p-2 rounded-full hover:bg-white/10 transition">
-                <MessageCircle className="w-5 h-5 text-white" strokeWidth={2} />
-                {messageCount > 0 && (
-                  <span className="absolute top-1 right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
-                    {messageCount > 9 ? '9+' : messageCount}
-                  </span>
-                )}
-              </button>
-
               {/* Notifications */}
               <button onClick={() => router.push("/notifications")} className="relative p-2 rounded-full hover:bg-white/10 transition">
                 <Bell className="w-5 h-5 text-white" strokeWidth={2} />
