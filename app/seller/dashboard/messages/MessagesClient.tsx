@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { ChevronLeft, Send, Loader2, MessageCircle, AlertCircle } from "lucide-react";
 import apiFetch from "../../../../lib/apiClient";
@@ -27,7 +27,8 @@ interface ConvData {
   unreadForSeller?: number;
 }
 
-export default function MessagesClient() {
+// Component that actually uses useSearchParams
+function MessagesContent() {
   const searchParams = useSearchParams();
   const selectedConvId = searchParams.get("convId");
 
@@ -380,5 +381,14 @@ export default function MessagesClient() {
         </div>
       )}
     </div>
+  );
+}
+
+// Main export with Suspense wrapper
+export default function MessagesClient() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-96">Loading messages...</div>}>
+      <MessagesContent />
+    </Suspense>
   );
 }
