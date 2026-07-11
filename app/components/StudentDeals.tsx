@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -8,16 +7,34 @@ import Link from 'next/link';
 export default function StudentDeals() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
     const load = async () => {
       setLoading(true);
+      setLoadError(null);
       try {
-        const res = await apiFetch('/public/services');
-        if (mounted && res && res.data) setItems(res.data);
+        // ✅ FIXED: Added /api prefix
+        const endpoint = "/api/public/services";
+        console.log(`📡 [StudentDeals] Fetching from: ${endpoint}`);
+        
+        const res = await apiFetch(endpoint, { suppressErrorLog: true });
+        
+        if (mounted && res && res.data) {
+          setItems(res.data);
+          console.log(`✅ [StudentDeals] Loaded ${res.data.length} items`);
+        } else if (mounted && res && Array.isArray(res)) {
+          setItems(res);
+          console.log(`✅ [StudentDeals] Loaded ${res.length} items`);
+        } else {
+          console.log('ℹ️ [StudentDeals] No data received, using fallback');
+          setItems([]);
+        }
       } catch (err) {
         console.error('Error loading student services', err);
+        setLoadError('Failed to load student deals');
+        setItems([]);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -33,7 +50,6 @@ export default function StudentDeals() {
           <h2 className="text-xl font-semibold">Student Deals</h2>
           <div className="flex items-center gap-3">
             <span className="text-sm text-stone-500">Verified student savings</span>
-
           </div>
         </div>
 
@@ -48,9 +64,24 @@ export default function StudentDeals() {
             </div>
           ))}
 
+          {/* Error state */}
+          {!loading && loadError && (
+            <div className="col-span-full text-center py-8">
+              <p className="text-red-500">{loadError}</p>
+              <button 
+                onClick={() => window.location.reload()}
+                className="mt-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
           {/* Empty state */}
-          {!loading && items.length === 0 && (
-            <div className="text-sm text-slate-500">No student deals found.</div>
+          {!loading && !loadError && items.length === 0 && (
+            <div className="col-span-full text-center py-8 text-slate-500">
+              No student deals found.
+            </div>
           )}
 
           {items.map((p: any) => {
@@ -69,7 +100,16 @@ export default function StudentDeals() {
                 <div className="flex flex-col">
                   <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-slate-100 mb-2 shadow-sm">
                     {p.imageUrls?.length ? (
-                      <img src={p.imageUrls[0]} alt={p.title} className="object-cover w-full h-full" />
+                      <img 
+                        src={p.imageUrls[0]} 
+                        alt={p.title} 
+                        className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" fill="%23f1f5f9"/%3E%3Ctext x="50" y="50" text-anchor="middle" dy=".3em" fill="%2394a3b8" font-size="12" font-family="sans-serif"%3ENo image%3C/text%3E%3C/svg%3E';
+                        }}
+                      />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">No image</div>
                     )}
@@ -101,14 +141,16 @@ export default function StudentDeals() {
         </div>
 
         {/* See all button */}
-        <div className="mt-6 flex justify-center">
-          <Link 
-            href="/category/student-deals" 
-            className="px-6 py-2 text-sm font-semibold text-teal-700 bg-teal-50 border border-teal-200 rounded-lg hover:bg-teal-100 transition-colors"
-          >
-            See all Student Deals →
-          </Link>
-        </div>
+        {items.length > 0 && (
+          <div className="mt-6 flex justify-center">
+            <Link 
+              href="/category/student-deals" 
+              className="px-6 py-2 text-sm font-semibold text-teal-700 bg-teal-50 border border-teal-200 rounded-lg hover:bg-teal-100 transition-colors"
+            >
+              See all Student Deals →
+            </Link>
+          </div>
+        )}
       </div>
     </section>
   );

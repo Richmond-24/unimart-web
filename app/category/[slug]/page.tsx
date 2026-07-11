@@ -23,19 +23,19 @@ export default function CategoryPage() {
       try {
         const key = slug.toLowerCase();
         const mapping: Record<string, string> = {
-          'deals': '/public/flash-deals',
-          'flash-deals': '/public/flash-deals',
-          'flash deals': '/public/flash-deals',
-          'grocery': '/public/food',
-          'groceries': '/public/food',
-          'food': '/public/food',
-          'electronics': '/public/tech-gadgets',
-          'tech': '/public/tech-gadgets',
-          'tech-gadgets': '/public/tech-gadgets'
+          'deals': '/api/public/flash-deals',
+          'flash-deals': '/api/public/flash-deals',
+          'flash deals': '/api/public/flash-deals',
+          'grocery': '/api/public/food',
+          'groceries': '/api/public/food',
+          'food': '/api/public/food',
+          'electronics': '/api/public/tech-gadgets',
+          'tech': '/api/public/tech-gadgets',
+          'tech-gadgets': '/api/public/tech-gadgets'
         };
 
         if (key === 'all') {
-          const endpoint = '/public/listings';
+          const endpoint = '/api/public/listings';
           if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
             // eslint-disable-next-line no-console
             console.debug('CategoryPage endpoint ->', { endpoint });

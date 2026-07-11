@@ -108,7 +108,7 @@ export default function ListingPage() {
       if (!listing?.sellerId) return;
       setLoadingOthers(true);
       try {
-        const res = await apiFetch(`/public/listings?sellerId=${listing.sellerId}&limit=6`);
+        const res = await apiFetch(`/api/public/listings?sellerId=${listing.sellerId}&limit=6`);
         if (res?.data) {
           setOtherProducts(res.data.filter((p: any) => p._id !== listing._id));
         }
@@ -267,7 +267,7 @@ export default function ListingPage() {
 
       if (token) {
         try {
-          await apiFetch('/reviews', { method: 'POST', body: JSON.stringify(payload), headers });
+          await apiFetch('/api/reviews', { method: 'POST', body: JSON.stringify(payload), headers });
         } catch (e) {}
       }
 
@@ -278,7 +278,7 @@ export default function ListingPage() {
       setListing({ ...listing, rating: Number(newRating.toFixed(1)), reviewCount: newCount });
 
       try {
-        const refreshed = await apiFetch(`/public/listings/${listing._id || listing.id}`);
+        const refreshed = await apiFetch(`/api/public/listings/${listing._id || listing.id}`);
         if (refreshed?.data) setListing(refreshed.data);
       } catch (e) {}
     } catch (err) {
@@ -293,7 +293,7 @@ export default function ListingPage() {
       if (!id) return;
       setLoading(true);
       try {
-        const res = await apiFetch(`/public/listings/${id}`);
+        const res = await apiFetch(`/api/public/listings/${id}`);
         if (mounted && res?.data) setListing(res.data);
       } catch (err) {
         console.error("Error loading listing", err);

@@ -1,109 +1,146 @@
-
 // lib/apiClient.ts
 
-// ALWAYS add /api to the base URL - this overrides any env issue
-const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://unimart-backend-6pld.onrender.com';
-// Remove trailing slash if exists, then ALWAYS add /api
-const API_BASE_URL = `${baseUrl.replace(/\/$/, '')}/api`;
+// ============================================
+// API CLIENT - FINAL WORKING VERSION
+// ============================================
 
-// Debug: Log the API base URL
-console.log('[apiClient] API_BASE_URL:', API_BASE_URL);
+// Get the base URL - NO /api here!
+const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://unimart-backend-6pld.onrender.com';
+// Remove trailing slash if exists - NO /api added!
+const API_BASE_URL = baseUrl.replace(/\/$/, '');
+
+console.log('🔧 [apiClient] API_BASE_URL:', API_BASE_URL);
 
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
   body?: any;
   headers?: Record<string, string>;
   suppressErrorLog?: boolean;
+  timeout?: number;
 }
 
-// Core request function
 async function request<T = any>(
   endpoint: string,
   options: RequestOptions = {}
 ): Promise<T> {
   // Ensure endpoint starts with /
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  // Build the full URL - /api is already in the base URL
+  // Build the full URL - NO duplicate /api!
   const url = `${API_BASE_URL}${cleanEndpoint}`;
   
-  // Debug: Log the full URL
-  console.log('[apiClient] Full URL:', url);
+  if (!options.suppressErrorLog) {
+    console.log(`🚀 [apiClient] ${options.method || 'GET'} ${url}`);
+  }
   
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
     ...options.headers,
   };
 
-  // Add auth token if available
   if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('unimart:token');
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
+    try {
+      const token = localStorage.getItem('unimart:token');
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+    } catch (e) {}
+  }
+
+  const fetchOptions: RequestInit = {
+    method: options.method || 'GET',
+    headers,
+    credentials: 'include',
+  };
+
+  if (options.body) {
+    fetchOptions.body = JSON.stringify(options.body);
   }
 
   try {
+    const timeout = options.timeout || 30000;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    
     const response = await fetch(url, {
-      method: options.method || 'GET',
-      headers,
-      body: options.body ? JSON.stringify(options.body) : undefined,
-      credentials: 'include',
+      ...fetchOptions,
+      signal: controller.signal,
     });
-
-    let payload: any = {};
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
+    
+    clearTimeout(timeoutId);
+    
+    if (!options.suppressErrorLog) {
+      console.log(`📥 [apiClient] Response: ${response.status} ${response.statusText}`);
+    }
+    
+    // Get the response as text
+    let responseText = '';
+    try {
+      responseText = await response.text();
+    } catch (e) {
+      responseText = '';
+    }
+    
+    // Parse JSON if possible
+    let data: any = {};
+    
+    if (responseText && responseText.trim()) {
       try {
-        payload = await response.json();
+        data = JSON.parse(responseText);
       } catch (e) {
-        payload = {};
+        // Not JSON - use raw text
+        data = { raw: responseText };
       }
     }
-
+    
+    // Handle error responses
     if (!response.ok) {
-      const errorMessage = payload?.message || payload?.error || response.statusText || `HTTP ${response.status}`;
-      const error = new Error(errorMessage);
-      (error as any).status = response.status;
-      (error as any).payload = payload;
-      (error as any).url = url;
+      let errorMessage = `HTTP ${response.status}`;
       
-      // Only log if suppressErrorLog is not true
+      if (data?.message) errorMessage = data.message;
+      else if (data?.error) errorMessage = data.error;
+      else if (response.statusText) errorMessage = response.statusText;
+      
+      const error = new Error(errorMessage) as any;
+      error.status = response.status;
+      error.statusText = response.statusText;
+      error.data = data;
+      error.url = url;
+      
+      // Only log if not suppressed
       if (!options.suppressErrorLog) {
-        console.error('[apiClient] Error Response:', {
-          status: response.status,
-          statusText: response.statusText,
-          message: errorMessage,
-          payload: payload,
-          url: url,
-        });
+        console.error(`❌ [apiClient] Error: ${response.status} - ${errorMessage}`);
       }
       
       throw error;
     }
-
-    return payload as T;
+    
+    return data as T;
+    
   } catch (error: any) {
-    if (error.message === 'Failed to fetch' || error.message.includes('NetworkError')) {
-      const networkError = new Error('Cannot connect to server. Please check your internet connection.');
-      (networkError as any).isNetworkError = true;
-      (networkError as any).status = 0;
+    if (error.name === 'AbortError') {
+      const timeoutError = new Error(`Request timeout`) as any;
+      timeoutError.status = 408;
+      throw timeoutError;
+    }
+    
+    if (error.message === 'Failed to fetch') {
+      const networkError = new Error('Cannot connect to server.') as any;
+      networkError.isNetworkError = true;
+      networkError.status = 0;
       throw networkError;
     }
     
-    if (error.status) {
-      throw error;
-    }
+    if (error.status) throw error;
     
-    const wrappedError = new Error(error.message || 'An unexpected error occurred');
-    (wrappedError as any).originalError = error;
+    const wrappedError = new Error(error.message || 'An unexpected error occurred') as any;
+    wrappedError.originalError = error;
     throw wrappedError;
   }
 }
 
-// Default export for apiFetch users
 export default request;
 
-// Named export for apiClient with methods
 export const apiClient = {
   get: <T = any>(endpoint: string, options?: Omit<RequestOptions, 'method'>) => 
     request<T>(endpoint, { ...options, method: 'GET' }),

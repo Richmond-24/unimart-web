@@ -71,7 +71,7 @@ export default function SearchPage() {
     }
     try {
       setSuggestionsLoading(true);
-      const res = await apiFetch(`/public/search?q=${encodeURIComponent(query.trim())}&limit=5`);
+      const res = await apiFetch(`/api/public/search?q=${encodeURIComponent(query.trim())}&limit=5`);
       if (res && res.data) {
         setSuggestions(res.data.slice(0, 5));
       } else {
@@ -141,7 +141,7 @@ export default function SearchPage() {
       try {
         // If a free-text query is provided, use the dedicated search endpoint
         if (q && q.trim().length > 0) {
-          const res = await apiFetch(`/public/search?q=${encodeURIComponent(q.trim())}`);
+          const res = await apiFetch(`/api/public/search?q=${encodeURIComponent(q.trim())}`);
           if (mounted && res && res.data) { setItems(res.data); }
           return;
         }
@@ -153,21 +153,21 @@ export default function SearchPage() {
 
           // mapping: fashion & deals -> flash-deals, grocery/food -> food, electronics/tech -> tech-gadgets
           const mapping: Record<string, string> = {
-            'fashion': '/public/flash-deals',
-            'deals': '/public/flash-deals',
-            'flash-deals': '/public/flash-deals',
-            'flash deals': '/public/flash-deals',
-            'services': '/public/services',
-            'service': '/public/services',
-            'second hand': '/public/second-hand',
-            'second-hand': '/public/second-hand',
-            'grocery': '/public/food',
-            'groceries': '/public/food',
-            'food': '/public/food',
-            'electronics': '/public/tech-gadgets',
-            'electronic': '/public/tech-gadgets',
-            'tech gadgets': '/public/tech-gadgets',
-            'tech-gadgets': '/public/tech-gadgets'
+            'fashion': '/api/public/flash-deals',
+            'deals': '/api/public/flash-deals',
+            'flash-deals': '/api/public/flash-deals',
+            'flash deals': '/api/public/flash-deals',
+            'services': '/api/public/services',
+            'service': '/api/public/services',
+            'second hand': '/api/public/second-hand',
+            'second-hand': '/api/public/second-hand',
+            'grocery': '/api/public/food',
+            'groceries': '/api/public/food',
+            'food': '/api/public/food',
+            'electronics': '/api/public/tech-gadgets',
+            'electronic': '/api/public/tech-gadgets',
+            'tech gadgets': '/api/public/tech-gadgets',
+            'tech-gadgets': '/api/public/tech-gadgets'
           };
 
           if (mapping[key]) {
@@ -175,12 +175,12 @@ export default function SearchPage() {
             if (mounted && res && res.data) setItems(res.data);
           } else {
             // Fallback: call generic category route (backend will decode spaces)
-            const path = `/public/categories/${encodeURIComponent(decoded)}`;
+            const path = `/api/public/categories/${encodeURIComponent(decoded)}`;
             const res = await apiFetch(path);
             if (mounted && res && res.data) setItems(res.data);
           }
         } else {
-          const res = await apiFetch('/public/listings');
+          const res = await apiFetch('/api/public/listings');
           if (mounted && res && res.data) setItems(res.data);
         }
       } catch (err) {

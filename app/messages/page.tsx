@@ -33,7 +33,7 @@ export default function MessagesPage() {
     (async () => {
       try {
         setLoading(true);
-        const res = await apiFetch('/messages/conversations');
+        const res = await apiFetch('/api/messages/conversations');
         const data = res?.conversations || res?.data || [];
         if (mounted) {
           setConvs(Array.isArray(data) ? data : []);

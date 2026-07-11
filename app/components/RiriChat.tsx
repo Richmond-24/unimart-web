@@ -94,7 +94,7 @@ export default function RiriChat({
     try {
       const conversationHistory = messages.map((m) => ({ role: m.role, content: m.text }));
       
-      const res = await apiFetch('/riri/chat', {
+      const res = await apiFetch('/api/riri/chat', {
         method: 'POST',
         body: { 
           message: messageText, 

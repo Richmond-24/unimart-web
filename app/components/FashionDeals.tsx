@@ -14,7 +14,7 @@ export default function FashionDeals() {
     const load = async () => {
       setLoading(true);
       try {
-        const res = await apiFetch('/public/listings?category=Fashion');
+        const res = await apiFetch('/api/public/listings?category=Fashion');
         if (mounted && res && res.data) setItems(res.data);
       } catch (err) {
         console.error('Error loading fashion listings', err);

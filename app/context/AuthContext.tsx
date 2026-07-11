@@ -96,10 +96,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        // Validate token with backend
+        // ✅ FIXED: Added /api prefix
         try {
-          const res = await apiFetch<{ user?: User; data?: any; success?: boolean }>('/auth/me', {
+          const res = await apiFetch<{ user?: User; data?: any; success?: boolean }>('/api/auth/me', {
             headers: { Authorization: `Bearer ${storedToken}` },
+            suppressErrorLog: true
           });
           if (res && (res.user || res.data)) {
             const userData = res.user || res.data;
@@ -154,8 +155,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!token) return false;
 
     try {
-      const res = await apiFetch<{ user?: User; data?: any }>('/auth/me', {
+      // ✅ FIXED: Added /api prefix
+      const res = await apiFetch<{ user?: User; data?: any }>('/api/auth/me', {
         headers: { Authorization: `Bearer ${token}` },
+        suppressErrorLog: true
       });
       if (res && (res.user || res.data)) {
         const userData = res.user || res.data;
@@ -171,9 +174,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function login(email: string, password: string) {
     try {
-      const res = await apiFetch<{ token: string; user: User; success: boolean; message?: string }>('/auth/login', {
+      // ✅ FIXED: Added /api prefix
+      const res = await apiFetch<{ token: string; user: User; success: boolean; message?: string }>('/api/auth/login', {
         method: 'POST',
-        body: { email, password }
+        body: { email, password },
+        suppressErrorLog: true
       });
 
       if (res && res.success && res.token) {
@@ -191,9 +196,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signup(data: any) {
     try {
-      const res = await apiFetch<{ token: string; user: User; success: boolean; message?: string }>('/auth/register', {
+      // ✅ FIXED: Added /api prefix
+      const res = await apiFetch<{ token: string; user: User; success: boolean; message?: string }>('/api/auth/register', {
         method: 'POST',
-        body: data
+        body: data,
+        suppressErrorLog: true
       });
 
       if (res && res.success && res.token) {
@@ -238,9 +245,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Best-effort backend logout using the captured token
     if (tokenForLogout) {
       try {
-        await apiFetch('/auth/logout', {
+        // ✅ FIXED: Added /api prefix
+        await apiFetch('/api/auth/logout', {
           method: 'POST',
           headers: { Authorization: `Bearer ${tokenForLogout}` },
+          suppressErrorLog: true
         });
       } catch (e) {
         console.debug('Backend logout call failed (ignored):', e);

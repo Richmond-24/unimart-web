@@ -137,7 +137,7 @@ export default function Greeting() {
 
         // ✅ FIXED: Use apiClient as a function, not .get()
         try {
-          const res = await apiClient('/auth/me', {
+          const res = await apiClient('/api/auth/me', {
             method: 'GET',
             suppressErrorLog: true // Suppress logging for this call
           });

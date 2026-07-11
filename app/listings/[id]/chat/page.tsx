@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Send, Phone, Video, Info } from "lucide-react";
 import { apiClient } from "../../../../lib/apiClient";
+import { connectSocket, getSocket } from "../../../../lib/socket";
 import { useAuth } from "../../../context/AuthContext";
 
 interface Message {
@@ -53,6 +54,7 @@ export default function ChatPage() {
         setLoading(true);
         setError(null);
         
+        // ✅ FIXED: Added /api prefix
         const res = await apiClient.get(`/api/public/listings/${listingId}`, {
           suppressErrorLog: true
         });
@@ -93,6 +95,7 @@ export default function ChatPage() {
         
         // Try to get existing conversation
         try {
+          // ✅ FIXED: Added /api prefix
           const convRes = await apiClient.get(`/api/conversations/${convIdParam}`, {
             suppressErrorLog: true
           });
@@ -124,6 +127,7 @@ export default function ChatPage() {
           
           console.log('Creating conversation with payload:', createPayload);
           
+          // ✅ FIXED: Added /api prefix
           const createRes = await apiClient.post("/api/conversations", createPayload, {
             suppressErrorLog: true
           });
@@ -158,12 +162,22 @@ export default function ChatPage() {
   const loadMessages = async (convId: string) => {
     try {
       setIsLoadingMessages(true);
+      // ✅ FIXED: Added /api prefix
       const res = await apiClient.get(`/api/conversations/${convId}/messages?limit=100`, {
         suppressErrorLog: true
       });
       
       if (res?.success && res.data) {
         setMessages(res.data);
+        // Notify server (and other participants) that messages were read
+        try {
+          const socket = getSocket();
+          if (socket && socket.emit) {
+            socket.emit('messages_read', { conversationId: convId });
+          }
+        } catch (e) {
+          // ignore
+        }
       }
     } catch (err: any) {
       console.warn('Failed to load messages:', err?.message || 'Unknown error');
@@ -172,6 +186,67 @@ export default function ChatPage() {
       setIsLoadingMessages(false);
     }
   };
+
+  // Join socket conversation room and listen for incoming messages
+  useEffect(() => {
+    if (!conversationId || !currentUserId) return;
+
+    const socket = connectSocket();
+    if (!socket) return;
+
+    const handleNewMessage = (msg: any) => {
+      if (!msg) return;
+      const message = {
+        _id: msg._id || msg.id || `srv-${Date.now()}`,
+        senderId: msg.sender?._id || msg.senderId || msg.sender,
+        receiverId: msg.receiverId || undefined,
+        content: msg.text || msg.content || msg.message || '',
+        createdAt: msg.timestamp || msg.createdAt || new Date().toISOString(),
+        read: !!msg.read,
+      };
+
+      setMessages((prev) => {
+        // avoid duplicates
+        const exists = prev.some(m => m._id && m._id === message._id);
+        if (exists) return prev;
+        return [...prev, message];
+      });
+    };
+
+    // Join conversation room
+    try {
+      socket.emit('join_conversation', { conversationId });
+    } catch (e) {
+      console.warn('Failed to join conversation room:', e);
+    }
+
+    socket.on('new_message', handleNewMessage);
+
+    const handleMessagesRead = (payload: any) => {
+      if (!payload) return;
+      if (payload.conversationId !== conversationId) return;
+      const readerId = payload.userId;
+      setMessages(prev => prev.map(m => {
+        if (!m) return m;
+        if (readerId && m.senderId === (currentUserId) && readerId !== (currentUserId)) {
+          return { ...m, read: true };
+        }
+        return m;
+      }));
+    };
+
+    socket.on('messages_read', handleMessagesRead);
+
+    return () => {
+      try {
+        socket.off('new_message', handleNewMessage);
+        socket.off('messages_read', handleMessagesRead);
+        socket.emit('leave_conversation', { conversationId });
+      } catch (e) {
+        // ignore
+      }
+    };
+  }, [conversationId, currentUserId]);
 
   // Send message
   const sendMessage = async () => {
@@ -193,12 +268,14 @@ export default function ChatPage() {
     setMessages(prev => [...prev, tempMessage]);
 
     try {
+      // ✅ POST message using 'text' (backend expects 'text')
       const res = await apiClient.post("/api/messages", {
         conversationId,
-        content,
+        text: content,
         senderId: currentUserId,
         receiverId: listing.sellerId,
         listingId,
+        type: 'text'
       }, {
         suppressErrorLog: true
       });

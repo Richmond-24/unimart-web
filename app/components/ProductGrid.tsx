@@ -1,3 +1,4 @@
+// app/components/ProductGrid.tsx
 
 "use client";
 
@@ -5,43 +6,154 @@ import React, { useEffect, useState } from "react";
 import apiFetch from "../../lib/apiClient";
 import Link from "next/link";
 
-export default function ProductGrid(props: { horizontal?: boolean } = {}) {
-  const { horizontal } = props;
-  const [products, setProducts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+interface Product {
+  _id: string;
+  id?: string;
+  title: string;
+  price: number;
+  originalPrice?: number;
+  sellerName?: string;
+  seller?: string;
+  imageUrls?: string[];
+  views?: number;
+  sales?: number;
+  category?: string;
+  condition?: string;
+}
+
+interface ProductGridProps {
+  horizontal?: boolean;
+  title?: string;
+  limit?: number;
+  endpoint?: string;
+}
+
+// Fallback products for when API fails
+const FALLBACK_PRODUCTS: Product[] = [
+  {
+    _id: '1',
+    title: 'Sample Product 1',
+    price: 99.99,
+    sellerName: 'Campus Seller',
+    imageUrls: ['/images/placeholder.png'],
+    category: 'Electronics',
+    condition: 'New'
+  },
+  {
+    _id: '2',
+    title: 'Sample Product 2',
+    price: 149.99,
+    sellerName: 'Tech Seller',
+    imageUrls: ['/images/placeholder.png'],
+    category: 'Fashion',
+    condition: 'Like New'
+  },
+  {
+    _id: '3',
+    title: 'Sample Product 3',
+    price: 49.99,
+    sellerName: 'Book Seller',
+    imageUrls: ['/images/placeholder.png'],
+    category: 'Books',
+    condition: 'Good'
+  },
+  {
+    _id: '4',
+    title: 'Sample Product 4',
+    price: 199.99,
+    sellerName: 'Gadget Seller',
+    imageUrls: ['/images/placeholder.png'],
+    category: 'Electronics',
+    condition: 'New'
+  }
+];
+
+export default function ProductGrid({ 
+  horizontal = false,
+  title = "Trending near you",
+  limit = 8,
+  endpoint = "/api/public/trending"
+}: ProductGridProps) {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [usingFallback, setUsingFallback] = useState(false);
 
   useEffect(() => {
     let mounted = true;
 
-    const load = async () => {
+    const loadProducts = async () => {
       setLoading(true);
+      setLoadError(null);
+      setUsingFallback(false);
+      
       try {
-        const res = await apiFetch("/public/trending");
-          if (mounted && res?.data) setProducts(res.data);
+        console.log(`📡 [ProductGrid] Fetching from: ${endpoint}`);
+        
+        const res = await apiFetch(endpoint);
+        
+        if (!mounted) return;
+        
+        console.log(`✅ [ProductGrid] Response:`, res);
+        
+        // Extract products from different response structures
+        let productData: Product[] = [];
+        
+        if (res?.data && Array.isArray(res.data)) {
+          productData = res.data;
+          console.log(`✅ Found ${productData.length} products in res.data`);
+        } else if (Array.isArray(res)) {
+          productData = res;
+          console.log(`✅ Found ${productData.length} products in array`);
+        } else if (res?.products && Array.isArray(res.products)) {
+          productData = res.products;
+          console.log(`✅ Found ${productData.length} products in res.products`);
+        } else if (res?.listings && Array.isArray(res.listings)) {
+          productData = res.listings;
+          console.log(`✅ Found ${productData.length} products in res.listings`);
+        }
+        
+        if (productData.length > 0) {
+          // Apply limit
+          if (limit && productData.length > limit) {
+            productData = productData.slice(0, limit);
+          }
+          setProducts(productData);
           setLoadError(null);
-      } catch (err) {
-          // show friendly inline error instead of noisy console exception
-          setLoadError("Unable to load trending products. Check backend or network.");
+        } else {
+          // No products found - use fallback
+          console.log('ℹ️ [ProductGrid] No products from API, using fallback');
+          setUsingFallback(true);
+          setProducts(FALLBACK_PRODUCTS.slice(0, limit));
+        }
+        
+      } catch (error: any) {
+        console.log('ℹ️ [ProductGrid] API error, using fallback products');
+        if (mounted) {
+          setUsingFallback(true);
+          setProducts(FALLBACK_PRODUCTS.slice(0, limit));
+        }
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
-    load();
+    loadProducts();
+
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [endpoint, limit]);
 
-  return (
-    <section className="py-8">
-      <h2 className="text-xl font-semibold mb-4">Trending near you</h2>
-
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-3 gap-y-6">
-        {/* Skeleton */}
-        {loading && products.length === 0 &&
-          new Array(8).fill(0).map((_, i) => (
+  // Loading state
+  if (loading) {
+    return (
+      <section className="py-8">
+        <h2 className="text-xl font-semibold mb-4">{title}</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-3 gap-y-6">
+          {Array(limit || 8).fill(0).map((_, i) => (
             <div key={i} className="animate-pulse">
               <div className="w-full aspect-square bg-slate-100 rounded-2xl mb-2" />
               <div className="h-3 bg-slate-100 rounded w-3/4 mb-1.5" />
@@ -49,76 +161,100 @@ export default function ProductGrid(props: { horizontal?: boolean } = {}) {
               <div className="h-3 bg-slate-100 rounded w-1/3" />
             </div>
           ))}
+        </div>
+      </section>
+    );
+  }
 
-        {/* Empty / Error */}
-        {!loading && products.length === 0 && (
-          <div className="text-sm text-slate-500">
-            {loadError || 'No trending products found.'}
-          </div>
-        )}
+  // Error state
+  if (loadError && !usingFallback) {
+    return (
+      <section className="py-8">
+        <h2 className="text-xl font-semibold mb-4">{title}</h2>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+          <div className="text-red-600 text-lg font-medium mb-2">⚠️ {loadError}</div>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+          >
+            🔄 Retry
+          </button>
+        </div>
+      </section>
+    );
+  }
 
-        {/* Products */}
-        {products.map((p: any) => {
-          const lid = p._id || p.id;
-          let avg: number | null = null;
-          try {
-            const raw = localStorage.getItem(`unimart:comments:${lid}`);
-            if (raw) {
-              const list = JSON.parse(raw) as any[];
-              if (list.length) avg = list.reduce((s, c) => s + (c.rating || 0), 0) / list.length;
-            }
-          } catch (e) { avg = null; }
+  // Empty state
+  if (products.length === 0) {
+    return (
+      <section className="py-8">
+        <h2 className="text-xl font-semibold mb-4">{title}</h2>
+        <div className="text-center text-slate-500 py-12">
+          <p className="text-lg">No products found.</p>
+          <p className="text-sm mt-2">Check back later for new listings!</p>
+        </div>
+      </section>
+    );
+  }
+
+  // Render products
+  return (
+    <section className="py-8">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold">{title}</h2>
+        <span className="text-sm text-slate-400">
+          {usingFallback ? 'Sample products' : `${products.length} items`}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-3 gap-y-6">
+        {products.map((product) => {
+          const id = product._id || product.id;
+          if (!id) return null;
 
           return (
             <Link
-              key={lid}
-              href={`/listings/${lid}`}
+              key={id}
+              href={`/listings/${id}`}
               className="block group"
             >
-
-              {/* Airbnb-style card: no box shadow on container, just clean image + text */}
               <div className="flex flex-col">
-                {/* Square image — same rounded-xl style as CampusTrending */}
+                {/* Image */}
                 <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-slate-100 mb-2 shadow-sm">
-                  {p.imageUrls?.length ? (
+                  {product.imageUrls && product.imageUrls.length > 0 ? (
                     <img
-                      src={p.imageUrls[0]}
-                      alt={p.title || "Product"}
-                      className="object-cover w-full h-full"
+                      src={product.imageUrls[0]}
+                      alt={product.title || "Product"}
+                      className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
+                      loading="lazy"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" fill="%23f1f5f9"/%3E%3Ctext x="50" y="50" text-anchor="middle" dy=".3em" fill="%2394a3b8" font-size="12" font-family="sans-serif"%3ENo image%3C/text%3E%3C/svg%3E';
+                      }}
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">No image</div>
+                    <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm bg-slate-50">
+                      No image
+                    </div>
                   )}
                 </div>
 
-                {/* Info below image */}
+                {/* Info */}
                 <div className="px-0.5">
-                  {/* Top row: seller name + rating */}
-                  <div className="flex items-center justify-between gap-1 mb-0.5">
-                    <p className="text-[13px] font-semibold text-slate-900 truncate leading-tight">
-                      {p.sellerName || p.seller || "Campus Seller"}
-                    </p>
-                    {avg !== null && (
-                      <div className="flex items-center gap-0.5 shrink-0">
-                        <svg className="w-3 h-3 text-yellow-400 fill-yellow-400" viewBox="0 0 20 20">
-                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                        </svg>
-                        <span className="text-[12px] font-medium text-slate-700">{avg.toFixed(1)}</span>
-                      </div>
-                    )}
-                  </div>
-                  
-
-                  {/* Product title */}
-                  <p className="text-[12px] text-slate-500 leading-snug line-clamp-1 mb-1">
-                    {p.title || "Untitled"}
+                  <p className="text-[13px] font-semibold text-slate-900 truncate leading-tight">
+                    {product.sellerName || product.seller || "Campus Seller"}
                   </p>
 
-                  {/* Price — orange, larger */}
+                  <p className="text-[12px] text-slate-500 leading-snug line-clamp-1 mb-1">
+                    {product.title || "Untitled"}
+                  </p>
+
                   <p className="text-[15px] font-bold" style={{ color: "var(--temu-orange)" }}>
-                    ₵{p.price ?? "—"}
-                    {p.originalPrice && (
-                      <span className="text-slate-400 line-through ml-1.5 text-[12px] font-normal">₵{p.originalPrice}</span>
+                    ₵{product.price ?? "—"}
+                    {product.originalPrice && product.originalPrice > product.price && (
+                      <span className="text-slate-400 line-through ml-1.5 text-[12px] font-normal">
+                        ₵{product.originalPrice}
+                      </span>
                     )}
                   </p>
                 </div>

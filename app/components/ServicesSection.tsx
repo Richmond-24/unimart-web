@@ -33,7 +33,7 @@ export default function ServicesSection() {
     const load = async () => {
       setLoading(true);
       try {
-        const res: any = await apiFetch('/public/services');
+        const res: any = await apiFetch('/api/public/services');
         const data = Array.isArray(res) ? res : (res && Array.isArray(res.data) ? res.data : []);
         if (!mounted) return;
         const mapped: Service[] = data.map((p: any) => ({

@@ -1,50 +1,109 @@
+// app/components/HeroCarousel.tsx
+
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import apiFetch from "../../lib/apiClient";
 
 interface Slide {
-  _id: string;
-  title: string;
-  subtitle?: string;
-  image: string;
+  _id?: string;
+  id?: string;
+  title?: string;
+  description?: string;
+  imageUrl?: string;
+  imageUrls?: string[];
   link?: string;
-  ctaText?: string;
+  buttonText?: string;
+  backgroundColor?: string;
 }
 
-export default function HeroCarousel() {
-  const [slides, setSlides] = useState<Slide[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+interface HeroCarouselProps {
+  autoPlay?: boolean;
+  interval?: number;
+}
 
-  // Fetch slides
+// Default slides as fallback
+const DEFAULT_SLIDES: Slide[] = [
+  {
+    id: '1',
+    title: 'Welcome to UniMart',
+    description: 'Your campus marketplace for buying and selling',
+    imageUrl: '/images/hero-banner-1.jpg',
+    buttonText: 'Shop Now',
+    link: '/products'
+  },
+  {
+    id: '2',
+    title: 'Find Great Deals',
+    description: 'Discover amazing products from fellow students',
+    imageUrl: '/images/hero-banner-2.jpg',
+    buttonText: 'Explore',
+    link: '/products'
+  },
+  {
+    id: '3',
+    title: 'Sell Your Items',
+    description: 'List your items and reach thousands of students',
+    imageUrl: '/images/hero-banner-3.jpg',
+    buttonText: 'Start Selling',
+    link: '/sell'
+  }
+];
+
+export default function HeroCarousel({ 
+  autoPlay = true, 
+  interval = 5000 
+}: HeroCarouselProps) {
+  const [slides, setSlides] = useState<Slide[]>(DEFAULT_SLIDES);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     const fetchSlides = async () => {
       try {
-        setLoading(true);
-        setError(null);
+        // ✅ FIXED: Use "/api/hero-slides" NOT "/api/api/hero-slides"
+        const endpoint = "/api/hero-slides";
+        console.log(`📡 [HeroCarousel] Fetching from: ${endpoint}`);
         
-        // Try to fetch from API
-        const response = await apiFetch('/api/hero-slides', {
-          method: 'GET',
-          suppressErrorLog: true // Suppress logging for this call
-        });
+        const response = await apiFetch(endpoint, { suppressErrorLog: true });
         
-        if (response?.success && Array.isArray(response.data) && response.data.length > 0) {
-          setSlides(response.data);
-        } else {
-          // Fallback to default slides if API returns empty
-          setSlides(getDefaultSlides());
+        console.log('✅ [HeroCarousel] Response received:', response);
+        
+        // Check if we got valid slides
+        let newSlides: Slide[] | null = null;
+        
+        if (response?.data && Array.isArray(response.data) && response.data.length > 0) {
+          newSlides = response.data.map((item: any) => ({
+            id: item._id || item.id || String(Math.random()),
+            title: item.title || 'Special Offer',
+            description: item.description || 'Check out our latest deals',
+            imageUrl: item.imageUrl || item.imageUrls?.[0] || '/images/hero-banner-1.jpg',
+            link: item.link || '/products',
+            buttonText: item.buttonText || 'Learn More',
+            backgroundColor: item.backgroundColor || '#f0f0f0'
+          }));
+        } else if (Array.isArray(response) && response.length > 0) {
+          newSlides = response.map((item: any) => ({
+            id: item._id || item.id || String(Math.random()),
+            title: item.title || 'Special Offer',
+            description: item.description || 'Check out our latest deals',
+            imageUrl: item.imageUrl || item.imageUrls?.[0] || '/images/hero-banner-1.jpg',
+            link: item.link || '/products',
+            buttonText: item.buttonText || 'Learn More',
+            backgroundColor: item.backgroundColor || '#f0f0f0'
+          }));
         }
-      } catch (err: any) {
-        // Silent fail - use default slides
-        console.warn('Hero slides fetch failed, using defaults:', err?.message || 'Unknown error');
-        setSlides(getDefaultSlides());
+        
+        if (newSlides && newSlides.length > 0) {
+          console.log(`✅ [HeroCarousel] Loaded ${newSlides.length} slides from API`);
+          setSlides(newSlides);
+        } else {
+          console.log('ℹ️ [HeroCarousel] Using default slides (no API data)');
+        }
+      } catch (error: any) {
+        // Silently fail - use default slides
+        console.log('ℹ️ [HeroCarousel] Using default slides (API error)');
       } finally {
         setLoading(false);
       }
@@ -53,112 +112,98 @@ export default function HeroCarousel() {
     fetchSlides();
   }, []);
 
-  // Auto-play carousel
+  // Auto-play functionality
   useEffect(() => {
-    if (!isAutoPlaying || slides.length === 0) return;
+    if (!autoPlay || slides.length === 0 || loading) return;
 
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % slides.length);
-    }, 5000);
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % slides.length);
+    }, interval);
 
-    return () => clearInterval(interval);
-  }, [slides.length, isAutoPlaying]);
+    return () => clearInterval(timer);
+  }, [autoPlay, interval, slides.length, loading]);
 
+  // Navigation functions
   const goToSlide = (index: number) => {
-    setCurrentIndex(index);
-    // Reset auto-play timer
-    setIsAutoPlaying(true);
+    setCurrentSlide(index);
   };
 
-  const goToPrevious = () => {
-    setCurrentIndex((prev) => (prev - 1 + slides.length) % slides.length);
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % slides.length);
   };
 
-  const goToNext = () => {
-    setCurrentIndex((prev) => (prev + 1) % slides.length);
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
   };
 
-  // Default slides as fallback
-  const getDefaultSlides = (): Slide[] => [
-    {
-      _id: '1',
-      title: 'Welcome to Uni-Mart',
-      subtitle: 'Your campus marketplace',
-      image: '/images/hero-banner-1.jpg',
-      link: '/explore',
-      ctaText: 'Explore Now'
-    },
-    {
-      _id: '2',
-      title: 'Student Deals',
-      subtitle: 'Exclusive discounts for students',
-      image: '/images/hero-banner-2.jpg',
-      link: '/search?category=deals',
-      ctaText: 'Shop Deals'
-    },
-    {
-      _id: '3',
-      title: 'Sell on Uni-Mart',
-      subtitle: 'Start selling today',
-      image: '/images/hero-banner-3.jpg',
-      link: '/seller',
-      ctaText: 'Start Selling'
-    }
-  ];
-
+  // Loading state
   if (loading) {
     return (
-      <div className="relative w-full h-[300px] sm:h-[400px] md:h-[500px] bg-gray-200 rounded-xl overflow-hidden animate-pulse">
+      <div className="relative w-full h-[400px] bg-slate-100 animate-pulse rounded-xl overflow-hidden">
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-12 h-12 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+          <div className="text-slate-400">Loading...</div>
         </div>
       </div>
     );
   }
 
+  // If no slides, don't render
   if (slides.length === 0) {
     return null;
   }
 
-  const currentSlide = slides[currentIndex];
+  const current = slides[currentSlide] || slides[0];
 
   return (
-    <div className="relative w-full h-[300px] sm:h-[400px] md:h-[500px] rounded-xl overflow-hidden group">
-      {/* Slide Image */}
-      <div className="relative w-full h-full">
-        <Image
-          src={currentSlide.image}
-          alt={currentSlide.title}
-          fill
-          className="object-cover transition-transform duration-700 group-hover:scale-105"
-          priority
-          onError={(e) => {
-            // Fallback if image fails to load
-            (e.target as HTMLImageElement).style.display = 'none';
-          }}
-        />
-        {/* Gradient overlay for text readability */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+    <div className="relative w-full h-[400px] rounded-xl overflow-hidden group">
+      {/* Slide Background */}
+      <div 
+        className="absolute inset-0 transition-all duration-700"
+        style={{ 
+          backgroundColor: current.backgroundColor || '#f0f0f0',
+        }}
+      >
+        {/* Image */}
+        {current.imageUrl && (
+          <div className="relative w-full h-full">
+            <Image
+              src={current.imageUrl}
+              alt={current.title || 'Hero slide'}
+              fill
+              className="object-cover"
+              priority
+              onError={(e) => {
+                // Fallback if image fails to load
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+              }}
+            />
+            {/* Gradient Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-r from-black/50 to-transparent" />
+          </div>
+        )}
       </div>
 
-      {/* Slide Content */}
-      <div className="absolute inset-0 flex flex-col justify-center px-6 sm:px-12 md:px-16 text-white">
-        <div className="max-w-2xl">
-          <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold mb-2 drop-shadow-lg">
-            {currentSlide.title}
-          </h2>
-          {currentSlide.subtitle && (
-            <p className="text-sm sm:text-base md:text-xl mb-4 drop-shadow-lg opacity-90">
-              {currentSlide.subtitle}
+      {/* Content */}
+      <div className="absolute inset-0 flex items-center justify-start p-8 md:p-12">
+        <div className="max-w-xl text-white">
+          {current.title && (
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 drop-shadow-lg">
+              {current.title}
+            </h1>
+          )}
+          {current.description && (
+            <p className="text-base md:text-lg lg:text-xl mb-6 drop-shadow-lg text-white/90">
+              {current.description}
             </p>
           )}
-          {currentSlide.link && currentSlide.ctaText && (
-            <Link
-              href={currentSlide.link}
-              className="inline-block px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-lg transition-colors shadow-lg"
+          {current.buttonText && current.link && (
+            <a
+              href={current.link}
+              className="inline-block px-6 py-3 bg-white text-slate-900 font-semibold rounded-lg hover:bg-slate-100 transition shadow-lg"
             >
-              {currentSlide.ctaText}
-            </Link>
+              {current.buttonText}
+            </a>
           )}
         </div>
       </div>
@@ -167,38 +212,40 @@ export default function HeroCarousel() {
       {slides.length > 1 && (
         <>
           <button
-            onClick={goToPrevious}
-            className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-black/70 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            onClick={prevSlide}
+            className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white p-2 rounded-full backdrop-blur-sm transition-opacity opacity-0 group-hover:opacity-100"
             aria-label="Previous slide"
           >
-            <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
           </button>
           <button
-            onClick={goToNext}
-            className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-black/70 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            onClick={nextSlide}
+            className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white p-2 rounded-full backdrop-blur-sm transition-opacity opacity-0 group-hover:opacity-100"
             aria-label="Next slide"
           >
-            <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
           </button>
-        </>
-      )}
 
-      {/* Dots Indicator */}
-      {slides.length > 1 && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-          {slides.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => goToSlide(index)}
-              className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full transition-all duration-300 ${
-                index === currentIndex
-                  ? 'bg-white w-6 sm:w-8'
-                  : 'bg-white/50 hover:bg-white/80'
-              }`}
-              aria-label={`Go to slide ${index + 1}`}
-            />
-          ))}
-        </div>
+          {/* Dot Indicators */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+            {slides.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => goToSlide(index)}
+                className={`w-2.5 h-2.5 rounded-full transition-all ${
+                  index === currentSlide
+                    ? 'bg-white w-8'
+                    : 'bg-white/50 hover:bg-white/80'
+                }`}
+                aria-label={`Go to slide ${index + 1}`}
+              />
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

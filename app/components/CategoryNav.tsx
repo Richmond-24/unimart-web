@@ -20,7 +20,7 @@ export default function CategoryNav() {
     let mounted = true;
     const load = async () => {
       try {
-        const res = await apiFetch("/public/categories");
+        const res = await apiFetch("/api/public/categories");
 
         if (!mounted) return;
 
