@@ -13,7 +13,7 @@ export default function SecondHandDeals() {
     const load = async () => {
       setLoading(true);
       try {
-        const res = await apiFetch('/public/second-hand');
+        const res = await apiFetch('/api/public/second-hand');
         if (mounted && res && res.data) setItems(res.data);
       } catch (err) {
         console.error('Error loading second-hand listings', err);

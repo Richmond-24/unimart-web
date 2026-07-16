@@ -27,9 +27,9 @@ export default function TrendingDetail({ params }: { params: { id: string } }) {
       try {
         let res: any = null;
         try {
-          res = await apiFetch(`/public/campus-trending/${id}`);
+          res = await apiFetch(`/api/public/campus-trending/${id}`);
         } catch (e) {
-          const listRes: any = await apiFetch('/public/campus-trending');
+          const listRes: any = await apiFetch('/api/public/campus-trending');
           const data = Array.isArray(listRes) ? listRes : (listRes && Array.isArray(listRes.data) ? listRes.data : []);
           res = { data };
         }

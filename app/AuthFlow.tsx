@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState, memo } from "react";
@@ -26,7 +25,6 @@ const UNIVERSITY_OPTIONS = [
 ];
 
 // ─── FLOATING GLASSMORPHIC E-COMMERCE ICONS ───────────────────────────────────
-// FIXED: Moved outside AuthFlow so it never remounts on parent state changes.
 const ICONS = [
   { path: <><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></>, size: 48, top: "8%", left: "5%", delay: "0s", duration: "14s" },
   { path: <><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></>, size: 36, top: "15%", left: "82%", delay: "2s", duration: "18s" },
@@ -42,7 +40,6 @@ const ICONS = [
   { path: <><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></>, size: 38, top: "40%", left: "-2%", delay: "2.5s", duration: "18s" },
 ];
 
-// FIXED: memo ensures FloatingIcons never re-renders unless its own props change (it has none).
 const FloatingIcons = memo(function FloatingIcons() {
   return (
     <div className="um-float-layer">
@@ -76,12 +73,12 @@ const FloatingIcons = memo(function FloatingIcons() {
 });
 
 // ─── WELCOME SCREEN ──────────────────────────────────────────────────────────
-// FIXED: Defined outside AuthFlow so it never gets a new identity on each render.
 type WelcomeScreenProps = {
   onSignup: () => void;
   onLogin: () => void;
   onTerms: () => void;
 };
+
 const WelcomeScreen = memo(function WelcomeScreen({ onSignup, onLogin, onTerms }: WelcomeScreenProps) {
   return (
     <div className="um-screen um-welcome">
@@ -135,8 +132,6 @@ const WelcomeScreen = memo(function WelcomeScreen({ onSignup, onLogin, onTerms }
 });
 
 // ─── FORM SCREEN ─────────────────────────────────────────────────────────────
-// FIXED: Defined outside AuthFlow. All state values passed as props — no closures
-// over parent state that would cause the component to get a new identity on each render.
 type FormScreenProps = {
   mode: "login" | "signup";
   name: string; setName: (v: string) => void;
@@ -383,7 +378,6 @@ const FormScreen = memo(function FormScreen({
 });
 
 // ─── DESKTOP LAYOUT ───────────────────────────────────────────────────────────
-// FIXED: Defined outside AuthFlow for the same reason.
 type DesktopLayoutProps = {
   screen: Screen;
   name: string; setName: (v: string) => void;
@@ -588,7 +582,7 @@ const DesktopLayout = memo(function DesktopLayout({
   );
 });
 
-// ─── AUTH FLOW (state only) ───────────────────────────────────────────────────
+// ─── AUTH FLOW ───────────────────────────────────────────────────────────────────
 export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'|'guest') => void }) {
   const router = useRouter();
   const { setToken, setUser } = useAuth();
@@ -628,18 +622,16 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
     setSuccessMessage("");
   }
 
+  // ─── SIGNUP HANDLER ──────────────────────────────────────────────────────────
   async function handleSignup() {
-    // Prevent concurrent submissions
     if (isSubmittingRef.current) return;
     setError(null);
 
-    // Validate name
     if (!name || name.trim() === "") {
       setError("Please enter your full name");
       return;
     }
 
-    // Validate email format
     if (!email || email.trim() === "") {
       setError("Please enter your email address");
       return;
@@ -650,7 +642,6 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
       return;
     }
 
-    // Validate password
     if (!password || password.trim() === "") {
       setError("Please create a password (at least 8 characters)");
       return;
@@ -661,7 +652,6 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
       return;
     }
 
-    // Validate password confirmation
     if (!passwordConfirm || passwordConfirm.trim() === "") {
       setError("Please confirm your password");
       return;
@@ -672,7 +662,6 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
       return;
     }
 
-    // Validate phone if provided
     if (phone && phone.trim() !== "") {
       if (!/^\+?[0-9\s\-]{7,15}$/.test(phone)) {
         setError("Please enter a valid phone number (7-15 digits)");
@@ -685,17 +674,12 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
       return;
     }
 
-    // mark submitting after validations so failed validations don't lock the flow
     isSubmittingRef.current = true;
     setIsLoading(true);
 
     try {
-      // Step 1: Try to detect user location while the request is prepared.
-      // Keep signup fast by not waiting longer than one second.
       const locationPromise = detectUserLocation(1000).catch(() => null);
 
-      // Step 2: Notify Zapier of new signup (best-effort, non-blocking)
-      // Step 3: Continue with the registration request and attach location data if available.
       let locPayload: any = {};
       try {
         const loc = await Promise.race([locationPromise, new Promise(resolve => setTimeout(() => resolve(null), 1000))]);
@@ -705,13 +689,11 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
           if (location.lat != null && location.lon != null) locPayload.locationCoords = { lat: location.lat, lon: location.lon };
           try { localStorage.setItem('unimart:locationDetected', '1'); } catch (e) {}
         }
-      } catch (e) {
-        // ignore detection errors
-      }
+      } catch (e) {}
 
-      // Step 4: Register user
+      // ✅ FIXED: Added /api prefix
       console.debug("Registering user with email:", email.substring(0, 3) + "***");
-      const res = await apiFetch('/auth/register', { 
+      const res = await apiFetch('/api/auth/register', { 
         method: 'POST', 
         body: { 
           name: name.trim(), 
@@ -737,13 +719,11 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
         return;
       }
       
-      // Success: Save credentials
       if (!res.token) {
         setError("Registration successful but authentication failed. Please log in.");
         return;
       }
 
-      // Update auth context (persists to localStorage + cookie via context effects)
       try { persistAuthToken(res.token); } catch (e) { console.warn('Could not persist token:', e); }
       try { setToken(res.token); } catch (e) { console.warn('Could not set token in context:', e); }
       try { setUser(res.user ? { ...res.user } : null); } catch (e) { console.warn('Could not set user in context:', e); }
@@ -762,7 +742,6 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
       try { localStorage.setItem('unimart:university', role === 'buyer' ? university : ''); } catch (e) {}
       try { localStorage.setItem('unimart:onboarded', '1'); } catch (e) {}
       
-      // Show success UI
       setIsLoading(false);
       setSuccessName(name.split(" ")[0]);
       setSuccessMessage('Account created successfully. Redirecting...');
@@ -771,14 +750,12 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
       setSuccessUserRole(newUserRole);
       setShowSuccess(true);
 
-      // Trigger auth change event and navigate based on role
       setTimeout(() => {
         setShowSuccess(false);
         try { window.dispatchEvent(new Event('unimart:authChanged')); } catch (e) {}
         if (onDone) {
           onDone(newUserRole);
         } else {
-          // Route based on user role
           const redirectPath = newUserRole === 'seller' ? '/seller' : '/';
           router.replace(redirectPath);
         }
@@ -797,10 +774,10 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
     }
   }
 
+  // ─── LOGIN HANDLER ──────────────────────────────────────────────────────────
   async function handleLogin() {
     setError(null);
     
-    // Validate email format
     if (!email || email.trim() === "") {
       setError("Please enter your email address");
       return;
@@ -811,7 +788,6 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
       return;
     }
     
-    // Validate password
     if (!password || password.trim() === "") {
       setError("Please enter your password");
       return;
@@ -825,9 +801,10 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
     setIsLoading(true);
     try {
       console.debug("Attempting login with email:", email.substring(0, 3) + "***");
-      console.debug("API URL will be: " + process.env.NEXT_PUBLIC_API_URL + "/auth/login");
+      console.debug("API URL will be: " + process.env.NEXT_PUBLIC_API_URL + "/api/auth/login");
       
-      const res = await apiFetch('/auth/login', { 
+      // ✅ FIXED: Added /api prefix
+      const res = await apiFetch('/api/auth/login', { 
         method: 'POST', 
         body: { 
           email: email.trim().toLowerCase(), 
@@ -835,7 +812,6 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
         } 
       });
       
-      // Handle response
       if (!res) {
         setError("No response from server. Please check your connection and try again.");
         setIsLoading(false);
@@ -843,7 +819,6 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
       }
       
       if (!res.success) {
-        // Show specific error message from backend, or generic default
         const errorMsg = res.message || 'Login failed. Please check your email and password.';
         setError(errorMsg);
         console.debug("Login failed:", errorMsg);
@@ -851,14 +826,12 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
         return;
       }
 
-      // Success: Save credentials
       if (!res.token) {
         setError("Authentication failed. No token received.");
         setIsLoading(false);
         return;
       }
 
-      // Update auth context so AppInitializer sees the change immediately
       try { persistAuthToken(res.token); } catch (e) { console.warn('Could not persist token:', e); }
       try { setToken(res.token); } catch (e) { console.warn('Could not set token in context:', e); }
       try { setUser(res.user ? { ...res.user } : null); } catch (e) { console.warn('Could not set user in context:', e); }
@@ -869,7 +842,6 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
         if (saved.university) {
           try { localStorage.setItem('unimart:university', saved.university); } catch (e) {}
         }
-        // If server did not provide creation date, try to infer from token iat
         if (!saved.createdAt) {
           try {
             const tok = res.token || (typeof window !== 'undefined' ? localStorage.getItem('unimart:token') : null);
@@ -880,9 +852,7 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
                 if (payload && payload.iat) saved.createdAt = new Date(payload.iat * 1000).toISOString();
               }
             }
-          } catch (e) {
-            // ignore
-          }
+          } catch (e) {}
         }
         if (!saved.createdAt) saved.createdAt = new Date().toISOString();
         localStorage.setItem('unimart:user', JSON.stringify(saved));
@@ -895,7 +865,6 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
         }
       } catch (e) { console.warn('Could not save user:', e); }
       
-      // Show success UI
       setIsLoading(false);
       setSuccessName(res.user?.name ? res.user.name.split(" ")[0] : "Welcome");
       setSuccessMessage('Logged in successfully. Redirecting...');
@@ -904,14 +873,12 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
       setSuccessUserRole(userRole);
       setShowSuccess(true);
 
-      // Trigger auth change event and navigate based on role
       setTimeout(() => {
         setShowSuccess(false);
         try { window.dispatchEvent(new Event('unimart:authChanged')); } catch (e) {}
         if (onDone) {
           onDone(userRole);
         } else {
-          // Route based on user role
           const redirectPath = userRole === 'seller' ? '/seller' : '/';
           router.replace(redirectPath);
         }
@@ -1154,8 +1121,6 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
         }
         .um-btn-ghost:hover { color: var(--um-text-2); }
 
-        /* small guest button used in welcome/login/signup to reduce visual weight */
-
         .um-spinner {
           width: 18px; height: 18px;
           border: 2.5px solid rgba(255,255,255,.3);
@@ -1198,10 +1163,8 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
           display: flex; flex-direction: column; gap: 12px; flex: 1;
           background: rgba(255,255,255,0.92);
           backdrop-filter: blur(6px);
-          /* Make the form body scrollable so inputs and submit stay visible */
           overflow: auto;
           -webkit-overflow-scrolling: touch;
-          /* Give room at the bottom so the submit button isn't hidden behind keyboard */
           padding-bottom: 88px;
           max-height: calc(100dvh - 140px);
         }
@@ -1223,7 +1186,6 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
           border-radius: 10px; padding: 0 44px 0 44px;
           font-family: 'Inter', sans-serif; font-size: 15px; color: var(--um-text);
           outline: none; transition: border-color .18s, box-shadow .18s, background .18s;
-          /* Prevent mobile zoom on focus */
           font-size: max(16px, 15px);
         }
         .um-field-input::placeholder { color: var(--um-text-3); }
@@ -1267,11 +1229,9 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
           display: flex; align-items: center; justify-content: center; gap: 6px;
           padding: 12px 16px;
           border-top: 1px solid var(--um-border);
-          margin-top: 0; /* removed auto so footer is not pushed off-screen */
+          margin-top: 0;
           background: rgba(255,255,255,0.96);
           backdrop-filter: blur(6px);
-          /* Keep footer visible when the form scrolls (sticky inside viewport)
-             so the submit/action buttons remain accessible on mobile keyboard */
           position: sticky;
           bottom: env(safe-area-inset-bottom, 0);
           z-index: 30;

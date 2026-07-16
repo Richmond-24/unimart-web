@@ -94,14 +94,9 @@ export default function SocketChat({
       setIsConnected(true);
       setError(null);
       
-      // Join conversation room
+      // Join conversation room (server expects 'join_conversation')
       const roomId = [sellerId, currentUserId].sort().join("-");
-      socket.emit("joinConversation", { 
-        conversationId: roomId,
-        listingId,
-        sellerId,
-        buyerId: currentUserId,
-      });
+      socket.emit('join_conversation', { conversationId: roomId });
     });
 
     socket.on("connect_error", (err) => {
@@ -115,8 +110,16 @@ export default function SocketChat({
       setIsConnected(false);
     });
 
-    socket.on("receiveMessage", (message: Message) => {
-      setMessages((prev) => [...prev, message]);
+    socket.on('new_message', (message: any) => {
+      const msg: Message = {
+        _id: message._id || message.id || `srv-${Date.now()}`,
+        senderId: message.sender?._id || message.senderId || message.sender,
+        receiverId: message.receiverId || undefined,
+        content: message.text || message.content || '',
+        createdAt: message.timestamp || message.createdAt || new Date().toISOString(),
+        read: !!message.read,
+      };
+      setMessages((prev) => [...prev, msg]);
       scrollToBottom();
     });
 
@@ -193,24 +196,15 @@ export default function SocketChat({
     try {
       const roomId = [sellerId, currentUserId].sort().join("-");
       
-      socketRef.current?.emit("sendMessage", {
-        conversationId: roomId,
-        listingId,
-        content: messageContent,
-        senderId: currentUserId,
-        receiverId: sellerId,
-        sellerId: sellerId,
-        buyerId: currentUserId,
-      });
-
-      // Save message to API
+      // Save message to API (use 'text' field expected by backend)
       await apiClient("/api/messages", {
         method: "POST",
         body: {
           listingId,
-          content: messageContent,
+          text: messageContent,
           receiverId: sellerId,
           senderId: currentUserId,
+          type: 'text'
         },
       });
     } catch (err) {

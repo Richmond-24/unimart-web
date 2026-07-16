@@ -67,7 +67,7 @@ function MessagesContent() {
     const loadConversations = async () => {
       try {
         setLoading(true);
-        const res = await apiFetch("/messages/seller/conversations");
+        const res = await apiFetch("/api/messages/seller/conversations");
         if (!mounted) return;
 
         const convs = Array.isArray(res?.conversations) ? res.conversations : [];
@@ -110,7 +110,7 @@ function MessagesContent() {
     const handleSellerNewMessage = (data: any) => {
       (async () => {
         try {
-          const res = await apiFetch("/messages/seller/conversations");
+          const res = await apiFetch("/api/messages/seller/conversations");
           const convs = res?.conversations || [];
           setConversations(convs);
 
@@ -144,10 +144,32 @@ function MessagesContent() {
       })();
     };
 
+    const handleMessagesRead = (data: any) => {
+      try {
+        if (!data || !data.conversationId) return;
+        if (selectedConv && data.conversationId === selectedConv._id) {
+          setMessages((prev) => prev.map(m => ({ ...m, read: true })));
+        }
+        // Refresh conversations list unread counts
+        (async () => {
+          try {
+            const res = await apiFetch("/api/messages/seller/conversations");
+            const convs = res?.conversations || [];
+            setConversations(convs);
+          } catch (e) {
+            // ignore
+          }
+        })();
+      } catch (err) {
+        console.error('messages_read handler failed', err);
+      }
+    };
+
     if (socket) {
       socket.on("connect", handleConnect);
       socket.on("disconnect", handleDisconnect);
       socket.on("seller:new_message", handleSellerNewMessage);
+      socket.on('messages_read', handleMessagesRead);
     }
 
     return () => {
@@ -155,6 +177,7 @@ function MessagesContent() {
         socket.off("connect", handleConnect);
         socket.off("disconnect", handleDisconnect);
         socket.off("seller:new_message", handleSellerNewMessage);
+        socket.off('messages_read', handleMessagesRead);
       }
     };
   }, [selectedConv?._id, selectedConv?.buyer?._id]);
@@ -168,7 +191,7 @@ function MessagesContent() {
       try {
         setMessagesLoading(true);
         const res = await apiFetch(
-          `/messages/seller/conversations/${selectedConv._id}?limit=100`
+          `/api/messages/seller/conversations/${selectedConv._id}?limit=100`
         );
         if (!mounted) return;
 
@@ -203,7 +226,7 @@ function MessagesContent() {
     setSending(true);
 
     try {
-      const res = await apiFetch("/messages", {
+      const res = await apiFetch("/api/messages", {
         method: "POST",
         body: {
           conversationId: selectedConv._id,
@@ -336,8 +359,8 @@ function MessagesContent() {
                   >
                     <div
                       className={`max-w-xs px-4 py-2.5 rounded-lg ${isMine
-                          ? "bg-teal-600 text-white rounded-br-none"
-                          : "bg-white border border-gray-200 text-gray-900 rounded-bl-none"
+                        ? "bg-teal-600 text-white rounded-br-none"
+                        : "bg-white border border-gray-200 text-gray-900 rounded-bl-none"
                         }`}
                     >
                       <p className="break-words text-sm">{msg.text}</p>
