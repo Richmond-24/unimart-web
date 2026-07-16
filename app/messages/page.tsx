@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { MessageCircle, Loader2, AlertCircle, Search } from 'lucide-react';
 import apiFetch from '../../lib/apiClient';
+import { connectSocket } from '../../lib/socket';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 interface Conversation {
@@ -28,6 +29,16 @@ export default function MessagesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
 
+  const refreshConvs = async () => {
+    try {
+      const res = await apiFetch('/messages/conversations');
+      const data = res?.conversations || res?.data || [];
+      setConvs(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error('Failed to refresh conversations:', e);
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -51,6 +62,25 @@ export default function MessagesPage() {
     };
   }, []);
 
+  // Real-time socket: auto-refresh when new message arrives
+  useEffect(() => {
+    const socket = connectSocket();
+    if (!socket) return;
+
+    const onNewMsg = () => { refreshConvs(); };
+    socket.on('new_message', onNewMsg);
+    socket.on('seller:new_message', onNewMsg);
+
+    if (socket.connected) {
+      socket.emit('health:ping');
+    }
+
+    return () => {
+      socket.off('new_message', onNewMsg);
+      socket.off('seller:new_message', onNewMsg);
+    };
+  }, []);
+
   useEffect(() => {
     const query = searchQuery.toLowerCase();
     const filtered = convs.filter(
@@ -63,11 +93,10 @@ export default function MessagesPage() {
   }, [searchQuery, convs]);
 
   const openChat = (conv: Conversation) => {
-    // Use the product ObjectId, falling back to conversation ID for direct routing
     const productId =
       (typeof conv.product === 'object' ? conv.product?._id : conv.product) ||
       conv._id;
-    router.push(`/listings/${productId}/chat?convId=${conv._id}`);
+    router.push(`/listings/${encodeURIComponent(String(productId))}/chat?convId=${encodeURIComponent(conv._id)}`);
   };
 
   const totalUnread = convs.reduce((sum, c) => sum + (c.unreadForBuyer || 0), 0);

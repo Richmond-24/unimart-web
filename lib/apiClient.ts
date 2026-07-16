@@ -42,10 +42,19 @@ async function request<T = any>(
     });
 
     let payload: any = {};
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
       try {
         payload = await response.json();
+      } catch (e) {
+        payload = {};
+      }
+    } else {
+      try {
+        const text = await response.text();
+        if (text) {
+          payload = { message: text };
+        }
       } catch (e) {
         payload = {};
       }

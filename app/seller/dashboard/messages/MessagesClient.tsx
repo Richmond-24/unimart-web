@@ -18,11 +18,13 @@ interface Message {
 
 interface ConvData {
   _id: string;
-  buyer?: { name: string; _id?: string; id?: string; email?: string };
+  buyer?: { name?: string; _id?: string; id?: string; email?: string };
+  seller?: { name?: string; _id?: string; id?: string; email?: string };
+  participants?: Array<{ _id?: string; id?: string; name?: string; email?: string }>;
   productName?: string;
   productImage?: string;
   price?: number;
-  lastMessage?: { text: string; timestamp: string };
+  lastMessage?: { text?: string; timestamp?: string | number };
   unreadCount?: number;
   unreadForSeller?: number;
 }
@@ -68,7 +70,7 @@ function MessagesContent() {
         const res = await apiFetch("/messages/seller/conversations");
         if (!mounted) return;
 
-        const convs = res?.conversations || [];
+        const convs = Array.isArray(res?.conversations) ? res.conversations : [];
         setConversations(convs);
 
         if (selectedConvId) {
@@ -113,17 +115,26 @@ function MessagesContent() {
           setConversations(convs);
 
           if (selectedConv && data.conversationId === selectedConv._id) {
-            const newMessage = data.message || {
+            const incomingMessage = data.message || {
               _id: `msg-${Date.now()}`,
-              sender: data.from === "buyer" ? selectedConv.buyer?._id : currentUserId,
+              sender: data.from === "buyer" ? selectedConv.buyer?._id || selectedConv.buyer?.id : currentUserId,
               text: data.message?.text || "New message",
               timestamp: new Date().toISOString(),
             };
-            // Deduplicate
+
             setMessages((prev) => {
-              const exists = prev.some(p => p._id && p._id === newMessage._id);
+              const senderId = String((incomingMessage.sender as any)?._id || incomingMessage.sender || incomingMessage.senderId || "");
+              const text = incomingMessage.text || "";
+              const exists = prev.some((p) => {
+                const existingId = p._id || p.id || "";
+                const existingSender = String((p.sender as any)?._id || p.sender || p.senderId || "");
+                const existingText = p.text || "";
+                return existingId === incomingMessage._id || existingId === incomingMessage.id || (
+                  Boolean(existingSender) && existingSender === senderId && existingText === text
+                );
+              });
               if (exists) return prev;
-              return [...prev, newMessage];
+              return [...prev, incomingMessage];
             });
             scrollToBottom();
           }
@@ -267,7 +278,7 @@ function MessagesContent() {
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-gray-900 line-clamp-1">
-                    {conv.buyer?.name || "Unknown Buyer"}
+                    {conv.buyer?.name || conv.participants?.find((p) => String(p._id || p.id) !== String(currentUserId))?.name || "Unknown Buyer"}
                   </p>
                   <p className="text-xs text-gray-600 line-clamp-1">
                     {conv.productName || "No product"}
@@ -292,7 +303,7 @@ function MessagesContent() {
           <div className="border-b p-4 flex items-center justify-between">
             <div>
               <h3 className="font-semibold text-gray-900">
-                {selectedConv.buyer?.name || "Buyer"}
+                {selectedConv.buyer?.name || selectedConv.participants?.find((p) => String(p._id || p.id) !== String(currentUserId))?.name || "Buyer"}
               </h3>
               <p className="text-xs text-gray-500">{selectedConv.productName}</p>
               {selectedConv.price && (

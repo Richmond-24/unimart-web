@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Space_Grotesk, Inter, Plus_Jakarta_Sans, Figtree } from "next/font/google";
 import "./globals.css";
 
 import { AuthProvider } from "./context/AuthContext";
@@ -7,7 +7,6 @@ import AppInitializer from "./components/AppInitializer";
 import AppGate from "./components/AppGate";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
-import SocketChatHost from "./components/SocketChatHost";
 import MessageListener from "./components/MessageListener";
 import RiriHost from "./components/RiriHost";
 import RiriButton from "./components/RiriButton";
@@ -24,6 +23,29 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-space-grotesk",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+});
+
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+});
+
+const plusJakartaSans = Plus_Jakarta_Sans({
+  variable: "--font-plus-jakarta-sans",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+});
+
+const figtree = Figtree({
+  variable: "--font-figtree",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
+});
+
 export const metadata: Metadata = {
   title: "Uni-Mart",
   description: "AI-powered commerce platform",
@@ -38,7 +60,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${inter.variable} ${plusJakartaSans.variable} ${figtree.variable} h-full antialiased`}
       data-app-stage="splash"
     >
       <head>
@@ -90,8 +112,7 @@ export default function RootLayout({
             {/* Floating RIRI assistant button (home page only) */}
             <RiriButton />
 
-            {/* Global AI assistant */}
-            <SocketChatHost />
+            {/* Global AI assistant and notification listener */}
             <RiriHost />
             <MessageListener />
             <WelcomeBadgeModal />

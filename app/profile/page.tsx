@@ -211,7 +211,65 @@ export default function ProfilePage() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"overview" | "reviews" | "security" | "badges">("overview");
   const [userBadges, setUserBadges] = useState<any[]>([]);
+  const [newBadgeAlert, setNewBadgeAlert] = useState<any[]>([]);
   const [backLoading, setBackLoading] = useState(false);
+
+  const getStoredBadgeIds = () => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const raw = localStorage.getItem('unimart:earnedBadgeIds');
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  };
+
+  const setStoredBadgeIds = (ids: string[]) => {
+    try {
+      localStorage.setItem('unimart:earnedBadgeIds', JSON.stringify(ids));
+    } catch (e) {
+      // ignore write failures
+    }
+  };
+
+  const trackBadgeUnlocks = async (earnedBadges: any[], userData: any) => {
+    const previousBadgeIds = getStoredBadgeIds();
+    const newBadges = earnedBadges.filter((badge) => !previousBadgeIds.includes(badge.id));
+    if (earnedBadges.length > 0) {
+      setStoredBadgeIds(earnedBadges.map((badge) => badge.id));
+    }
+    if (newBadges.length === 0) return;
+
+    setNewBadgeAlert(newBadges);
+
+    const userId = userData?._id || userData?.id;
+    if (!userId) return;
+
+    try {
+      await Promise.all(newBadges.map((badge) =>
+        apiFetch('/notifications', {
+          method: 'POST',
+          body: {
+            userId,
+            type: 'badge_unlocked',
+            title: `Badge unlocked: ${badge.name}`,
+            body: badge.description,
+            data: { badgeId: badge.id, badgeName: badge.name },
+          },
+        }).catch((err) => {
+          console.warn('Badge notification creation failed', err);
+        })
+      ));
+    } catch (err) {
+      console.warn('Badge notification creation error', err);
+    }
+
+    try {
+      window.dispatchEvent(new CustomEvent('unimart:notificationCount', { detail: { increment: newBadges.length } }));
+    } catch (e) {
+      // ignore
+    }
+  };
 
   const handleBackToHome = async () => {
     if (backLoading) return;
@@ -271,6 +329,7 @@ export default function ProfilePage() {
           // Calculate badges based on user data
           const earnedBadges = calculateBadges(u);
           setUserBadges(earnedBadges);
+          trackBadgeUnlocks(earnedBadges, u);
 
           try { localStorage.setItem("unimart:user", JSON.stringify(u)); } catch (e) { }
         } else {
@@ -284,6 +343,7 @@ export default function ProfilePage() {
               setPhone(lu.phone || "");
               const earnedBadges = calculateBadges(lu);
               setUserBadges(earnedBadges);
+              trackBadgeUnlocks(earnedBadges, lu);
             }
           } catch (e) { }
         }
@@ -333,6 +393,7 @@ export default function ProfilePage() {
         setPhone(lu.phone || "");
         const earnedBadges = calculateBadges(lu);
         setUserBadges(earnedBadges);
+        trackBadgeUnlocks(earnedBadges, lu);
         loadProfileAndReviews();
       } catch (e) { }
     }
@@ -485,6 +546,19 @@ export default function ProfilePage() {
       </div>
 
       <div className="p-layout">
+        {newBadgeAlert.length > 0 && (
+          <div className="p-new-badge-alert rounded-3xl border border-teal-100 bg-teal-50 p-4 mb-4 text-sm text-teal-900 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="mt-1 rounded-full bg-white p-2 text-teal-700">
+                <span className="text-lg">🎉</span>
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold">You unlocked {newBadgeAlert.length} new badge{newBadgeAlert.length > 1 ? 's' : ''}!</p>
+                <p className="mt-1 text-slate-600">We added a notification for your latest achievement. Tap the Badges tab to view them.</p>
+              </div>
+            </div>
+          </div>
+        )}
         {/* ── LEFT SIDEBAR ── */}
         <aside className="p-sidebar">
           {/* Avatar card with badges next to name */}
@@ -571,8 +645,10 @@ export default function ProfilePage() {
               >
                 <i className={`ti ${t.icon}`} />
                 {t.label}
-                {t.key === 'badges' && userBadges.length > 0 && (
-                  <span className="p-badge-count-pill">{userBadges.length}</span>
+                {(t.key === 'badges' && (userBadges.length > 0 || newBadgeAlert.length > 0)) && (
+                  <span className="p-badge-count-pill">
+                    {newBadgeAlert.length > 0 ? `New` : userBadges.length}
+                  </span>
                 )}
                 <i className="ti ti-chevron-right p-sidenav-arrow" />
               </button>

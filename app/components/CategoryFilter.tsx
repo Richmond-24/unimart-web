@@ -1,146 +1,120 @@
-
 "use client";
 
-import React from "react";
+import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 
 const CATEGORIES = [
-  {
-    slug: "tech-gadgets",
-    name: "Tech",
-    fileName: "tech.jpg",
-    crop: "center",
-    alt: "Circuit board close-up",
-  },
-  {
-    slug: "fashion",
-    name: "Fashion",
-    fileName: "Fashion.jpg",
-    crop: "center",
-    alt: "Clothing rack with garments",
-  },
-  {
-    slug: "food",
-    name: "Food",
-    fileName: "Food.jpg",
-    crop: "center",
-    alt: "Colourful food bowl",
-  },
-  {
-    slug: "home-furniture",
-    name: "Home Appliance",
-    fileName: "home.jpg",
-    crop: "center",
-    alt: "Modern living room sofa",
-  },
-  {
-    slug: "services",
-    name: "Services",
-    fileName: "services.jpg",
-    crop: "center",
-    alt: "Handyman tools on a workbench",
-  },
-  {
-    slug: "second-hand",
-    name: "Second-hand",
-    fileName: "used.jpg",
-    crop: "center",
-    alt: "Vintage items at a market stall",
-  },
-  {
-    slug: "events",
-    name: "Events",
-    fileName: "event.jpg",
-    crop: "top",
-    alt: "Concert crowd at an event",
-  },
-  {
-    slug: "books",
-    name: "Books",
-    fileName: "books.jpg",
-    crop: "center",
-    alt: "Books arranged on a shelf",
-  },
+  { slug: "tech-gadgets", name: "Tech", fileName: "tech.jpg", alt: "Circuit board", discount: "70%", sold: "12k+ sold" },
+  { slug: "fashion", name: "Fashion", fileName: "Fashion.jpg", alt: "Clothing rack", discount: "60%", sold: "8.5k+ sold" },
+  { slug: "food", name: "Food", fileName: "Food.jpg", alt: "Colourful bowl", discount: "45%", sold: "3k+ sold" },
+  { slug: "home-furniture", name: "Home", fileName: "home.jpg", alt: "Modern room", discount: "80%", sold: "20k+ sold" },
+  { slug: "services", name: "Services", fileName: "services.jpg", alt: "Handyman tools", discount: "30%", sold: "900+ sold" },
+  { slug: "second-hand", name: "Second-hand", fileName: "used.jpg", alt: "Vintage items", discount: "55%", sold: "5.2k+ sold" },
+  { slug: "events", name: "Events", fileName: "event.jpg", alt: "Concert crowd", discount: "25%", sold: "1.1k+ sold" },
+  { slug: "books", name: "Books", fileName: "books.jpg", alt: "Bookshelf", discount: "65%", sold: "4.7k+ sold" },
 ];
 
+// Only the categories in the auto-slider, with a flat color per banner
+const SLIDER_SLUGS = ["fashion", "food", "tech-gadgets", "events", "books"];
+const BANNER_COLORS: Record<string, string> = {
+  fashion: "#E5231B",
+  food: "#FF6000",
+  "tech-gadgets": "#1A1A1A",
+  events: "#7C3AED",
+  books: "#0F766E",
+};
+const SLIDER_CATEGORIES = SLIDER_SLUGS
+  .map((slug) => CATEGORIES.find((c) => c.slug === slug))
+  .filter(Boolean) as typeof CATEGORIES;
+
+// Duplicate the list so the CSS scroll loop is seamless
+const SLIDER_LOOP = [...SLIDER_CATEGORIES, ...SLIDER_CATEGORIES];
+
 function localPhotoUrl(fileName: string) {
-  // image files live in the `public/` folder — prefix with `/` so Next serves them from public
   return `/${fileName}`;
 }
 
-interface CategoryFilterProps {
-  activeCategory?: string;
-}
+export default function CategoryFilter({ activeCategory }: { activeCategory?: string }) {
+  const [highlightedCategory, setHighlightedCategory] = useState(activeCategory || "tech-gadgets");
 
-export default function CategoryFilter({ activeCategory }: CategoryFilterProps) {
+  const selectedCategory = useMemo(
+    () => CATEGORIES.find((cat) => cat.slug === highlightedCategory) ?? CATEGORIES[0],
+    [highlightedCategory]
+  );
+
   return (
-    <section className="py-3">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 sm:gap-3">
-          {CATEGORIES.map((cat) => {
-            const isActive = activeCategory === cat.slug;
-
-            return (
-              <Link
-                key={cat.slug}
-                href={`/search?category=${encodeURIComponent(cat.slug)}`}
-                className={[
-                  "category-chip group flex flex-col items-center gap-2",
-                  "py-3 px-1 rounded-[18px] border-[1.5px] transition-colors duration-200",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2",
-                  "active:scale-95",
-                  isActive
-                    ? "border-teal-500 bg-teal-50"
-                    : "border-transparent bg-white hover:border-teal-500 hover:shadow-[0_4px_16px_rgba(13,148,136,0.15)]",
-                ].join(" ")}
-              >
-                {/* Photo tile */}
-                <span
-                  className={[
-                    "relative overflow-hidden rounded-[13px] flex-shrink-0 block",
-                    // larger base sizes for better visibility on mobile & desktop
-                    "w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-24 lg:h-24",
-                    "border-2 transition-colors duration-200",
-                    isActive
-                      ? "border-teal-500"
-                      : "border-transparent group-hover:border-teal-500",
-                  ].join(" ")}
+    <section className="bg-[#F7F7F7] px-3 py-5 sm:px-6 sm:py-8">
+      <div className="mx-auto max-w-5xl">
+        {/* Category avatar strip — the Temu signature element */}
+        <div className="-mx-3 overflow-x-auto px-3 sm:mx-0 sm:px-0">
+          <div className="flex gap-4 pb-1">
+            {CATEGORIES.map((cat) => {
+              const isSelected = highlightedCategory === cat.slug;
+              return (
+                <Link
+                  key={cat.slug}
+                  href={`/search?category=${encodeURIComponent(cat.slug)}`}
+                  onClick={() => setHighlightedCategory(cat.slug)}
+                  className="flex w-16 shrink-0 flex-col items-center gap-1.5"
                 >
-                  {/* Local photo from public/ */}
-                  <Image
-                    src={localPhotoUrl(cat.fileName || 'G.jpg')}
-                    alt={cat.alt}
-                    fill
-                    sizes="(max-width: 640px) 72px, (max-width: 768px) 96px, 128px"
-                    className={`object-cover ${cat.crop === 'top' ? 'object-top' : 'object-center'} transition-transform duration-300 group-hover:scale-110`}
-                  />
-
-                  {/* Teal hover tint */}
                   <span
-                    className={[
-                      "absolute inset-0 bg-teal-500 transition-opacity duration-200 pointer-events-none",
-                      isActive ? "opacity-10" : "opacity-0 group-hover:opacity-15",
-                    ].join(" ")}
-                  />
-                </span>
+                    className={`relative flex h-16 w-16 items-center justify-center rounded-full p-[2px] transition ${
+                      isSelected
+                        ? "bg-gradient-to-br from-[#FF6000] to-[#E5231B]"
+                        : "bg-transparent"
+                    }`}
+                  >
+                    <span className="relative h-full w-full overflow-hidden rounded-full border border-[#EDEDED] bg-white">
+                      <Image src={localPhotoUrl(cat.fileName)} alt={cat.alt} fill className="object-cover" />
+                    </span>
+                  </span>
+                  <span
+                    className={`text-[11px] font-semibold leading-tight ${
+                      isSelected ? "text-[#FF6000]" : "text-[#1A1A1A]"
+                    }`}
+                  >
+                    {cat.name}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
 
-                {/* Label */}
-                <span
-                  className={[
-                    "text-sm sm:text-base font-medium text-center w-full truncate leading-none transition-colors duration-200",
-                    isActive
-                      ? "text-teal-600"
-                      : "text-gray-500 group-hover:text-teal-600",
-                  ].join(" ")}
+        {/* Auto-sliding promo banners (text only, no images) */}
+        <div className="mt-5 overflow-hidden rounded-2xl bg-white p-2.5 ring-1 ring-[#EDEDED]">
+          <div className="group relative overflow-hidden">
+            <div className="flex w-max animate-[slide_18s_linear_infinite] gap-2.5 group-hover:[animation-play-state:paused]">
+              {SLIDER_LOOP.map((cat, i) => (
+                <Link
+                  key={`${cat.slug}-${i}`}
+                  href={`/search?category=${encodeURIComponent(cat.slug)}`}
+                  onClick={() => setHighlightedCategory(cat.slug)}
+                  style={{ backgroundColor: BANNER_COLORS[cat.slug] }}
+                  className="flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-5 text-sm font-bold text-white transition hover:opacity-90"
                 >
-                  {cat.name}
-                </span>
-              </Link>
-            );
-          })}
+                  <span>Shop {cat.name}</span>
+                  <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs">
+                    -{cat.discount}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes slide {
+          from {
+            transform: translateX(0);
+          }
+          to {
+            transform: translateX(-50%);
+          }
+        }
+      `}</style>
     </section>
   );
 }

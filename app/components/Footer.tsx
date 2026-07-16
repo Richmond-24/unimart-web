@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import React from "react";
 import { useAuth } from "../context/AuthContext";
@@ -16,32 +17,44 @@ const tabs = [
     ),
   },
   {
-    key: "categories",
-    label: "Shop",
-    href: "/explore",
-    match: (p: string) => p.startsWith("/explore") || p.startsWith("/category"),
+    key: "cart",
+    label: "Cart",
+    href: "/cart",
+    match: (p: string) => p.startsWith("/cart") || p.startsWith("/checkout"),
+    // Cart now sits as a regular tab with a plain bag icon.
     icon: (active: boolean) => (
-      <svg viewBox="0 0 24 24" fill="none" className="w-[22px] h-[22px]" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
-        <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+      <svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
       </svg>
     ),
   },
   {
-    key: "cart",
+    key: "categories",
     label: "",
-    href: "/cart",
-    match: (p: string) => p.startsWith("/cart") || p.startsWith("/checkout"),
+    href: "/explore",
+    match: (p: string) => p.startsWith("/explore") || p.startsWith("/category"),
+    // Explore now takes the raised middle button, showing the app logo.
+    raised: true,
     icon: (_active: boolean) => (
-      <div className="relative w-[58px] h-[58px] rounded-[20px] flex items-center justify-center -translate-y-[10px]"
+      <div
+        className="relative w-[58px] h-[58px] rounded-[20px] flex items-center justify-center -translate-y-[10px]"
         style={{
           background: "linear-gradient(135deg, #00c99f 0%, #00a884 50%, #008f6e 100%)",
           boxShadow: "0 4px 16px rgba(0,168,132,0.45), 0 0 0 3px rgba(0,168,132,0.15)",
-        }}>
+        }}
+      >
         <div className="absolute inset-0 rounded-[20px]" style={{ border: "1.5px solid rgba(255,255,255,0.25)" }} />
-        <svg viewBox="0 0 24 24" width={26} height={26} fill="none" stroke="white" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
-        </svg>
+        <div className="relative w-6 h-6 rounded-md overflow-hidden">
+          <Image
+            src="/logo.png"
+            alt=""
+            fill
+            sizes="24px"
+            className="object-cover select-none pointer-events-none"
+            draggable={false}
+            priority
+          />
+        </div>
       </div>
     ),
   },
@@ -77,6 +90,8 @@ export default function Footer() {
   const pathname = usePathname();
   const { user } = useAuth();
   const [cartCount, setCartCount] = React.useState(0);
+  // Prevents double-fire from a fast double-tap, which is common on touch screens.
+  const navLockRef = React.useRef(false);
 
   React.useEffect(() => {
     function readCartCount() {
@@ -97,15 +112,36 @@ export default function Footer() {
     };
   }, []);
 
+  const handleNav = React.useCallback(
+    (href: string) => {
+      if (navLockRef.current) return;
+      navLockRef.current = true;
+      // Light haptic tap on devices that support it (most Android browsers; iOS Safari ignores it).
+      if (typeof window !== "undefined" && "vibrate" in navigator) {
+        try {
+          navigator.vibrate(8);
+        } catch {
+          // no-op: vibration not permitted/supported
+        }
+      }
+      router.push(href);
+      window.setTimeout(() => {
+        navLockRef.current = false;
+      }, 350);
+    },
+    [router]
+  );
+
   if (HIDDEN_PREFIXES.some((p) => pathname.startsWith(p))) {
     return null;
   }
 
   return (
     <nav
-      role="site-footer"
+      role="navigation"
+      aria-label="Primary"
       data-unimart-footer
-      className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-black/[0.06] md:hidden z-50"
+      className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-black/[0.06] md:hidden z-50 overscroll-contain"
       style={{
         paddingBottom: "env(safe-area-inset-bottom)",
         boxShadow: "0 -8px 32px rgba(0,0,0,0.07)",
@@ -116,29 +152,34 @@ export default function Footer() {
         <div className="flex items-end justify-around h-[72px]">
           {tabs.map((t) => {
             const active = t.match(pathname);
-            const isMiddle = t.key === "cart";
+            const isMiddle = Boolean(t.raised);
+            const showBadge = t.key === "cart" && cartCount > 0;
 
             return (
               <button
                 key={t.key}
-                onClick={() => router.push(t.href)}
+                type="button"
+                onClick={() => handleNav(t.href)}
                 aria-current={active ? "page" : undefined}
-                aria-label={t.label || "Cart"}
-                className={`flex-1 flex flex-col items-center gap-1 py-2 transition-all duration-200 active:scale-95 ${isMiddle ? "justify-end pb-1" : ""}`}
+                aria-label={t.label || "Explore"}
+                className={`flex-1 min-w-[44px] min-h-[44px] flex flex-col items-center gap-1 py-2 select-none touch-manipulation transition-transform duration-150 active:scale-95 motion-reduce:active:scale-100 ${
+                  isMiddle ? "justify-end pb-1" : ""
+                }`}
+                style={{ WebkitTapHighlightColor: "transparent" }}
               >
                 {isMiddle ? (
-                  <div className="relative">
-                    {t.icon(active)}
-                    {cartCount > 0 && (
-                      <span className="absolute top-0 right-0 w-[18px] h-[18px] bg-[#ff3b30] text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white translate-x-1 -translate-y-1">
-                        {cartCount > 9 ? "9+" : cartCount}
-                      </span>
-                    )}
-                  </div>
+                  <div className="relative">{t.icon(active)}</div>
                 ) : (
                   <>
-                    <div className={`w-11 h-10 flex items-center justify-center rounded-[14px] transition-all duration-200 ${active ? "bg-[#00a884]/10 text-[#00a884]" : "text-stone-400 hover:text-stone-600"}`}>
-                      {t.icon(active)}
+                    <div className="relative w-11 h-10 flex items-center justify-center">
+                      <div className={`w-11 h-10 flex items-center justify-center rounded-[14px] transition-all duration-200 ${active ? "bg-[#00a884]/10 text-[#00a884]" : "text-stone-400 hover:text-stone-600"}`}>
+                        {t.icon(active)}
+                      </div>
+                      {showBadge && (
+                        <span className="absolute top-0 right-1 w-[18px] h-[18px] bg-[#ff3b30] text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white translate-x-1 -translate-y-1">
+                          {cartCount > 9 ? "9+" : cartCount}
+                        </span>
+                      )}
                     </div>
                     <span className={`text-[10px] leading-none font-medium tracking-wide transition-colors ${active ? "text-[#00a884] font-bold" : "text-stone-400"}`}>
                       {t.key === "profile" && user?.name ? user.name.split(" ")[0] : t.label}

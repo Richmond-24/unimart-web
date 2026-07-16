@@ -1,36 +1,13 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
-  Zap, Sun, Cloud, Moon, Flame, Coins,
-  ShoppingBag, MessageCircle, Gift, ChevronRight
+  Sun, Cloud, Moon, Flame, Coins,
+  ShoppingBag, MessageCircle, Gift,
+  Trophy, AlertTriangle, RefreshCw
 } from "lucide-react";
 import apiClient from "../../lib/apiClient";
-
-// Fix: Use proper Framer Motion types with 'as any' workaround for ease
-const containerVariants = {
-  hidden: { opacity: 0, y: 10 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      staggerChildren: 0.08,
-      delayChildren: 0.05,
-      duration: 0.45,
-      ease: "easeOut" as any,
-    },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 10 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.45, ease: "easeOut" as any },
-  },
-};
 
 export default function Greeting() {
   const [firstName, setFirstName] = useState<string | null>(null);
@@ -47,27 +24,23 @@ export default function Greeting() {
   const [error, setError] = useState<string | null>(null);
   const xpPercent = xpToNext > 0 ? Math.min(100, Math.round((xp / xpToNext) * 100)) : 0;
 
-  // Load and accumulate persistent XP on mount
+  // XP Persistence logic
   useEffect(() => {
     const stored = localStorage.getItem("unimart:xp");
     const lastDate = localStorage.getItem("unimart:xp-date");
     const today = new Date().toDateString();
-
     let currentXp = 0;
-    if (stored) {
-      currentXp = parseInt(stored, 10) || 0;
-    }
-
+    if (stored) currentXp = parseInt(stored, 10) || 0;
     if (lastDate !== today) {
-      currentXp += 50; // daily login bonus
+      currentXp += 50; 
       localStorage.setItem("unimart:xp-date", today);
     }
-
     localStorage.setItem("unimart:xp", String(currentXp));
     setXp(currentXp);
     setXpToNext(500);
   }, []);
 
+  // Time-of-day logic
   useEffect(() => {
     try {
       const raw = localStorage.getItem("unimart:user");
@@ -76,27 +49,15 @@ export default function Greeting() {
         const name = u?.firstName || (u?.name ? String(u.name).split(" ")[0] : null);
         if (name) setFirstName(name);
       }
-    } catch (e) {
-      // ignore
-    }
-
+    } catch (e) {}
     const h = new Date().getHours();
-    if (h < 12) {
-      setGreeting("Good morning");
-      setTimeIcon(<Sun size={14} />);
-    } else if (h < 17) {
-      setGreeting("Good afternoon");
-      setTimeIcon(<Cloud size={14} />);
-    } else if (h < 21) {
-      setGreeting("Good evening");
-      setTimeIcon(<Moon size={14} />);
-    } else {
-      setGreeting("Good night");
-      setTimeIcon(<Moon size={14} />);
-    }
+    if (h < 12) { setGreeting("Good morning"); setTimeIcon(<Sun size={12} />); }
+    else if (h < 17) { setGreeting("Good afternoon"); setTimeIcon(<Cloud size={12} />); }
+    else if (h < 21) { setGreeting("Good evening"); setTimeIcon(<Moon size={12} />); }
+    else { setGreeting("Good night"); setTimeIcon(<Moon size={12} />); }
   }, []);
 
-  // Load live user data
+  // Data Loading logic (restoring all functional safety)
   useEffect(() => {
     let mounted = true;
     let retryCount = 0;
@@ -106,13 +67,11 @@ export default function Greeting() {
       try {
         setLoading(true);
         setError(null);
-        
-        // Check if token exists
         const token = localStorage.getItem('unimart:token');
+        
         if (!token) {
           if (mounted) {
             setLoading(false);
-            // Try to load from localStorage
             try {
               const raw = localStorage.getItem("unimart:user");
               if (raw) {
@@ -126,135 +85,63 @@ export default function Greeting() {
                 setCartCount((Array.isArray(lu?.cart) ? lu.cart.length : (lu?.cartCount ?? 0)) || 0);
                 const storedXp = parseInt(localStorage.getItem("unimart:xp") || "0", 10);
                 setXp(storedXp || Number(lu?.xp || 0));
-                setXpToNext(500);
               }
-            } catch (e) {
-              // ignore
-            }
+            } catch (e) {}
           }
           return;
         }
 
-        // ✅ FIXED: Use apiClient as a function, not .get()
         try {
-          const res = await apiClient('/auth/me', {
-            method: 'GET',
-            suppressErrorLog: true // Suppress logging for this call
-          });
-          
+          const res = await apiClient('/auth/me', { method: 'GET', suppressErrorLog: true });
           if (!mounted) return;
-          
           const u = res?.user || res?.data || res;
           if (u) {
             try { localStorage.setItem("unimart:user", JSON.stringify(u)); } catch (e) {}
             const name = u?.firstName || (u?.name ? String(u.name).split(" ")[0] : null);
             if (name) setFirstName(name as string);
-
-            setStreakDays(Number(u?.streakDays || u?.currentStreak || u?.currentStreakDays || 0));
+            setStreakDays(Number(u?.streakDays || u?.currentStreak || 0));
             setCoins(u?.coins ?? u?.balance ?? "—");
             setMessagesCount((Array.isArray(u?.messages) ? u.messages.length : (u?.unreadMessages ?? 0)) || 0);
-            setOffersCount(u?.offersCount ?? u?.flashSalesPurchases ?? 0);
+            setOffersCount(u?.offersCount ?? 0);
             setCartCount((Array.isArray(u?.cart) ? u.cart.length : (u?.cartCount ?? 0)) || 0);
-
             const storedXp = parseInt(localStorage.getItem("unimart:xp") || "0", 10);
             const serverXp = Number(u?.xp || 0);
             setXp(storedXp > 0 ? storedXp : serverXp);
-            setXpToNext(500);
           }
         } catch (err: any) {
-          // Handle specific error cases silently
           if (err.status === 401) {
-            // Unauthorized - token invalid
             localStorage.removeItem('unimart:token');
-            if (mounted) {
-              // Try to load from localStorage
-              try {
-                const raw = localStorage.getItem("unimart:user");
-                if (raw) {
-                  const lu = JSON.parse(raw);
-                  const name = lu?.firstName || (lu?.name ? String(lu.name).split(" ")[0] : null);
-                  if (name) setFirstName(name as string);
-                  setStreakDays(Number(lu?.streakDays || 0));
-                  setCoins(lu?.coins ?? "—");
-                  setMessagesCount((Array.isArray(lu?.messages) ? lu.messages.length : (lu?.unreadMessages ?? 0)) || 0);
-                  setOffersCount(lu?.offersCount ?? 0);
-                  setCartCount((Array.isArray(lu?.cart) ? lu.cart.length : (lu?.cartCount ?? 0)) || 0);
-                  const storedXp = parseInt(localStorage.getItem("unimart:xp") || "0", 10);
-                  setXp(storedXp || Number(lu?.xp || 0));
-                  setXpToNext(500);
-                }
-              } catch (e) {
-                // ignore
-              }
-            }
           } else if (err.status === 0) {
-            // Network error - retry
             if (retryCount < maxRetries && mounted) {
               retryCount++;
               setTimeout(loadUser, 2000 * retryCount);
               return;
             }
-            // Silent fail - don't show error
-          } else {
-            // Other errors - silent fail, use localStorage
-            if (mounted) {
-              try {
-                const raw = localStorage.getItem("unimart:user");
-                if (raw) {
-                  const lu = JSON.parse(raw);
-                  const name = lu?.firstName || (lu?.name ? String(lu.name).split(" ")[0] : null);
-                  if (name) setFirstName(name as string);
-                  setStreakDays(Number(lu?.streakDays || 0));
-                  setCoins(lu?.coins ?? "—");
-                  setMessagesCount((Array.isArray(lu?.messages) ? lu.messages.length : (lu?.unreadMessages ?? 0)) || 0);
-                  setOffersCount(lu?.offersCount ?? 0);
-                  setCartCount((Array.isArray(lu?.cart) ? lu.cart.length : (lu?.cartCount ?? 0)) || 0);
-                  const storedXp = parseInt(localStorage.getItem("unimart:xp") || "0", 10);
-                  setXp(storedXp || Number(lu?.xp || 0));
-                  setXpToNext(500);
-                }
-              } catch (e) {
-                // ignore
+          }
+          if (mounted) {
+            try {
+              const raw = localStorage.getItem("unimart:user");
+              if (raw) {
+                const lu = JSON.parse(raw);
+                const name = lu?.firstName || (lu?.name ? String(lu.name).split(" ")[0] : null);
+                if (name) setFirstName(name as string);
+                setStreakDays(Number(lu?.streakDays || 0));
+                setCoins(lu?.coins ?? "—");
+                setMessagesCount((Array.isArray(lu?.messages) ? lu.messages.length : (lu?.unreadMessages ?? 0)) || 0);
+                setOffersCount(lu?.offersCount ?? 0);
+                setCartCount((Array.isArray(lu?.cart) ? lu.cart.length : (lu?.cartCount ?? 0)) || 0);
               }
-            }
+            } catch (e) {}
           }
         }
       } catch (err) {
-        // Silent fail - don't show error
-        if (mounted) {
-          // Try localStorage as fallback
-          try {
-            const raw = localStorage.getItem("unimart:user");
-            if (raw) {
-              const lu = JSON.parse(raw);
-              const name = lu?.firstName || (lu?.name ? String(lu.name).split(" ")[0] : null);
-              if (name) setFirstName(name as string);
-              setStreakDays(Number(lu?.streakDays || 0));
-              setCoins(lu?.coins ?? "—");
-              setMessagesCount((Array.isArray(lu?.messages) ? lu.messages.length : (lu?.unreadMessages ?? 0)) || 0);
-              setOffersCount(lu?.offersCount ?? 0);
-              setCartCount((Array.isArray(lu?.cart) ? lu.cart.length : (lu?.cartCount ?? 0)) || 0);
-              const storedXp = parseInt(localStorage.getItem("unimart:xp") || "0", 10);
-              setXp(storedXp || Number(lu?.xp || 0));
-              setXpToNext(500);
-            }
-          } catch (e) {
-            // ignore
-          }
-        }
       } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+        if (mounted) setLoading(false);
       }
     }
 
     loadUser();
-
-    function onStorage(e: StorageEvent) {
-      if (e.key === "unimart:user") loadUser();
-    }
-
+    function onStorage(e: StorageEvent) { if (e.key === "unimart:user") loadUser(); }
     window.addEventListener("storage", onStorage);
     window.addEventListener("unimart:authChanged", loadUser as EventListener);
     return () => {
@@ -264,213 +151,151 @@ export default function Greeting() {
     };
   }, []);
 
-  const slangResponses = [
-    "absolute legend!", "let's go!", "elite energy!", "main character!",
-    "built different!", "top tier!", "that's the move!", "no cap!", "straight fire!"
-  ];
-
-  const [slang, setSlang] = useState("");
-  const [showSlang, setShowSlang] = useState(false);
-
-  const handleAvatarClick = () => {
-    const randomSlang = slangResponses[Math.floor(Math.random() * slangResponses.length)];
-    setSlang(randomSlang);
-    setShowSlang(true);
-    setTimeout(() => setShowSlang(false), 1800);
-  };
-
-  // Retry loading user data
   const handleRetry = () => {
     window.dispatchEvent(new Event('unimart:authChanged'));
   };
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
-        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm px-5 py-6 sm:px-7 sm:py-8 min-h-[152px] flex items-center justify-center">
-          <div className="flex items-center gap-3">
-            <div className="w-6 h-6 border-2 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
-            <span className="text-sm text-gray-500">Loading...</span>
-          </div>
-        </div>
+      <div className="max-w-7xl mx-auto px-4 py-2">
+        <div className="h-[100px] w-full bg-slate-100 animate-pulse rounded-[28px] border border-black/5 shadow-sm"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
-        <div className="bg-white rounded-3xl border border-red-200 shadow-sm px-5 py-6 sm:px-7 sm:py-8 min-h-[152px] flex items-center justify-between">
-          <div className="flex items-center gap-3 text-red-600">
-            <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center">
-              <span className="text-lg">⚠️</span>
-            </div>
-            <span className="text-sm">{error}</span>
-          </div>
-          <button
-            onClick={handleRetry}
-            className="px-4 py-2 bg-teal-600 text-white text-sm rounded-lg hover:bg-teal-700 transition-colors"
-          >
-            Retry
+      <div className="max-w-7xl mx-auto px-4 py-2">
+        <div className="bg-red-50 border border-red-100 rounded-[28px] p-6 text-center space-y-3">
+          <AlertTriangle size={24} className="mx-auto text-red-500" />
+          <h3 className="font-bold text-red-900">Connection Interrupted</h3>
+          <button onClick={handleRetry} className="bg-red-500 text-white px-5 py-2 rounded-full text-xs font-bold transition-transform active:scale-95 shadow-lg">
+            Reactivate
           </button>
         </div>
       </div>
     );
   }
 
+  const nameText = firstName || "User";
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+    <div className="max-w-7xl mx-auto px-4 py-2 relative overflow-hidden font-sans selection:bg-teal-500 selection:text-white">
+      {/* Teal/Blue Ambient Mesh Background */}
+      <div className="absolute inset-0 pointer-events-none rounded-[36px] overflow-hidden -z-10 bg-slate-50">
+        <motion.div 
+          animate={{ x: [0, 30, -20, 0], y: [0, -20, 40, 0], scale: [1, 1.1, 0.9, 1] }}
+          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+          className="absolute -top-1/2 -left-1/4 w-full h-full bg-teal-400/20 blur-[100px] rounded-full"
+        />
+        <motion.div 
+          animate={{ x: [0, -40, 30, 0], y: [0, 40, -20, 0], scale: [1, 0.8, 1.2, 1] }}
+          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+          className="absolute -bottom-1/2 -right-1/4 w-full h-full bg-blue-500/20 blur-[120px] rounded-full"
+        />
+      </div>
+
       <motion.div
-        initial={{ opacity: 0, y: -14, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-        className="relative overflow-hidden bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300 px-5 py-6 sm:px-7 sm:py-8 min-h-[152px] sm:min-h-[176px] flex flex-col justify-center"
+        initial={{ opacity: 0, scale: 0.98, y: 10, filter: "blur(8px)" }}
+        animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
+        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        className="relative backdrop-blur-xl bg-white/60 border border-white/40 rounded-[28px] p-4 sm:p-6 shadow-[0_8px_32px_rgba(13,148,136,0.08)] overflow-hidden"
       >
-        {/* Decorative ambient glow */}
-        <motion.div
-          aria-hidden
-          className="pointer-events-none absolute -top-16 -right-16 w-56 h-56 rounded-full bg-gradient-to-br from-emerald-200/40 to-teal-200/30 blur-3xl"
-          animate={{ scale: [1, 1.12, 1], opacity: [0.5, 0.8, 0.5] }}
-          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-        />
-        <motion.div
-          aria-hidden
-          className="pointer-events-none absolute -bottom-14 left-10 w-40 h-40 rounded-full bg-amber-100/40 blur-3xl"
-          animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.7, 0.4] }}
-          transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-        />
-
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="show"
-          className="relative flex items-center gap-4"
-        >
-          {/* Avatar */}
-          <motion.button
-            variants={itemVariants}
-            onClick={handleAvatarClick}
-            whileTap={{ scale: 0.9 }}
-            whileHover={{ scale: 1.05 }}
-            className="relative flex-shrink-0"
-          >
-            <motion.div
-              animate={{ boxShadow: ["0 0 0 0 rgba(16,185,129,0.35)", "0 0 0 8px rgba(16,185,129,0)"] }}
-              transition={{ duration: 2.4, repeat: Infinity, ease: "easeOut" }}
-              className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center text-white text-lg font-bold shadow-sm ring-2 ring-white font-display"
-            >
-              {firstName ? firstName.charAt(0).toUpperCase() : "U"}
-            </motion.div>
-            {streakDays > 0 && (
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.4, type: "spring", stiffness: 400, damping: 12 }}
-                className="absolute -bottom-0.5 -right-0.5 bg-orange-500 rounded-full w-4.5 h-4.5 flex items-center justify-center ring-2 ring-white"
-              >
-                <Flame size={9} className="text-white" />
-              </motion.div>
-            )}
-
-            <AnimatePresence>
-              {showSlang && (
-                <motion.div
-                  initial={{ opacity: 0, y: 6, scale: 0.9 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -6, scale: 0.9 }}
-                  className="absolute top-full left-1/2 -translate-x-1/2 mt-1.5 bg-slate-900 text-white text-[11px] font-semibold px-2.5 py-1 rounded-full whitespace-nowrap shadow-lg z-10"
-                >
-                  {slang}
-                </motion.div>
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-row items-center gap-4">
+            {/* Teal/Blue Circular Avatar */}
+            <div className="relative shrink-0">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full p-0.5 bg-gradient-to-tr from-teal-400 to-blue-500 shadow-[0_4px_16px_rgba(20,184,166,0.35)]">
+                <div className="w-full h-full rounded-full bg-white p-[3px]">
+                  <div className="w-full h-full rounded-full bg-gradient-to-tr from-teal-500 to-blue-600 flex items-center justify-center text-xl font-bold text-white font-display">
+                    {nameText.charAt(0).toUpperCase()}
+                  </div>
+                </div>
+              </div>
+              {streakDays > 0 && (
+                <div className="absolute -bottom-0.5 -right-0.5 bg-white p-1 rounded-full border border-teal-500/10 shadow-md">
+                  <Flame size={10} className="text-orange-500 fill-orange-500/10" />
+                </div>
               )}
-            </AnimatePresence>
-          </motion.button>
+            </div>
 
-          {/* Greeting + name */}
-          <div className="min-w-0 flex-1">
-            <motion.div
-              variants={itemVariants}
-              className="flex items-center gap-1 text-gray-400 text-[10px] font-semibold uppercase tracking-[0.15em]"
-            >
-              {timeIcon}
-              <span>{greeting}</span>
-            </motion.div>
-            <motion.div
-              variants={itemVariants}
-              className="font-display text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 text-3xl sm:text-4xl font-extrabold truncate leading-tight tracking-tight mt-0.5"
-            >
-              {firstName ? `Hey ${firstName}` : "Welcome to Uni-Mart"}
-            </motion.div>
+            {/* Typography Greeting */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 opacity-50 mb-0.5">
+                {timeIcon}
+                <span className="text-[9px] font-bold uppercase tracking-widest text-teal-700">{greeting}</span>
+              </div>
+              <h1 className="text-xl sm:text-3xl font-extrabold text-black tracking-tight truncate font-display">
+                Hello, {nameText}
+              </h1>
+            </div>
+
+            {/* Desktop Stats (Static Row) */}
+            <div className="hidden md:flex gap-2">
+              <StatPill icon={<Coins size={14} />} value={coins} label="Coins" />
+              <StatPill icon={<ShoppingBag size={14} />} value={cartCount} label="Cart" />
+            </div>
           </div>
 
-          {/* Compact stat pills — desktop/tablet */}
-          <motion.div variants={itemVariants} className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
-            <StatPill icon={<Coins size={12} />} value={typeof coins === "number" ? coins.toLocaleString() : coins} tone="amber" />
-            <StatPill icon={<ShoppingBag size={12} />} value={cartCount} tone="teal" />
-            <StatPill icon={<MessageCircle size={12} />} value={messagesCount} tone="blue" />
-            <StatPill icon={<Gift size={12} />} value={offersCount} tone="rose" />
-          </motion.div>
+          {/* Horizontal Stat Rail (Always scrolling for mobile density) */}
+          <div className="flex md:hidden overflow-x-auto no-scrollbar gap-2 -mx-1 px-1 snap-x pb-0.5">
+            <StatPill icon={<Coins size={12} />} value={coins} label="Coins" className="snap-start" />
+            <StatPill icon={<ShoppingBag size={12} />} value={cartCount} label="Cart" className="snap-start" />
+            <StatPill icon={<MessageCircle size={12} />} value={messagesCount} label="Chats" className="snap-start" />
+            <StatPill icon={<Gift size={12} />} value={offersCount} label="Gifts" className="snap-start" />
+          </div>
 
-          {/* Coins only on mobile to save space */}
-          <motion.div
-            variants={itemVariants}
-            className="flex sm:hidden items-center gap-1 flex-shrink-0 bg-amber-50 text-amber-700 rounded-full px-2.5 py-1.5 text-xs font-bold"
-          >
-            <Coins size={12} />
-            <span>{typeof coins === "number" ? coins.toLocaleString() : coins}</span>
-          </motion.div>
-
-          <ChevronRight size={16} className="text-gray-300 flex-shrink-0 hidden sm:block" />
-        </motion.div>
-
-        {/* Slim XP bar */}
-        <div className="relative mt-4 flex items-center gap-2">
-          <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${xpPercent}%` }}
-              transition={{ duration: 0.9, delay: 0.35, ease: "easeOut" }}
-              className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full relative overflow-hidden"
-            >
+          {/* Precision XP Progression */}
+          <div className="flex flex-col gap-2 pt-1 border-t border-teal-900/5">
+            <div className="flex justify-between items-center px-0.5">
+              <div className="flex items-center gap-1.5">
+                <Trophy size={12} className="text-amber-500" />
+                <span className="text-[9px] font-bold text-black/50 uppercase tracking-tighter">Campus Legend</span>
+              </div>
+              <span className="text-[9px] font-mono font-bold text-black/30 tracking-tight">
+                <span className="text-black/80">{xp}</span> / {xpToNext} XP
+              </span>
+            </div>
+            
+            <div className="h-1.5 w-full bg-teal-900/5 rounded-full overflow-hidden relative border border-teal-900/[0.02]">
               <motion.div
-                className="absolute inset-0 bg-white/30"
-                animate={{ x: ["-100%", "200%"] }}
-                transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut", delay: 1.2 }}
-              />
-            </motion.div>
+                initial={{ width: 0 }}
+                animate={{ width: `${xpPercent}%` }}
+                transition={{ duration: 1.2, ease: "circOut" }}
+                className="h-full bg-gradient-to-r from-teal-400 to-blue-500 relative shadow-[0_0_8px_rgba(20,184,166,0.4)]"
+              >
+                <div className="absolute inset-0 bg-white/20 animate-pulse" />
+              </motion.div>
+            </div>
           </div>
-          <span className="text-[10px] text-gray-400 font-mono font-semibold flex-shrink-0 flex items-center gap-0.5">
-            <Zap size={9} />
-            {xp}/{xpToNext}
-          </span>
         </div>
       </motion.div>
+
+      <style jsx global>{`
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
     </div>
   );
 }
 
-function StatPill({
-  icon,
-  value,
-  tone,
-}: {
-  icon: React.ReactNode;
-  value: number | string;
-  tone: "amber" | "teal" | "blue" | "rose";
+function StatPill({ icon, value, label, className = "" }: { 
+  icon: React.ReactNode, 
+  value: string | number, 
+  label: string,
+  className?: string
 }) {
-  const tones: Record<string, string> = {
-    amber: "bg-amber-50 text-amber-700",
-    teal: "bg-teal-50 text-teal-700",
-    blue: "bg-blue-50 text-blue-700",
-    rose: "bg-rose-50 text-rose-700",
-  };
   return (
     <motion.div
-      whileHover={{ y: -2 }}
-      className={`flex items-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-bold ${tones[tone]}`}
+      whileHover={{ y: -1, backgroundColor: "rgba(255, 255, 255, 0.85)" }}
+      whileTap={{ scale: 0.98 }}
+      className={`shrink-0 flex items-center gap-2.5 bg-white/40 backdrop-blur-sm border border-teal-500/10 px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-sm ${className}`}
     >
-      {icon}
-      <span>{value}</span>
+      <div className="text-teal-600/70">{icon}</div>
+      <div className="flex flex-col leading-none">
+        <span className="text-[11px] font-extrabold text-black tracking-tighter">{value}</span>
+        <span className="text-[7px] font-bold text-black/30 uppercase tracking-tighter">{label}</span>
+      </div>
     </motion.div>
   );
 }

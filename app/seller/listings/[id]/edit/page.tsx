@@ -19,7 +19,7 @@ export default function SellerListingEdit() {
       if (!id) return;
       setLoading(true);
       try {
-        const res = await apiFetch(`/public/listings/${id}`);
+        const res = await apiFetch(`/listings/${id}`);
         if (res?.data && mounted) {
           const l = res.data;
           setForm({

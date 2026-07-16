@@ -180,7 +180,7 @@ export default function SearchPage() {
             if (mounted && res && res.data) setItems(res.data);
           }
         } else {
-          const res = await apiFetch('/public/listings');
+          const res = await apiFetch('/listings');
           if (mounted && res && res.data) setItems(res.data);
         }
       } catch (err) {

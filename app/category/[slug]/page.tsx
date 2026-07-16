@@ -35,7 +35,7 @@ export default function CategoryPage() {
         };
 
         if (key === 'all') {
-          const endpoint = '/public/listings';
+          const endpoint = '/listings';
           if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
             // eslint-disable-next-line no-console
             console.debug('CategoryPage endpoint ->', { endpoint });
