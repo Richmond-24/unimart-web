@@ -3,7 +3,7 @@ const nextConfig = {
   reactStrictMode: true,
   
   typescript: {
-    ignoreBuildErrors: true,
+    ignorseBuildErrors: true,
   },
   
   output: 'standalone',
