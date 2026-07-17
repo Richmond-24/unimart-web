@@ -1,13 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  
   typescript: {
-    ignorseBuildErrors: true,
+    ignoreBuildErrors: true,
   },
-  
   output: 'standalone',
-  
   images: {
     remotePatterns: [
       {
@@ -20,7 +17,6 @@ const nextConfig = {
       },
     ],
   },
-  
   turbopack: {},
 };
 
