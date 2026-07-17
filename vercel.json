@@ -3,14 +3,6 @@
   "installCommand": "npm install --prefer-offline --no-audit --no-fund",
   "framework": "nextjs",
   "regions": ["iad1"],
-  "functions": {
-    "api/**/*.js": {
-      "maxDuration": 10
-    },
-    "api/**/*.ts": {
-      "maxDuration": 10
-    }
-  },
   "env": {
     "NEXT_DISABLE_ESLINT": "1",
     "NEXT_TELEMETRY_DISABLED": "1"
