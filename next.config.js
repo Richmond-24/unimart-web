@@ -17,15 +17,12 @@ const nextConfig = {
     return [];
   },
 
-  // Skip TypeScript checking during build
   typescript: {
     ignoreBuildErrors: true,
   },
   
-  // Output standalone for smaller deployments
   output: 'standalone',
   
-  // Image optimization with remotePatterns
   images: {
     remotePatterns: [
       {
@@ -44,18 +41,6 @@ const nextConfig = {
     dangerouslyAllowSVG: true,
   },
   
-  // Remove console logs in production
-  compiler: {
-    removeConsole: process.env.NODE_ENV === 'production',
-  },
-  
-  logging: {
-    fetches: {
-      fullUrl: false,
-    },
-  },
-  
-  // Performance optimizations
   poweredByHeader: false,
   compress: true,
   staticPageGenerationTimeout: 120,
@@ -63,12 +48,10 @@ const nextConfig = {
     keepAlive: true,
   },
   
-  // Turbopack configuration (Next.js 16+)
-  turbopack: {
-    // Empty config to enable Turbopack with defaults
-  },
+  // CRITICAL FOR NEXT.JS 16: Enable Turbopack
+  turbopack: {},
   
-  // Experimental features for faster builds (remove webpack config)
+  // Experimental features for better performance
   experimental: {
     optimizeCss: true,
     optimizePackageImports: [
