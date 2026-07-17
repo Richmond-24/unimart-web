@@ -22,11 +22,6 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   
-  // Skip ESLint during build
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  
   // Output standalone for smaller deployments
   output: 'standalone',
   
@@ -47,12 +42,9 @@ const nextConfig = {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 60,
     dangerouslyAllowSVG: true,
-    contentDispositionType: 'attachment',
-    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
   
-  // Optimize SWC compiler
-  swcMinify: true,
+  // Remove console logs in production
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
   },
@@ -71,7 +63,12 @@ const nextConfig = {
     keepAlive: true,
   },
   
-  // Experimental features for faster builds
+  // Turbopack configuration (Next.js 16+)
+  turbopack: {
+    // Empty config to enable Turbopack with defaults
+  },
+  
+  // Experimental features for faster builds (remove webpack config)
   experimental: {
     optimizeCss: true,
     optimizePackageImports: [
@@ -81,40 +78,6 @@ const nextConfig = {
       '@radix-ui/react-dropdown-menu',
       '@radix-ui/react-tabs',
     ],
-    // Reduce build memory usage
-    workerThreads: false,
-    cpus: 2,
-  },
-  
-  // Reduce bundle size
-  webpack: (config, { isServer }) => {
-    // Optimize bundle size
-    if (!isServer) {
-      config.optimization = {
-        ...config.optimization,
-        splitChunks: {
-          chunks: 'all',
-          minSize: 20000,
-          maxSize: 244000,
-          minChunks: 1,
-          maxAsyncRequests: 30,
-          maxInitialRequests: 30,
-          cacheGroups: {
-            defaultVendors: {
-              test: /[\\/]node_modules[\\/]/,
-              priority: -10,
-              reuseExistingChunk: true,
-            },
-            default: {
-              minChunks: 2,
-              priority: -20,
-              reuseExistingChunk: true,
-            },
-          },
-        },
-      };
-    }
-    return config;
   },
 };
 

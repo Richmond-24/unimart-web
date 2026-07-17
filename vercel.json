@@ -1,5 +1,19 @@
 {
   "buildCommand": "npm run build",
-  "installCommand": "npm install",
-  "framework": "nextjs"
+  "installCommand": "npm install --prefer-offline --no-audit --no-fund",
+  "framework": "nextjs",
+  "cache": ["node_modules", ".next/cache"],
+  "regions": ["iad1"],
+  "functions": {
+    "api/**/*.js": {
+      "maxDuration": 10
+    },
+    "api/**/*.ts": {
+      "maxDuration": 10
+    }
+  },
+  "env": {
+    "NEXT_DISABLE_ESLINT": "1",
+    "NEXT_TELEMETRY_DISABLED": "1"
+  }
 }
