@@ -1,1 +1,10 @@
 app/api/avatar/*
+node_modules
+.git
+README.md
+.eslintrc.json
+*.test.ts
+*.test.tsx
+__tests__
+coverage
+.vercel
