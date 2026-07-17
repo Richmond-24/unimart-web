@@ -2,7 +2,6 @@
   "buildCommand": "npm run build",
   "installCommand": "npm install --prefer-offline --no-audit --no-fund",
   "framework": "nextjs",
-  "cache": ["node_modules", ".next/cache"],
   "regions": ["iad1"],
   "functions": {
     "api/**/*.js": {
