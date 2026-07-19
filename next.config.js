@@ -17,7 +17,7 @@ const nextConfig = {
       },
     ],
   },
-  turbopack: {},
+  // ✅ REMOVED: turbopack: {}, - Turbopack is experimental and not recommended for production builds
 };
 
 module.exports = nextConfig;
