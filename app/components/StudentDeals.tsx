@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import apiFetch from "../../lib/apiClient";
+import { apiFetch } from "@/lib/apiClient";
 import Link from 'next/link';
 
 export default function StudentDeals() {
@@ -15,8 +15,8 @@ export default function StudentDeals() {
       setLoading(true);
       setLoadError(null);
       try {
-        // ✅ FIXED: Added /api prefix
-        const endpoint = "/api/public/services";
+        // ✅ FIXED: Removed duplicate /api
+        const endpoint = "/public/services";
         console.log(`📡 [StudentDeals] Fetching from: ${endpoint}`);
         
         const res = await apiFetch(endpoint, { suppressErrorLog: true });

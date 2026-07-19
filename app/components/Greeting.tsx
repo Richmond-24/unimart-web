@@ -7,7 +7,7 @@ import {
   ShoppingBag, MessageCircle, Gift,
   Trophy, AlertTriangle, RefreshCw
 } from "lucide-react";
-import apiClient from "../../lib/apiClient";
+import { apiFetch } from "@/lib/apiClient";
 
 export default function Greeting() {
   const [firstName, setFirstName] = useState<string | null>(null);
@@ -57,7 +57,7 @@ export default function Greeting() {
     else { setGreeting("Good night"); setTimeIcon(<Moon size={12} />); }
   }, []);
 
-  // Data Loading logic (restoring all functional safety)
+  // Data Loading logic
   useEffect(() => {
     let mounted = true;
     let retryCount = 0;
@@ -92,9 +92,17 @@ export default function Greeting() {
         }
 
         try {
-          const res = await apiClient('/auth/me', { method: 'GET', suppressErrorLog: true });
+          // ✅ FIXED: Changed from /api/auth/me to /auth/me
+          const res = await apiFetch('/auth/me', { 
+            method: 'GET', 
+            suppressErrorLog: true 
+          });
+          
           if (!mounted) return;
+          
+          // Handle different response structures
           const u = res?.user || res?.data || res;
+          
           if (u) {
             try { localStorage.setItem("unimart:user", JSON.stringify(u)); } catch (e) {}
             const name = u?.firstName || (u?.name ? String(u.name).split(" ")[0] : null);
@@ -109,15 +117,22 @@ export default function Greeting() {
             setXp(storedXp > 0 ? storedXp : serverXp);
           }
         } catch (err: any) {
+          console.error('API Error in Greeting:', err);
+          
           if (err.status === 401) {
             localStorage.removeItem('unimart:token');
-          } else if (err.status === 0) {
+          } else if (err.status === 0 || err.message?.includes('NetworkError') || err.isNetworkError) {
             if (retryCount < maxRetries && mounted) {
               retryCount++;
               setTimeout(loadUser, 2000 * retryCount);
               return;
             }
+            if (mounted) {
+              setError('Unable to connect to server. Using cached data.');
+            }
           }
+          
+          // Fallback to cached data
           if (mounted) {
             try {
               const raw = localStorage.getItem("unimart:user");
@@ -135,15 +150,21 @@ export default function Greeting() {
           }
         }
       } catch (err) {
+        console.error('Unexpected error in loadUser:', err);
       } finally {
         if (mounted) setLoading(false);
       }
     }
 
     loadUser();
-    function onStorage(e: StorageEvent) { if (e.key === "unimart:user") loadUser(); }
+    
+    function onStorage(e: StorageEvent) { 
+      if (e.key === "unimart:user") loadUser(); 
+    }
+    
     window.addEventListener("storage", onStorage);
     window.addEventListener("unimart:authChanged", loadUser as EventListener);
+    
     return () => {
       mounted = false;
       window.removeEventListener("storage", onStorage);
@@ -169,6 +190,7 @@ export default function Greeting() {
         <div className="bg-red-50 border border-red-100 rounded-[28px] p-6 text-center space-y-3">
           <AlertTriangle size={24} className="mx-auto text-red-500" />
           <h3 className="font-bold text-red-900">Connection Interrupted</h3>
+          <p className="text-xs text-red-700">{error}</p>
           <button onClick={handleRetry} className="bg-red-500 text-white px-5 py-2 rounded-full text-xs font-bold transition-transform active:scale-95 shadow-lg">
             Reactivate
           </button>

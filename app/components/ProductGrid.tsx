@@ -3,7 +3,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import apiFetch from "../../lib/apiClient";
+import { apiFetch } from "@/lib/apiClient";
 import Link from "next/link";
 
 interface Product {
@@ -72,7 +72,7 @@ export default function ProductGrid({
   horizontal = false,
   title = "Trending near you",
   limit = 8,
-  endpoint = "/api/public/trending"
+  endpoint = "/public/trending" // ✅ FIXED: Removed /api prefix
 }: ProductGridProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);

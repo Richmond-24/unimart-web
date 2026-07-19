@@ -1,22 +1,50 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import apiFetch from "../../lib/apiClient";
+import { apiFetch } from "@/lib/apiClient";
 import Link from 'next/link';
 
 export default function SecondHandDeals() {
   const [items, setItems] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
     const load = async () => {
       setLoading(true);
+      setError(null);
       try {
-        const res = await apiFetch('/api/public/second-hand');
-        if (mounted && res && res.data) setItems(res.data);
-      } catch (err) {
-        console.error('Error loading second-hand listings', err);
+        // ✅ FIXED: Removed duplicate /api
+        const endpoint = '/public/second-hand';
+        console.log(`📡 [SecondHandDeals] Fetching from: ${endpoint}`);
+        
+        const res = await apiFetch(endpoint, { suppressErrorLog: false });
+        
+        if (mounted && res) {
+          console.log('✅ [SecondHandDeals] Response:', res);
+          
+          // Handle different response structures
+          let data = [];
+          if (res.success && Array.isArray(res.data)) {
+            data = res.data;
+          } else if (Array.isArray(res)) {
+            data = res;
+          } else if (res.data && Array.isArray(res.data)) {
+            data = res.data;
+          } else if (res.items && Array.isArray(res.items)) {
+            data = res.items;
+          } else {
+            data = [];
+          }
+          
+          setItems(data);
+          console.log(`✅ [SecondHandDeals] Loaded ${data.length} items`);
+        }
+      } catch (err: any) {
+        console.error('❌ [SecondHandDeals] Error:', err);
+        setError(err.message || 'Failed to load second-hand items');
+        setItems([]);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -25,6 +53,25 @@ export default function SecondHandDeals() {
     return () => { mounted = false };
   }, []);
 
+  // Error state
+  if (error) {
+    return (
+      <section className="py-6 bg-stone-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center py-8">
+            <p className="text-red-500">Failed to load second-hand items: {error}</p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="mt-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="py-6 bg-stone-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -32,7 +79,6 @@ export default function SecondHandDeals() {
           <h2 className="text-xl font-semibold">Second-hand Picks</h2>
           <div className="flex items-center gap-3">
             <span className="text-sm text-stone-500">Sustainably sourced</span>
-
           </div>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-x-3 gap-y-6">
@@ -46,17 +92,21 @@ export default function SecondHandDeals() {
           ))}
 
           {!loading && items.length === 0 && (
-            <div className="text-sm text-slate-500">No second-hand items found.</div>
+            <div className="col-span-full text-center py-8 text-slate-500">
+              No second-hand items found.
+            </div>
           )}
 
           {items.map((p:any) => {
             const lid = p._id || p.id;
             let avg: number | null = null;
             try {
-              const raw = localStorage.getItem(`unimart:comments:${lid}`);
-              if (raw) {
-                const list = JSON.parse(raw) as any[];
-                if (list.length) avg = list.reduce((s, c) => s + (c.rating || 0), 0) / list.length;
+              if (typeof window !== 'undefined') {
+                const raw = localStorage.getItem(`unimart:comments:${lid}`);
+                if (raw) {
+                  const list = JSON.parse(raw) as any[];
+                  if (list.length) avg = list.reduce((s, c) => s + (c.rating || 0), 0) / list.length;
+                }
               }
             } catch (e) { avg = null; }
 
@@ -65,7 +115,16 @@ export default function SecondHandDeals() {
                 <div className="flex flex-col">
                   <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-slate-100 mb-2 shadow-sm">
                     {p.imageUrls?.length ? (
-                      <img src={p.imageUrls[0]} alt={p.title} className="object-cover w-full h-full" />
+                      <img 
+                        src={p.imageUrls[0]} 
+                        alt={p.title} 
+                        className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" fill="%23f1f5f9"/%3E%3Ctext x="50" y="50" text-anchor="middle" dy=".3em" fill="%2394a3b8" font-size="12" font-family="sans-serif"%3ENo image%3C/text%3E%3C/svg%3E';
+                        }}
+                      />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">No image</div>
                     )}

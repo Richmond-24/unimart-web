@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import apiFetch from '@/lib/apiClient';
+import { apiFetch } from '@/lib/apiClient';
 import { setAuthCookie, clearAuthCookie, persistAuthToken } from '@/lib/authCookie';
 
 export interface User {

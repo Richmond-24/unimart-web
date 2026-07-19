@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const AUTH_ROUTES = ['/auth', '/login', '/signup'];
 
-const PROTECTED_ROUTES = ['/profile', '/checkout', '/seller', '/messages', '/orders'];
+const PROTECTED_ROUTES = ['/profile', '/checkout', '/seller','/messages', '/orders'];
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const token = request.cookies.get('unimart:token')?.value || null;
   const hasToken = !!token;
@@ -15,7 +15,7 @@ export function middleware(request: NextRequest) {
   }
 
   // Already signed in — skip auth screens
-  if (AUTH_ROUTES.some((route) => pathname.startsWith(route)) && hasToken) {
+  if (AUTH_ROUTES.some((route)=> pathname.startsWith(route))&& hasToken) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 

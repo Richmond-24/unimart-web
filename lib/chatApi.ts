@@ -1,6 +1,6 @@
 "use client";
 
-import apiFetch from './apiClient';
+import { apiFetch } from '@/lib/apiClient';
 
 export interface ConversationSummary {
   _id: string;
@@ -50,7 +50,8 @@ export interface ChatMessage {
 
 export async function fetchConversations(): Promise<ConversationSummary[]> {
   try {
-    const res: any = await apiFetch('/api/conversations', { suppressErrorLog: true });
+    // ✅ FIXED: Removed duplicate /api
+    const res: any = await apiFetch('/conversations', { suppressErrorLog: true });
     const payload = res?.data ?? res;
     if (Array.isArray(payload)) {
       return payload;
@@ -72,7 +73,8 @@ export async function fetchMessages(
 ): Promise<ChatMessage[]> {
   try {
     const q = `?limit=${limit}${before ? `&before=${encodeURIComponent(before)}` : ''}`;
-    const res: any = await apiFetch(`/api/conversations/${conversationId}/messages${q}`, {
+    // ✅ FIXED: Removed duplicate /api
+    const res: any = await apiFetch(`/conversations/${conversationId}/messages${q}`, {
       suppressErrorLog: true,
     });
     const payload = res?.data ?? res;
@@ -91,7 +93,8 @@ export async function fetchMessages(
 
 export async function createConversation(payload: Record<string, any>) {
   try {
-    const res: any = await apiFetch('/api/conversations', {
+    // ✅ FIXED: Removed duplicate /api
+    const res: any = await apiFetch('/conversations', {
       method: 'POST',
       body: payload,
       suppressErrorLog: true,
@@ -118,7 +121,8 @@ export async function sendMessage(payload: MessagePayload) {
       listingId: payload.listingId,
     };
 
-    const res: any = await apiFetch('/api/messages', {
+    // ✅ FIXED: Removed duplicate /api
+    const res: any = await apiFetch('/messages', {
       method: 'POST',
       body,
       suppressErrorLog: true,
@@ -139,7 +143,8 @@ export async function sendMessage(payload: MessagePayload) {
 
 export async function getConversation(conversationId: string) {
   try {
-    const res: any = await apiFetch(`/api/conversations/${conversationId}`, {
+    // ✅ FIXED: Removed duplicate /api
+    const res: any = await apiFetch(`/conversations/${conversationId}`, {
       suppressErrorLog: true,
     });
     return res?.data ?? res;
@@ -151,7 +156,8 @@ export async function getConversation(conversationId: string) {
 
 export async function markAsRead(conversationId: string, userId: string) {
   try {
-    const res: any = await apiFetch(`/api/messages/${conversationId}/read`, {
+    // ✅ FIXED: Removed duplicate /api
+    const res: any = await apiFetch(`/messages/${conversationId}/read`, {
       method: 'PUT',
       body: { userId },
       suppressErrorLog: true,
