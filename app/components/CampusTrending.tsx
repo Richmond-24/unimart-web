@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -7,7 +6,7 @@ import {
   Users, Eye,
   Star, ChevronRight, Zap 
 } from "lucide-react";
-import apiFetch from '../../lib/apiClient';
+import { apiFetch } from '@/lib/apiClient';
 
 type Trend = {
   id: string;
@@ -46,16 +45,17 @@ export default function CampusTrending() {
     const load = async () => {
       setLoading(true);
       try {
+        // ✅ FIXED: Removed duplicate /api prefix from all endpoints
         // try multiple endpoints: public top sellers -> public sellers -> sellers -> campus trending fallback
-        let res: any = await apiFetch('/api/public/top-sellers').catch(() => null);
+        let res: any = await apiFetch('/public/top-sellers').catch(() => null);
         if (!res || (!Array.isArray(res) && !Array.isArray(res.data))) {
-          res = await apiFetch('/api/public/sellers').catch(() => null);
+          res = await apiFetch('/public/sellers').catch(() => null);
         }
         if (!res || (!Array.isArray(res) && !Array.isArray(res.data))) {
           res = await apiFetch('/sellers').catch(() => null);
         }
         if (!res || (!Array.isArray(res) && !Array.isArray(res.data))) {
-          res = await apiFetch('/api/public/campus-trending').catch(() => null);
+          res = await apiFetch('/public/campus-trending').catch(() => null);
         }
         const data = Array.isArray(res) ? res : (res && Array.isArray(res.data) ? res.data : []);
         if (!mounted) return;

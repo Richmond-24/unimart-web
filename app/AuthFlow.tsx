@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import ReactDOM from "react-dom";
 import { useAuth } from "./context/AuthContext";
 import TermsModal from "./components/TermsModal";
-import apiFetch from "../lib/apiClient";
+import { apiFetch } from "@/lib/apiClient";
 import SuccessModal from "./components/SuccessModal";
 import detectUserLocation from "../lib/location";
 import { persistAuthToken } from "../lib/authCookie";
@@ -691,9 +691,9 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
         }
       } catch (e) {}
 
-      // ✅ FIXED: Added /api prefix
+      // ✅ FIXED: Removed duplicate /api
       console.debug("Registering user with email:", email.substring(0, 3) + "***");
-      const res = await apiFetch('/api/auth/register', { 
+      const res = await apiFetch('/auth/register', { 
         method: 'POST', 
         body: { 
           name: name.trim(), 
@@ -801,10 +801,11 @@ export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'
     setIsLoading(true);
     try {
       console.debug("Attempting login with email:", email.substring(0, 3) + "***");
-      console.debug("API URL will be: " + process.env.NEXT_PUBLIC_API_URL + "/api/auth/login");
+      // ✅ FIXED: Removed duplicate /api
+      console.debug("API URL will be: " + process.env.NEXT_PUBLIC_API_URL + "/auth/login");
       
-      // ✅ FIXED: Added /api prefix
-      const res = await apiFetch('/api/auth/login', { 
+      // ✅ FIXED: Removed duplicate /api
+      const res = await apiFetch('/auth/login', { 
         method: 'POST', 
         body: { 
           email: email.trim().toLowerCase(), 

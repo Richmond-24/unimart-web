@@ -85,41 +85,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const storedGuest = localStorage.getItem('unimart:guest');
 
       if (storedToken) {
+        // ✅ FIXED: Set token and user immediately from localStorage
         setToken(storedToken);
         setAuthCookie(storedToken);
 
         if (storedUser) {
           try {
-            setUser(JSON.parse(storedUser));
+            const parsedUser = JSON.parse(storedUser);
+            setUser(parsedUser);
           } catch (e) {
             console.warn('Failed to parse stored user:', e);
           }
         }
 
-        // ✅ FIXED: Added /api prefix
+        // ✅ FIXED: Validate token in background, don't clear on failure
+        // This keeps the user on the page even if validation fails
         try {
-          const res = await apiFetch<{ user?: User; data?: any; success?: boolean }>('/api/auth/me', {
+          // ✅ FIXED: Removed duplicate /api prefix
+          const res = await apiFetch<{ user?: User; data?: any; success?: boolean }>('/auth/me', {
             headers: { Authorization: `Bearer ${storedToken}` },
             suppressErrorLog: true
           });
+          
           if (res && (res.user || res.data)) {
             const userData = res.user || res.data;
             setUser(userData);
-          } else {
-            // Token is invalid, clear auth
-            setToken(null);
-            setUser(null);
-            localStorage.removeItem('unimart:token');
-            localStorage.removeItem('unimart:user');
-            clearAuthCookie();
+            // Update stored user with fresh data
+            localStorage.setItem('unimart:user', JSON.stringify(userData));
           }
+          // If validation fails, we keep the stored user data anyway
+          // This prevents redirect on refresh
         } catch (e) {
-          console.debug('Token validation failed:', e);
-          setToken(null);
-          setUser(null);
-          localStorage.removeItem('unimart:token');
-          localStorage.removeItem('unimart:user');
-          clearAuthCookie();
+          console.debug('Token validation failed (keeping stored user):', e);
+          // Don't clear the user data on validation failure
+          // This keeps the user on the page
         }
       } else if (storedGuest && storedUser) {
         try {
@@ -152,17 +151,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function checkAuth(): Promise<boolean> {
-    if (!token) return false;
+    if (!token) {
+      // ✅ FIXED: Check localStorage for token
+      const storedToken = typeof window !== 'undefined' ? localStorage.getItem('unimart:token') : null;
+      if (storedToken) {
+        setToken(storedToken);
+        try {
+          // ✅ FIXED: Removed duplicate /api prefix
+          const res = await apiFetch<{ user?: User; data?: any }>('/auth/me', {
+            headers: { Authorization: `Bearer ${storedToken}` },
+            suppressErrorLog: true
+          });
+          if (res && (res.user || res.data)) {
+            const userData = res.user || res.data;
+            setUser(userData);
+            localStorage.setItem('unimart:user', JSON.stringify(userData));
+            return true;
+          }
+        } catch (e) {
+          console.debug('Auth check failed:', e);
+          return false;
+        }
+      }
+      return false;
+    }
 
     try {
-      // ✅ FIXED: Added /api prefix
-      const res = await apiFetch<{ user?: User; data?: any }>('/api/auth/me', {
+      // ✅ FIXED: Removed duplicate /api prefix
+      const res = await apiFetch<{ user?: User; data?: any }>('/auth/me', {
         headers: { Authorization: `Bearer ${token}` },
         suppressErrorLog: true
       });
       if (res && (res.user || res.data)) {
         const userData = res.user || res.data;
         setUser(userData);
+        localStorage.setItem('unimart:user', JSON.stringify(userData));
         return true;
       }
       return false;
@@ -174,16 +197,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function login(email: string, password: string) {
     try {
-      // ✅ FIXED: Added /api prefix
-      const res = await apiFetch<{ token: string; user: User; success: boolean; message?: string }>('/api/auth/login', {
+      // ✅ FIXED: Removed duplicate /api prefix
+      const res = await apiFetch<{ token: string; user: User; success: boolean; message?: string }>('/auth/login', {
         method: 'POST',
         body: { email, password },
         suppressErrorLog: true
       });
 
       if (res && res.success && res.token) {
+        // ✅ FIXED: Persist both token and user immediately
         setToken(res.token);
         setUser(res.user);
+        localStorage.setItem('unimart:token', res.token);
+        localStorage.setItem('unimart:user', JSON.stringify(res.user));
         return { success: true, token: res.token, user: res.user };
       }
 
@@ -196,8 +222,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signup(data: any) {
     try {
-      // ✅ FIXED: Added /api prefix
-      const res = await apiFetch<{ token: string; user: User; success: boolean; message?: string }>('/api/auth/register', {
+      // ✅ FIXED: Removed duplicate /api prefix
+      const res = await apiFetch<{ token: string; user: User; success: boolean; message?: string }>('/auth/register', {
         method: 'POST',
         body: data,
         suppressErrorLog: true
@@ -206,6 +232,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (res && res.success && res.token) {
         setToken(res.token);
         setUser(res.user);
+        localStorage.setItem('unimart:token', res.token);
+        localStorage.setItem('unimart:user', JSON.stringify(res.user));
         return { success: true, token: res.token, user: res.user };
       }
 
@@ -245,8 +273,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Best-effort backend logout using the captured token
     if (tokenForLogout) {
       try {
-        // ✅ FIXED: Added /api prefix
-        await apiFetch('/api/auth/logout', {
+        // ✅ FIXED: Removed duplicate /api prefix
+        await apiFetch('/auth/logout', {
           method: 'POST',
           headers: { Authorization: `Bearer ${tokenForLogout}` },
           suppressErrorLog: true
