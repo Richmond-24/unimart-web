@@ -946,7 +946,6 @@ export default function Header() {
           })}
         </div>
       </nav>
-      {/* =========================== END MOBILE BOTTOM TAB BAR =========================== */}
     </>
   );
 }

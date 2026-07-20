@@ -12,8 +12,7 @@ import Header from "./components/Header";
 import Footer from "./components/Footer";
 import MessageListener from "./components/MessageListener";
 import RiriHost from "./components/RiriHost";
-import RiriButton from "./components/RiriButton";
-import ChatButton from "./components/ChatButton";
+import UnimartFAB from "./components/RiriButton";
 import SocketProvider from "./components/SocketProvider";
 import WelcomeBadgeModal from "./components/WelcomeBadgeModal";
 
@@ -98,8 +97,7 @@ export default function RootLayout({
               </main>
             </div>
             <Footer />
-            <ChatButton />
-            <RiriButton />
+            <UnimartFAB />
             <RiriHost />
             <MessageListener />
             <WelcomeBadgeModal />
