@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import io, { Socket } from "socket.io-client";
-import apiClient from "../../lib/apiClient"; // ✅ Fixed: default import
+import apiFetch from "../../lib/apiClient"; // ✅ Using default export (apiFetch) which is the callable function
 import { useAuth } from "../context/AuthContext";
 
 interface Message {
@@ -34,7 +34,7 @@ export default function SocketChat({
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [onlineStatus, setOnlineStatus] = useState<"online" | "offline" | "typing">("offline");
-  
+
   const socketRef = useRef<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
@@ -47,15 +47,19 @@ export default function SocketChat({
   useEffect(() => {
     const loadMessages = async () => {
       if (!listingId) return;
-      
+
       try {
         setIsLoading(true);
-        const response = await apiClient(`/api/messages/${listingId}`, {
+        const response = await apiFetch(`/messages/${listingId}`, {
           method: "GET",
         });
-        
+
         if (response?.success && response.data) {
           setMessages(response.data);
+        } else if (Array.isArray(response?.data)) {
+          setMessages(response.data);
+        } else if (Array.isArray(response)) {
+          setMessages(response);
         }
       } catch (err) {
         console.error("Failed to load messages:", err);
@@ -78,7 +82,7 @@ export default function SocketChat({
     }
 
     const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "https://unimart-backend-6pld.onrender.com";
-    
+
     socketRef.current = io(socketUrl, {
       auth: { token },
       transports: ["websocket", "polling"],
@@ -93,7 +97,7 @@ export default function SocketChat({
       console.log("Socket connected");
       setIsConnected(true);
       setError(null);
-      
+
       // Join conversation room (server expects 'join_conversation')
       const roomId = [sellerId, currentUserId].sort().join("-");
       socket.emit('join_conversation', { conversationId: roomId });
@@ -195,9 +199,9 @@ export default function SocketChat({
 
     try {
       const roomId = [sellerId, currentUserId].sort().join("-");
-      
+
       // Save message to API (use 'text' field expected by backend)
-      await apiClient("/api/messages", {
+      await apiFetch("/messages", {
         method: "POST",
         body: {
           listingId,
@@ -270,13 +274,12 @@ export default function SocketChat({
               </span>
             </div>
             <div
-              className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-teal-600 ${
-                onlineStatus === "online"
+              className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-teal-600 ${onlineStatus === "online"
                   ? "bg-green-500"
                   : onlineStatus === "typing"
-                  ? "bg-yellow-500"
-                  : "bg-gray-400"
-              }`}
+                    ? "bg-yellow-500"
+                    : "bg-gray-400"
+                }`}
             />
           </div>
           <div>
@@ -285,8 +288,8 @@ export default function SocketChat({
               {onlineStatus === "online"
                 ? "Online"
                 : onlineStatus === "typing"
-                ? "Typing..."
-                : "Offline"}
+                  ? "Typing..."
+                  : "Offline"}
             </p>
           </div>
         </div>
@@ -319,8 +322,8 @@ export default function SocketChat({
         ) : (
           messages.map((message, index) => {
             const isOwnMessage = message.senderId === currentUserId;
-            const showDate = index === 0 || 
-              new Date(message.createdAt).toDateString() !== 
+            const showDate = index === 0 ||
+              new Date(message.createdAt).toDateString() !==
               new Date(messages[index - 1].createdAt).toDateString();
 
             return (
@@ -340,17 +343,15 @@ export default function SocketChat({
                   className={`flex ${isOwnMessage ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-[70%] rounded-lg px-4 py-2 ${
-                      isOwnMessage
+                    className={`max-w-[70%] rounded-lg px-4 py-2 ${isOwnMessage
                         ? "bg-teal-600 text-white rounded-br-none"
                         : "bg-white text-gray-800 rounded-bl-none shadow-sm border border-gray-100"
-                    }`}
+                      }`}
                   >
                     <p className="break-words">{message.content}</p>
                     <div
-                      className={`flex items-center gap-1 mt-1 text-xs ${
-                        isOwnMessage ? "text-teal-100" : "text-gray-400"
-                      }`}
+                      className={`flex items-center gap-1 mt-1 text-xs ${isOwnMessage ? "text-teal-100" : "text-gray-400"
+                        }`}
                     >
                       <span>{formatTime(message.createdAt)}</span>
                       {isOwnMessage && (

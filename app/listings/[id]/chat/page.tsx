@@ -59,17 +59,12 @@ export default function ChatPage() {
 
   const loadBuyerConversations = useCallback(async () => {
     try {
-      const res = await apiFetch("/messages/conversations", { method: "GET", suppressErrorLog: true } as any);
-      const conversations = res?.conversations || res?.data || [];
+      // ✅ FIX: Use correct /conversations endpoint directly
+      const res = await apiFetch("/conversations", { method: "GET", suppressErrorLog: true } as any);
+      const conversations = res?.conversations || res?.data || res || [];
       return Array.isArray(conversations) ? conversations : [];
     } catch {
-      try {
-        const fallback = await apiFetch("/conversations", { method: "GET", suppressErrorLog: true } as any);
-        const conversations = fallback?.conversations || fallback?.data || [];
-        return Array.isArray(conversations) ? conversations : [];
-      } catch {
-        return [];
-      }
+      return [];
     }
   }, []);
 
@@ -243,7 +238,9 @@ export default function ChatPage() {
       try {
         setIsLoadingMessages(true);
         const res = await apiFetch(`/conversations/${conversationId}/messages?limit=100`, { suppressErrorLog: true } as any);
-        if (m) setMessages(res?.messages || []);
+        // ✅ FIX: Backend can return messages in res.data, res.messages, or as array directly
+        const msgs = res?.data || res?.messages || (Array.isArray(res) ? res : []);
+        if (m) setMessages(msgs);
       } catch {
         if (m) setMessages([]);
       } finally { if (m) setIsLoadingMessages(false); }
@@ -341,12 +338,13 @@ export default function ChatPage() {
         body: { conversationId: activeConversationId, text, type: "text" },
       } as any);
 
-      if (res?.success && res?.message) {
-        setMessages((prev) => prev.map((m) => (m._id === tempId ? res.message : m)));
-      } else {
-        setMessages((prev) => prev.filter((m) => m._id !== tempId));
-        setNewMessage(text);
+      // ✅ FIX: Backend can return saved message in res.message, res.data, or res directly
+      const savedMsg = res?.message || res?.data || (res?._id ? res : null);
+      if (savedMsg?._id) {
+        setMessages((prev) => prev.map((m) => (m._id === tempId ? { ...savedMsg, text: savedMsg.text || savedMsg.content || text } : m)));
       }
+      // If no saved message was returned, keep the optimistic message visible
+      // (server emits the real one via socket or next reload)
 
       pendingMessageRef.current = null;
     } catch (err: any) {
@@ -478,11 +476,10 @@ export default function ChatPage() {
                 )}
                 <div className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
                   <div
-                    className={`max-w-[75%] px-3.5 py-2.5 rounded-2xl ${
-                      isMine
+                    className={`max-w-[75%] px-3.5 py-2.5 rounded-2xl ${isMine
                         ? "bg-teal-600 text-white rounded-br-md"
                         : "bg-white text-gray-800 rounded-bl-md shadow-sm border border-gray-100"
-                    }`}
+                      }`}
                   >
                     <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
                       {msg.text || msg.content || ""}

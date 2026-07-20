@@ -1,6 +1,9 @@
+
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Space_Grotesk, Inter, Plus_Jakarta_Sans, Figtree } from "next/font/google";
-import "./globals.css";
+import { Space_Grotesk, Inter, Plus_Jakarta_Sans, Figtree } from "next/font/google";
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
+import "./globals.css"; 
 
 import { AuthProvider } from "./context/AuthContext";
 import AppInitializer from "./components/AppInitializer";
@@ -13,16 +16,6 @@ import RiriButton from "./components/RiriButton";
 import ChatButton from "./components/ChatButton";
 import SocketProvider from "./components/SocketProvider";
 import WelcomeBadgeModal from "./components/WelcomeBadgeModal";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
@@ -61,7 +54,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${inter.variable} ${plusJakartaSans.variable} ${figtree.variable} h-full antialiased`}
+      className={`${GeistSans.variable} ${GeistMono.variable} ${spaceGrotesk.variable} ${inter.variable} ${plusJakartaSans.variable} ${figtree.variable} h-full antialiased`}
       data-app-stage="splash"
     >
       <head>
