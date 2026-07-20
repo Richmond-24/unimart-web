@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { Space_Grotesk, Inter, Plus_Jakarta_Sans, Figtree } from "next/font/google";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
-import "./globals.css"; 
+import "./globals.css";
 
 import { AuthProvider } from "./context/AuthContext";
 import AppInitializer from "./components/AppInitializer";
@@ -17,27 +17,32 @@ import ChatButton from "./components/ChatButton";
 import SocketProvider from "./components/SocketProvider";
 import WelcomeBadgeModal from "./components/WelcomeBadgeModal";
 
+// ✅ FIXED: Add display and remove weight arrays
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
+  display: "swap",
 });
 
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
+  display: "swap",
 });
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-plus-jakarta-sans",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
 });
 
 const figtree = Figtree({
   variable: "--font-figtree",
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700", "800", "900"],
+  display: "swap", // ✅ Added display option
 });
 
 export const metadata: Metadata = {
@@ -81,15 +86,9 @@ export default function RootLayout({
       <body suppressHydrationWarning className="min-h-full flex flex-col">
         <AuthProvider>
           <SocketProvider>
-            {/* App init - shows splash/auth overlay */}
             <AppInitializer />
-
-            {/* Fixed Header (global) */}
             <Header />
-
-            {/* Push content below header using runtime-measured CSS variables */}
             <div id="site-content" style={{ paddingTop: 'calc(var(--header-height) + env(safe-area-inset-top))', paddingBottom: 'calc(var(--footer-height) + env(safe-area-inset-bottom))' }} className="flex flex-col flex-1">
-
               <main className="flex-1">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                   <AppGate>
@@ -97,19 +96,10 @@ export default function RootLayout({
                   </AppGate>
                 </div>
               </main>
-
             </div>
-
-            {/* Mobile bottom nav (Temu-style, global) */}
             <Footer />
-
-            {/* Global chat FAB */}
             <ChatButton />
-
-            {/* Floating RIRI assistant button (home page only) */}
             <RiriButton />
-
-            {/* Global AI assistant and notification listener */}
             <RiriHost />
             <MessageListener />
             <WelcomeBadgeModal />
