@@ -1,11 +1,10 @@
 
-
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { motion, AnimatePresence, type Variants } from "framer-motion";
 import apiFetch from "../../lib/apiClient";
 import {
-  ShoppingBag,
   ShoppingCart,
   Truck,
   Rocket,
@@ -60,14 +59,11 @@ const ORANGE_BORDER = "#FFCBAE";
 
 const MONEY = "#12A87F";
 const MONEY_TINT = "#E4F7F0";
-const AMBER = "#E8992A";
-const AMBER_TINT = "#FDF1E0";
 const DANGER = "#E24C4B";
 const DANGER_TINT = "#FDEBEB";
 
 const GRAD_BRAND = `linear-gradient(135deg, ${TEAL} 0%, ${BLUE} 100%)`;
 const GRAD_CTA = `linear-gradient(135deg, ${ORANGE} 0%, ${ORANGE_DARK} 100%)`;
-const GRAD_CTA_HOVER = `linear-gradient(135deg, #FF7C4A 0%, ${ORANGE} 100%)`;
 
 // ─── TYPES ──────────────────────────────────────────────────
 interface DeliveryOption {
@@ -238,113 +234,72 @@ function loadPaystackScript(): Promise<void> {
   });
 }
 
+// ─── ANIMATION VARIANTS ─────────────────────────────────────────
+const stepVariants: Variants = {
+  enter: (direction: number) => ({ opacity: 0, x: direction >= 0 ? 28 : -28 }),
+  center: { opacity: 1, x: 0 },
+  exit: (direction: number) => ({ opacity: 0, x: direction >= 0 ? -28 : 28 }),
+};
+
+const listStagger: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.05 } },
+};
+
+const listItem: Variants = {
+  hidden: { opacity: 0, y: 8 },
+  show: { opacity: 1, y: 0 },
+};
+
 // ─── GLOBAL SCOPED STYLES ───────────────────────────────────────
 function CheckoutStyles() {
   return (
     <style jsx global>{`
-      @keyframes uc-spin {
-        to {
-          transform: rotate(360deg);
-        }
+      * {
+        box-sizing: border-box;
       }
-      @keyframes uc-pulse-ring {
-        0% {
-          transform: scale(0.85);
-          opacity: 0.55;
-        }
-        100% {
-          transform: scale(1.55);
-          opacity: 0;
-        }
-      }
-      @keyframes uc-fade-up {
-        from {
-          opacity: 0;
-          transform: translateY(8px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-      .uc-step-panel {
-        animation: uc-fade-up 0.24s ease;
-      }
-      .uc-btn-primary {
-        transition: background 0.15s ease, transform 0.08s ease, box-shadow 0.15s ease;
-        box-shadow: 0 6px 16px -4px rgba(255, 107, 53, 0.45);
-      }
-      .uc-btn-primary:hover:not(:disabled) {
-        background: ${GRAD_CTA_HOVER} !important;
-        box-shadow: 0 8px 20px -4px rgba(255, 107, 53, 0.55);
-      }
-      .uc-btn-primary:active:not(:disabled) {
-        transform: scale(0.98);
-      }
-      .uc-btn-primary:focus-visible {
-        outline: 2px solid ${ORANGE};
-        outline-offset: 2px;
-      }
-      .uc-btn-ghost {
-        transition: border-color 0.15s ease, background 0.15s ease, transform 0.08s ease;
-      }
-      .uc-btn-ghost:hover {
-        border-color: ${TEAL};
-        background: ${TEAL_TINT};
-      }
-      .uc-btn-ghost:active {
-        transform: scale(0.98);
-      }
-      .uc-option {
-        transition: border-color 0.15s ease, background 0.15s ease, transform 0.08s ease, box-shadow 0.15s ease;
-        cursor: pointer;
-      }
-      .uc-option:hover {
-        border-color: ${TEAL_LIGHT};
-      }
-      .uc-option:active {
-        transform: scale(0.98);
+      .uc-root {
+        overflow-x: hidden;
       }
       .uc-input {
         transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        font-size: 16px !important; /* prevents iOS auto-zoom which shifts layout */
       }
       .uc-input:focus {
         outline: none;
         border-color: ${TEAL} !important;
         box-shadow: 0 0 0 3px ${TEAL_TINT};
       }
-      .uc-qtybtn {
-        transition: background 0.15s ease, transform 0.08s ease, border-color 0.15s ease;
+      .uc-btn-primary:focus-visible {
+        outline: 2px solid ${ORANGE};
+        outline-offset: 2px;
       }
-      .uc-qtybtn:hover:not(:disabled) {
-        background: ${TEAL_TINT};
-        border-color: ${TEAL_LIGHT};
+      .uc-btn-ghost:hover {
+        border-color: ${TEAL} !important;
+        background: ${TEAL_TINT} !important;
       }
-      .uc-qtybtn:active:not(:disabled) {
-        transform: scale(0.92);
+      .uc-option {
+        cursor: pointer;
       }
-      .uc-step-dot {
-        transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
-      }
-      .uc-step-nav:hover:not(:disabled) .uc-step-dot {
-        transform: scale(1.08);
-      }
-      .uc-pulse::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        border-radius: 50%;
-        background: ${MONEY};
-        animation: uc-pulse-ring 1.6s ease-out infinite;
-      }
-      .uc-link-btn:hover {
-        text-decoration: underline;
+      .uc-option:hover {
+        border-color: ${TEAL_LIGHT} !important;
       }
       .uc-logo-badge {
         box-shadow: 0 4px 14px -3px rgba(13, 115, 119, 0.55);
       }
+      .uc-panel-scroll {
+        overflow: hidden;
+      }
       @media (max-width: 767px) {
         .uc-hide-mobile {
+          display: none !important;
+        }
+        .uc-summary-sidebar {
+          display: none !important;
+        }
+      }
+      @media (min-width: 768px) {
+        .uc-hide-desktop {
           display: none !important;
         }
       }
@@ -371,10 +326,10 @@ function IconBadge({ icon: Icon, tone = "teal", size = 36 }: { icon: LucideIcon;
 
 function StepHeader({ icon, title, subtitle }: { icon: LucideIcon; title: string; subtitle: string }) {
   return (
-    <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: "1.35rem" }}>
+    <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: "1.35rem", minWidth: 0 }}>
       <IconBadge icon={icon} tone="teal" />
-      <div>
-        <h2 style={{ margin: 0, fontSize: 19, fontWeight: 800, color: "var(--color-text-primary)", letterSpacing: -0.3 }}>{title}</h2>
+      <div style={{ minWidth: 0 }}>
+        <h2 style={{ margin: 0, fontSize: "clamp(17px, 4.2vw, 19px)", fontWeight: 800, color: "var(--color-text-primary)", letterSpacing: -0.3 }}>{title}</h2>
         <p style={{ margin: "3px 0 0", fontSize: 13, color: "var(--color-text-secondary)" }}>{subtitle}</p>
       </div>
     </div>
@@ -403,13 +358,13 @@ function Row({ label, value, bold, valueColor, mono }: { label: string; value: s
 
 function QtyBtn({ onClick, children, disabled }: { onClick: () => void; children: React.ReactNode; disabled?: boolean }) {
   return (
-    <button
+    <motion.button
       onClick={onClick}
       disabled={disabled}
-      className="uc-qtybtn"
+      whileTap={disabled ? undefined : { scale: 0.88 }}
       style={{
-        width: 30,
-        height: 30,
+        width: 32,
+        height: 32,
         borderRadius: 9,
         border: "1px solid var(--color-border-secondary)",
         background: "var(--color-background-secondary)",
@@ -423,16 +378,19 @@ function QtyBtn({ onClick, children, disabled }: { onClick: () => void; children
       }}
     >
       {children}
-    </button>
+    </motion.button>
   );
 }
 
 function PrimaryButton({ children, onClick, disabled, loading, trailingIcon: Trailing = ArrowRight }: { children: React.ReactNode; onClick: () => void; disabled?: boolean; loading?: boolean; trailingIcon?: LucideIcon }) {
   return (
-    <button
+    <motion.button
       onClick={onClick}
       disabled={disabled || loading}
       className="uc-btn-primary"
+      whileHover={disabled || loading ? undefined : { scale: 1.015 }}
+      whileTap={disabled || loading ? undefined : { scale: 0.98 }}
+      transition={{ duration: 0.12 }}
       style={{
         width: "100%",
         padding: "15px",
@@ -448,21 +406,26 @@ function PrimaryButton({ children, onClick, disabled, loading, trailingIcon: Tra
         alignItems: "center",
         justifyContent: "center",
         gap: 8,
-        boxShadow: disabled || loading ? "none" : undefined,
+        boxShadow: disabled || loading ? "none" : "0 6px 16px -4px rgba(255, 107, 53, 0.45)",
       }}
     >
-      {loading ? <Loader2 size={16} style={{ animation: "uc-spin 0.7s linear infinite" }} /> : null}
+      {loading ? (
+        <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.7, repeat: Infinity, ease: "linear" }} style={{ display: "flex" }}>
+          <Loader2 size={16} />
+        </motion.span>
+      ) : null}
       {children}
       {!loading && Trailing ? <Trailing size={16} /> : null}
-    </button>
+    </motion.button>
   );
 }
 
 function GhostButton({ children, onClick, leadingIcon: Leading = ArrowLeft }: { children: React.ReactNode; onClick: () => void; leadingIcon?: LucideIcon }) {
   return (
-    <button
+    <motion.button
       onClick={onClick}
       className="uc-btn-ghost"
+      whileTap={{ scale: 0.97 }}
       style={{
         padding: "14px 18px",
         borderRadius: 13,
@@ -475,11 +438,13 @@ function GhostButton({ children, onClick, leadingIcon: Leading = ArrowLeft }: { 
         display: "flex",
         alignItems: "center",
         gap: 6,
+        flexShrink: 0,
+        whiteSpace: "nowrap",
       }}
     >
       {Leading ? <Leading size={15} /> : null}
       {children}
-    </button>
+    </motion.button>
   );
 }
 
@@ -500,9 +465,7 @@ function IconInput({
           borderRadius: 11,
           border: `1px solid ${invalid ? DANGER : "var(--color-border-secondary)"}`,
           background: "var(--color-background-primary)",
-          fontSize: 14,
           color: "var(--color-text-primary)",
-          boxSizing: "border-box",
         }}
       />
     </div>
@@ -516,17 +479,18 @@ function Stepper({ step, furthestStep, onJump, isMobile }: { step: number; furth
     <div style={{ width: "100%", maxWidth: 1100, margin: "0 auto", padding: isMobile ? "0.9rem 1rem 0" : "1.25rem 1.5rem 0" }}>
       <div style={{ position: "relative", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div style={{ position: "absolute", top: 16, left: `${100 / (STEPS.length * 2)}%`, right: `${100 / (STEPS.length * 2)}%`, height: 3, background: "var(--color-border-tertiary)", borderRadius: 999, zIndex: 0 }} />
-        <div
+        <motion.div
+          initial={false}
+          animate={{ width: `calc(${pct}% * ${(STEPS.length - 1) / STEPS.length})` }}
+          transition={{ duration: 0.35, ease: "easeInOut" }}
           style={{
             position: "absolute",
             top: 16,
             left: `${100 / (STEPS.length * 2)}%`,
-            width: `calc(${pct}% * ${(STEPS.length - 1) / STEPS.length})`,
             height: 3,
             background: GRAD_BRAND,
             borderRadius: 999,
             zIndex: 0,
-            transition: "width 0.3s ease",
           }}
         />
         {STEPS.map(({ label, icon: Icon }, i) => {
@@ -535,9 +499,10 @@ function Stepper({ step, furthestStep, onJump, isMobile }: { step: number; furth
           const active = n === step;
           const reachable = n <= furthestStep;
           return (
-            <button key={label} onClick={() => reachable && onJump(n)} disabled={!reachable} className="uc-step-nav" style={{ position: "relative", zIndex: 1, background: "none", border: "none", cursor: reachable ? "pointer" : "default", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, flex: 1 }}>
-              <div
-                className="uc-step-dot"
+            <button key={label} onClick={() => reachable && onJump(n)} disabled={!reachable} style={{ position: "relative", zIndex: 1, background: "none", border: "none", cursor: reachable ? "pointer" : "default", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, flex: 1, padding: 0 }}>
+              <motion.div
+                animate={{ scale: active ? 1.08 : 1 }}
+                transition={{ type: "spring", stiffness: 400, damping: 20 }}
                 style={{
                   width: 32,
                   height: 32,
@@ -552,8 +517,8 @@ function Stepper({ step, furthestStep, onJump, isMobile }: { step: number; furth
                 }}
               >
                 {done ? <Check size={15} strokeWidth={2.6} /> : <Icon size={14} strokeWidth={2.2} />}
-              </div>
-              <span style={{ fontSize: isMobile ? 10 : 12, fontWeight: active ? 700 : 500, color: active ? "var(--color-text-primary)" : "var(--color-text-tertiary)" }}>{label}</span>
+              </motion.div>
+              <span style={{ fontSize: isMobile ? 10 : 12, fontWeight: active ? 700 : 500, color: active ? "var(--color-text-primary)" : "var(--color-text-tertiary)", whiteSpace: "nowrap" }}>{label}</span>
             </button>
           );
         })}
@@ -567,6 +532,7 @@ export default function SocialCheckout() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [step, setStep] = useState<number>(1);
   const [furthestStep, setFurthestStep] = useState<number>(1);
+  const [direction, setDirection] = useState<number>(1);
 
   const [deliverySelections, setDeliverySelections] = useState<Record<string, string>>({});
   const [address, setAddress] = useState<Address>({ name: "", phone: "", region: "", city: "", landmark: "" });
@@ -581,12 +547,31 @@ export default function SocialCheckout() {
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const [summaryOpen, setSummaryOpen] = useState<boolean>(false);
 
+  // Measure the fixed mobile bottom bar so page content always reserves
+  // exactly enough space for it — this is what was causing the bar to
+  // overlay step content whenever its height changed (e.g. summary open).
+  const bottomBarRef = useRef<HTMLDivElement | null>(null);
+  const [bottomBarHeight, setBottomBarHeight] = useState<number>(0);
+
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
+
+  useEffect(() => {
+    if (!isMobile || typeof ResizeObserver === "undefined") return;
+    const el = bottomBarRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setBottomBarHeight(entry.contentRect.height);
+      }
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [isMobile, summaryOpen]);
 
   const sellerGroups: SellerGroup[] = useMemo(() => {
     const map = new Map<string, SellerGroup>();
@@ -761,13 +746,21 @@ export default function SocialCheckout() {
   const validatePaymentStep = (): boolean => /\S+@\S+\.\S+/.test(buyerEmail);
 
   const goNext = () => {
+    setDirection(1);
     setStep((s) => {
       const n = Math.min(s + 1, STEPS.length);
       setFurthestStep((f) => Math.max(f, n));
       return n;
     });
   };
-  const goBack = () => setStep((s) => Math.max(s - 1, 1));
+  const goBack = () => {
+    setDirection(-1);
+    setStep((s) => Math.max(s - 1, 1));
+  };
+  const jumpTo = (n: number) => {
+    setDirection(n >= step ? 1 : -1);
+    setStep(n);
+  };
 
   const handleFieldChange = (field: keyof Address, value: string) => setAddress((prev) => ({ ...prev, [field]: value }));
   const handleTouch = (field: string) => setTouched((prev) => ({ ...prev, [field]: true }));
@@ -848,32 +841,52 @@ export default function SocialCheckout() {
   // ─── SUCCESS SCREEN ─────────────────────────────────────────
   if (success) {
     return (
-      <div style={{ minHeight: "100vh", background: `linear-gradient(180deg, ${TEAL_TINT} 0%, var(--color-background-tertiary) 340px)`, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
+      <div className="uc-root" style={{ minHeight: "100vh", background: `linear-gradient(180deg, ${TEAL_TINT} 0%, var(--color-background-tertiary) 340px)`, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
         <CheckoutStyles />
-        <div style={{ background: "var(--color-background-primary)", borderRadius: 26, border: "1px solid var(--color-border-tertiary)", padding: "2.25rem 1.75rem", maxWidth: 440, width: "100%", textAlign: "center", boxShadow: "0 20px 50px -20px rgba(13,115,119,0.35)" }}>
+        <motion.div
+          initial={{ opacity: 0, y: 24, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ type: "spring", stiffness: 260, damping: 22 }}
+          style={{ background: "var(--color-background-primary)", borderRadius: 26, border: "1px solid var(--color-border-tertiary)", padding: "2.25rem 1.75rem", maxWidth: 440, width: "100%", textAlign: "center", boxShadow: "0 20px 50px -20px rgba(13,115,119,0.35)" }}
+        >
           <div style={{ position: "relative", width: 76, height: 76, margin: "0 auto 1.25rem" }}>
-            <div className="uc-pulse" style={{ position: "absolute", inset: 0 }} />
-            <div style={{ position: "relative", width: 76, height: 76, borderRadius: "50%", background: GRAD_BRAND, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 22px -6px rgba(13,115,119,0.55)" }}>
+            <motion.div
+              initial={{ scale: 0.85, opacity: 0.55 }}
+              animate={{ scale: 1.55, opacity: 0 }}
+              transition={{ duration: 1.6, repeat: Infinity, ease: "easeOut" }}
+              style={{ position: "absolute", inset: 0, borderRadius: "50%", background: MONEY }}
+            />
+            <motion.div
+              initial={{ scale: 0, rotate: -30 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 15, delay: 0.1 }}
+              style={{ position: "relative", width: 76, height: 76, borderRadius: "50%", background: GRAD_BRAND, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 22px -6px rgba(13,115,119,0.55)" }}
+            >
               <CheckCircle2 size={38} color="#fff" strokeWidth={2} />
-            </div>
+            </motion.div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 4 }}>
+          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 4 }}>
             <PartyPopper size={18} color={ORANGE} />
             <h2 style={{ fontSize: 22, fontWeight: 800, margin: 0, color: "var(--color-text-primary)" }}>Order Placed</h2>
-          </div>
-          <p style={{ color: "var(--color-text-secondary)", margin: "0 0 1.5rem", fontSize: 14 }}>
+          </motion.div>
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.32 }} style={{ color: "var(--color-text-secondary)", margin: "0 0 1.5rem", fontSize: 14 }}>
             Order <strong>{success.orderId}</strong> is confirmed and each seller has been notified.
-          </p>
-          <div style={{ background: TEAL_TINT, border: `1px solid ${TEAL_BORDER}`, borderRadius: 14, padding: "1rem", marginBottom: "1.5rem", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+          </motion.p>
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.38 }}
+            style={{ background: TEAL_TINT, border: `1px solid ${TEAL_BORDER}`, borderRadius: 14, padding: "1rem", marginBottom: "1.5rem", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}
+          >
             <Receipt size={18} color={TEAL} />
             <div>
               <p style={{ margin: 0, fontSize: 12, color: TEAL_DARK, textAlign: "left" }}>Total paid</p>
               <p style={{ margin: 0, fontSize: 26, fontWeight: 800, color: TEAL_DARK, fontVariantNumeric: "tabular-nums" }}>{fmt(success.total)}</p>
             </div>
-          </div>
-          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-            <button
-              className="uc-btn-ghost"
+          </motion.div>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.45 }} style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+            <motion.button
+              whileTap={{ scale: 0.97 }}
               onClick={() => {
                 setSuccess(null);
                 setStep(1);
@@ -883,341 +896,385 @@ export default function SocialCheckout() {
               style={{ padding: "11px 20px", borderRadius: 11, border: "1px solid var(--color-border-secondary)", background: "transparent", cursor: "pointer", fontSize: 14, fontWeight: 600, color: "var(--color-text-primary)" }}
             >
               Continue Shopping
-            </button>
-            <button className="uc-btn-primary" style={{ padding: "11px 20px", borderRadius: 11, border: "none", background: GRAD_CTA, color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
+            </motion.button>
+            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} style={{ padding: "11px 20px", borderRadius: 11, border: "none", background: GRAD_CTA, color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", gap: 6, boxShadow: "0 6px 16px -4px rgba(255,107,53,0.45)" }}>
               <Truck size={15} />
               Track Order
-            </button>
-          </div>
-        </div>
+            </motion.button>
+          </motion.div>
+        </motion.div>
       </div>
     );
   }
 
   // ─── MAIN WIZARD ─────────────────────────────────────────────
   return (
-    <div style={{ minHeight: "100vh", background: "var(--color-background-tertiary)", fontFamily: "var(--font-sans)", paddingBottom: isMobile ? 172 : 40 }}>
+    <div className="uc-root" style={{ minHeight: "100vh", background: "var(--color-background-tertiary)", fontFamily: "var(--font-sans)", paddingBottom: isMobile ? bottomBarHeight + 12 : 40 }}>
       <CheckoutStyles />
 
       {/* Header */}
-      <div style={{ background: GRAD_BRAND, padding: isMobile ? "0.85rem 1rem" : "0.9rem 2rem", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 4px 16px -6px rgba(13,115,119,0.5)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <motion.div
+        initial={{ opacity: 0, y: -12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        style={{ background: GRAD_BRAND, padding: isMobile ? "0.85rem 1rem" : "0.9rem 2rem", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, boxShadow: "0 4px 16px -6px rgba(13,115,119,0.5)" }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
           <div className="uc-logo-badge" style={{ width: 34, height: 34, borderRadius: 10, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" alt="Uni-Mart" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           </div>
-          <span style={{ fontWeight: 800, fontSize: 17, color: "#fff", letterSpacing: -0.2 }}>Uni-Mart</span>
+          <span style={{ fontWeight: 800, fontSize: 17, color: "#fff", letterSpacing: -0.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Uni-Mart</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.92)", background: "rgba(255,255,255,0.16)", padding: "6px 12px", borderRadius: 999 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.92)", background: "rgba(255,255,255,0.16)", padding: "6px 12px", borderRadius: 999, flexShrink: 0, whiteSpace: "nowrap" }}>
           <ShoppingCart size={14} />
           {cart.reduce((s, i) => s + i.qty, 0)} items
         </div>
-      </div>
+      </motion.div>
 
-      <Stepper step={step} furthestStep={furthestStep} onJump={setStep} isMobile={isMobile} />
+      <Stepper step={step} furthestStep={furthestStep} onJump={(n) => furthestStep >= n && jumpTo(n)} isMobile={isMobile} />
 
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "1rem" : "1.5rem", display: "flex", flexDirection: isMobile ? "column" : "row", gap: "1.5rem", alignItems: "flex-start" }}>
         {/* LEFT: active step panel only — a true step-by-step flow */}
-        <div style={{ flex: 1, width: "100%", background: "var(--color-background-primary)", borderRadius: 20, border: "1px solid var(--color-border-tertiary)", padding: isMobile ? "1.1rem" : "1.6rem", boxShadow: "0 2px 10px rgba(16,16,20,0.05)" }}>
-          {error && (
-            <div style={{ background: DANGER_TINT, border: `1px solid ${DANGER}33`, borderRadius: 12, padding: "10px 14px", marginBottom: "1rem", fontSize: 13, color: DANGER, display: "flex", alignItems: "flex-start", gap: 8 }}>
-              <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: 1 }} />
-              <span>{error}</span>
-            </div>
-          )}
+        <div className="uc-panel-scroll" style={{ flex: 1, width: "100%", minWidth: 0, background: "var(--color-background-primary)", borderRadius: 20, border: "1px solid var(--color-border-tertiary)", padding: isMobile ? "1.1rem" : "1.6rem", boxShadow: "0 2px 10px rgba(16,16,20,0.05)", position: "relative" }}>
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                animate={{ opacity: 1, height: "auto", marginBottom: "1rem" }}
+                exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                style={{ overflow: "hidden" }}
+              >
+                <div style={{ background: DANGER_TINT, border: `1px solid ${DANGER}33`, borderRadius: 12, padding: "10px 14px", fontSize: 13, color: DANGER, display: "flex", alignItems: "flex-start", gap: 8 }}>
+                  <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: 1 }} />
+                  <span>{error}</span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          {/* STEP 1 — CART */}
-          {step === 1 && (
-            <div className="uc-step-panel">
-              <StepHeader icon={ShoppingCart} title="Your Cart" subtitle={`Items from ${sellerGroups.length} local ${sellerGroups.length === 1 ? "creator" : "creators"}`} />
+          <AnimatePresence mode="wait" custom={direction} initial={false}>
+            <motion.div
+              key={step}
+              custom={direction}
+              variants={stepVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.22, ease: "easeOut" }}
+            >
+              {/* STEP 1 — CART */}
+              {step === 1 && (
+                <div>
+                  <StepHeader icon={ShoppingCart} title="Your Cart" subtitle={`Items from ${sellerGroups.length} local ${sellerGroups.length === 1 ? "creator" : "creators"}`} />
 
-              {cart.length === 0 && <p style={{ fontSize: 14, color: "var(--color-text-secondary)" }}>Your cart is empty.</p>}
+                  {cart.length === 0 && <p style={{ fontSize: 14, color: "var(--color-text-secondary)" }}>Your cart is empty.</p>}
 
-              {sellerGroups.map((group) => (
-                <div key={group.seller.id} style={{ marginBottom: "1.25rem" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                    <div style={{ width: 22, height: 22, borderRadius: "50%", background: GRAD_BRAND, color: "#fff", fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{group.seller.avatar}</div>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: TEAL_DARK }}>{group.seller.name}</span>
-                  </div>
+                  <motion.div variants={listStagger} initial="hidden" animate="show">
+                    {sellerGroups.map((group) => (
+                      <div key={group.seller.id} style={{ marginBottom: "1.25rem" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, minWidth: 0 }}>
+                          <div style={{ width: 22, height: 22, borderRadius: "50%", background: GRAD_BRAND, color: "#fff", fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{group.seller.avatar}</div>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: TEAL_DARK, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{group.seller.name}</span>
+                        </div>
 
-                  {group.items.map((item) => (
-                    <div key={item.id} style={{ display: "flex", gap: 12, padding: "10px 0", borderBottom: "1px solid var(--color-border-tertiary)", flexWrap: "wrap" }}>
-                      <div style={{ width: isMobile ? 54 : 60, height: isMobile ? 54 : 60, borderRadius: 14, background: item.color + "1F", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        <Package size={24} color={item.color} strokeWidth={1.8} />
+                        {group.items.map((item) => (
+                          <motion.div variants={listItem} key={item.id} style={{ display: "flex", gap: 12, padding: "10px 0", borderBottom: "1px solid var(--color-border-tertiary)" }}>
+                            <div style={{ width: isMobile ? 54 : 60, height: isMobile ? 54 : 60, borderRadius: 14, background: item.color + "1F", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                              <Package size={24} color={item.color} strokeWidth={1.8} />
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                                <p style={{ margin: 0, fontWeight: 600, fontSize: 13.5, color: "var(--color-text-primary)", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</p>
+                                <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: "var(--color-text-primary)", fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>{fmt(item.price * item.qty)}</p>
+                              </div>
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 6, flexWrap: "wrap", gap: 6 }}>
+                                <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: "var(--color-text-tertiary)", minWidth: 0 }}>
+                                  <span style={{ display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
+                                    <Heart size={12} fill="currentColor" color={ORANGE} /> {item.likes.toLocaleString()}
+                                  </span>
+                                  {item.friendsBought.length > 0 && (
+                                    <span style={{ display: "flex", alignItems: "center", gap: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                      <Users size={12} style={{ flexShrink: 0 }} /> {item.friendsBought.slice(0, 2).join(", ")} bought this
+                                    </span>
+                                  )}
+                                </span>
+                                <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                                  <QtyBtn onClick={() => updateQty(item.id, -1)}>
+                                    <Minus size={13} />
+                                  </QtyBtn>
+                                  <span style={{ fontSize: 14, fontWeight: 700, minWidth: 16, textAlign: "center" }}>{item.qty}</span>
+                                  <QtyBtn onClick={() => updateQty(item.id, 1)}>
+                                    <Plus size={13} />
+                                  </QtyBtn>
+                                </div>
+                              </div>
+                            </div>
+                          </motion.div>
+                        ))}
                       </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
-                          <p style={{ margin: 0, fontWeight: 600, fontSize: 13.5, color: "var(--color-text-primary)" }}>{item.name}</p>
-                          <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: "var(--color-text-primary)", fontVariantNumeric: "tabular-nums" }}>{fmt(item.price * item.qty)}</p>
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 6, flexWrap: "wrap", gap: 6 }}>
-                          <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: "var(--color-text-tertiary)" }}>
-                            <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                              <Heart size={12} fill="currentColor" color={ORANGE} /> {item.likes.toLocaleString()}
-                            </span>
-                            {item.friendsBought.length > 0 && (
-                              <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                                <Users size={12} /> {item.friendsBought.slice(0, 2).join(", ")} bought this
-                              </span>
-                            )}
-                          </span>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <QtyBtn onClick={() => updateQty(item.id, -1)}>
-                              <Minus size={13} />
-                            </QtyBtn>
-                            <span style={{ fontSize: 14, fontWeight: 700, minWidth: 16, textAlign: "center" }}>{item.qty}</span>
-                            <QtyBtn onClick={() => updateQty(item.id, 1)}>
-                              <Plus size={13} />
-                            </QtyBtn>
-                          </div>
-                        </div>
+                    ))}
+                  </motion.div>
+
+                  <div style={{ marginTop: "1.5rem" }}>
+                    <PrimaryButton onClick={() => validateCartStep() && goNext()} disabled={!validateCartStep()}>
+                      Continue to Delivery
+                    </PrimaryButton>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 2 — DELIVERY (per seller) */}
+              {step === 2 && (
+                <div>
+                  <StepHeader icon={Truck} title="Delivery" subtitle="Each seller sets their own delivery options — choose one per seller" />
+
+                  {sellerGroups.map((group) => (
+                    <div key={group.seller.id} style={{ marginBottom: "1.25rem" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, minWidth: 0, flexWrap: "wrap" }}>
+                        <div style={{ width: 20, height: 20, borderRadius: "50%", background: GRAD_BRAND, color: "#fff", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{group.seller.avatar}</div>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-text-primary)", overflow: "hidden", textOverflow: "ellipsis" }}>{group.seller.name}</span>
+                        <span style={{ fontSize: 11, color: "var(--color-text-tertiary)", whiteSpace: "nowrap" }}>
+                          · {group.items.length} item{group.items.length > 1 ? "s" : ""}
+                        </span>
+                      </div>
+
+                      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : `repeat(${Math.min(group.seller.deliveryOptions.length, 3)}, 1fr)`, gap: 10 }}>
+                        {group.seller.deliveryOptions.map((opt) => {
+                          const selected = deliverySelections[group.seller.id] === opt.id;
+                          const OptIcon = deliveryIconFor(opt);
+                          return (
+                            <motion.button
+                              key={opt.id}
+                              onClick={() => setDeliverySelections((prev) => ({ ...prev, [group.seller.id]: opt.id }))}
+                              className="uc-option"
+                              whileTap={{ scale: 0.98 }}
+                              style={{
+                                padding: "13px 12px",
+                                borderRadius: 14,
+                                border: selected ? `2px solid ${TEAL}` : "1px solid var(--color-border-tertiary)",
+                                background: selected ? TEAL_TINT : "var(--color-background-primary)",
+                                textAlign: "left",
+                                boxShadow: selected ? "0 4px 12px -4px rgba(13,115,119,0.35)" : "none",
+                                minWidth: 0,
+                              }}
+                            >
+                              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, minWidth: 0 }}>
+                                <OptIcon size={14} color={selected ? TEAL : "var(--color-text-secondary)"} style={{ flexShrink: 0 }} />
+                                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: selected ? TEAL_DARK : "var(--color-text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{opt.label}</p>
+                              </div>
+                              <p style={{ margin: 0, fontSize: 11, color: "var(--color-text-secondary)" }}>{opt.eta}</p>
+                              <p style={{ margin: "4px 0 0", fontSize: 13, fontWeight: 800, color: opt.price === 0 ? MONEY : "var(--color-text-primary)", fontVariantNumeric: "tabular-nums" }}>{opt.price === 0 ? "Free" : fmt(opt.price)}</p>
+                            </motion.button>
+                          );
+                        })}
                       </div>
                     </div>
                   ))}
+
+                  {needsAddress && (
+                    <div style={{ marginTop: "0.5rem" }}>
+                      <p style={{ fontSize: 13, fontWeight: 700, margin: "0 0 10px", color: "var(--color-text-primary)", display: "flex", alignItems: "center", gap: 6 }}>
+                        <MapPin size={14} color={BLUE} /> Delivery address
+                      </p>
+                      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
+                        <div style={{ gridColumn: !isMobile ? "span 2" : "span 1" }}>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", display: "block", marginBottom: 5 }}>Full Name</label>
+                          <IconInput icon={User} value={address.name} onChange={(e) => handleFieldChange("name", e.target.value)} onBlur={() => handleTouch("name")} placeholder="Ama Owusu" invalid={touched.name && !address.name} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", display: "block", marginBottom: 5 }}>Phone Number</label>
+                          <IconInput icon={Phone} value={address.phone} onChange={(e) => handleFieldChange("phone", e.target.value)} onBlur={() => handleTouch("phone")} placeholder="0244 123 456" invalid={touched.phone && !address.phone} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", display: "block", marginBottom: 5 }}>Region</label>
+                          <IconInput icon={MapPin} value={address.region} onChange={(e) => handleFieldChange("region", e.target.value)} onBlur={() => handleTouch("region")} placeholder="Greater Accra" invalid={touched.region && !address.region} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", display: "block", marginBottom: 5 }}>City / Town</label>
+                          <IconInput icon={MapPin} value={address.city} onChange={(e) => handleFieldChange("city", e.target.value)} onBlur={() => handleTouch("city")} placeholder="Accra" invalid={touched.city && !address.city} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", display: "block", marginBottom: 5 }}>Landmark (optional)</label>
+                          <IconInput icon={MapPin} value={address.landmark} onChange={(e) => handleFieldChange("landmark", e.target.value)} placeholder="Near Accra Mall" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ display: "flex", gap: 10, marginTop: "1.5rem" }}>
+                    <GhostButton onClick={goBack}>Back</GhostButton>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <PrimaryButton
+                        onClick={() => {
+                          if (validateDeliveryStep()) goNext();
+                          else setTouched({ name: true, phone: true, region: true, city: true });
+                        }}
+                      >
+                        Continue to Payment
+                      </PrimaryButton>
+                    </div>
+                  </div>
                 </div>
-              ))}
+              )}
 
-              <div style={{ marginTop: "1.5rem" }}>
-                <PrimaryButton onClick={() => validateCartStep() && goNext()} disabled={!validateCartStep()}>
-                  Continue to Delivery
-                </PrimaryButton>
-              </div>
-            </div>
-          )}
+              {/* STEP 3 — PAYMENT (Paystack) */}
+              {step === 3 && (
+                <div>
+                  <StepHeader icon={CreditCard} title="Payment" subtitle="Checkout runs securely through Paystack" />
 
-          {/* STEP 2 — DELIVERY (per seller) */}
-          {step === 2 && (
-            <div className="uc-step-panel">
-              <StepHeader icon={Truck} title="Delivery" subtitle="Each seller sets their own delivery options — choose one per seller" />
-
-              {sellerGroups.map((group) => (
-                <div key={group.seller.id} style={{ marginBottom: "1.25rem" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                    <div style={{ width: 20, height: 20, borderRadius: "50%", background: GRAD_BRAND, color: "#fff", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{group.seller.avatar}</div>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-text-primary)" }}>{group.seller.name}</span>
-                    <span style={{ fontSize: 11, color: "var(--color-text-tertiary)" }}>
-                      · {group.items.length} item{group.items.length > 1 ? "s" : ""}
-                    </span>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", display: "block", marginBottom: 5 }}>Email for receipt</label>
+                  <div style={{ marginBottom: "1.25rem" }}>
+                    <IconInput icon={Mail} value={buyerEmail} onChange={(e) => setBuyerEmail(e.target.value)} onBlur={() => handleTouch("email")} placeholder="you@example.com" type="email" invalid={touched.email && !validatePaymentStep()} />
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : `repeat(${Math.min(group.seller.deliveryOptions.length, 3)}, 1fr)`, gap: 10 }}>
-                    {group.seller.deliveryOptions.map((opt) => {
-                      const selected = deliverySelections[group.seller.id] === opt.id;
-                      const OptIcon = deliveryIconFor(opt);
+                  <p style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", margin: "0 0 8px" }}>Payment method</p>
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: 10, marginBottom: "1.25rem" }}>
+                    {PAYMENT_CHANNELS.map((pm) => {
+                      const selected = payChannel === pm.id;
+                      const Icon = pm.id === "card" ? CreditCard : Smartphone;
                       return (
-                        <button
-                          key={opt.id}
-                          onClick={() => setDeliverySelections((prev) => ({ ...prev, [group.seller.id]: opt.id }))}
+                        <motion.button
+                          key={pm.id}
+                          onClick={() => setPayChannel(pm.id)}
                           className="uc-option"
-                          style={{
-                            padding: "13px 12px",
-                            borderRadius: 14,
-                            border: selected ? `2px solid ${TEAL}` : "1px solid var(--color-border-tertiary)",
-                            background: selected ? TEAL_TINT : "var(--color-background-primary)",
-                            textAlign: "left",
-                            boxShadow: selected ? "0 4px 12px -4px rgba(13,115,119,0.35)" : "none",
-                          }}
+                          whileTap={{ scale: 0.98 }}
+                          style={{ padding: "13px 10px", borderRadius: 14, border: selected ? `2px solid ${TEAL}` : "1px solid var(--color-border-tertiary)", background: selected ? TEAL_TINT : "var(--color-background-primary)", textAlign: "center", position: "relative", boxShadow: selected ? "0 4px 12px -4px rgba(13,115,119,0.35)" : "none", minWidth: 0, overflow: "hidden" }}
                         >
-                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                            <OptIcon size={14} color={selected ? TEAL : "var(--color-text-secondary)"} />
-                            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: selected ? TEAL_DARK : "var(--color-text-primary)" }}>{opt.label}</p>
+                          {pm.tag && (
+                            <span style={{ position: "absolute", top: 6, right: 6, fontSize: 9, fontWeight: 700, background: GRAD_CTA, color: "#fff", padding: "2px 6px", borderRadius: 20, lineHeight: 1.4 }}>{pm.tag}</span>
+                          )}
+                          <div style={{ position: "relative", width: 26, height: 26, margin: "6px auto 0" }}>
+                            <Icon size={22} color={selected ? TEAL : "var(--color-text-secondary)"} />
+                            <span style={{ position: "absolute", bottom: -1, right: -3, width: 8, height: 8, borderRadius: "50%", background: pm.brandColor, border: "1.5px solid var(--color-background-primary)" }} />
                           </div>
-                          <p style={{ margin: 0, fontSize: 11, color: "var(--color-text-secondary)" }}>{opt.eta}</p>
-                          <p style={{ margin: "4px 0 0", fontSize: 13, fontWeight: 800, color: opt.price === 0 ? MONEY : "var(--color-text-primary)", fontVariantNumeric: "tabular-nums" }}>{opt.price === 0 ? "Free" : fmt(opt.price)}</p>
-                        </button>
+                          <p style={{ margin: "6px 0 0", fontSize: 12, fontWeight: 700, color: selected ? TEAL_DARK : "var(--color-text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pm.label}</p>
+                        </motion.button>
                       );
                     })}
                   </div>
-                </div>
-              ))}
 
-              {needsAddress && (
-                <div style={{ marginTop: "0.5rem" }}>
-                  <p style={{ fontSize: 13, fontWeight: 700, margin: "0 0 10px", color: "var(--color-text-primary)", display: "flex", alignItems: "center", gap: 6 }}>
-                    <MapPin size={14} color={BLUE} /> Delivery address
-                  </p>
-                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
-                    <div style={{ gridColumn: !isMobile ? "span 2" : "span 1" }}>
-                      <label style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", display: "block", marginBottom: 5 }}>Full Name</label>
-                      <IconInput icon={User} value={address.name} onChange={(e) => handleFieldChange("name", e.target.value)} onBlur={() => handleTouch("name")} placeholder="Ama Owusu" invalid={touched.name && !address.name} />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", display: "block", marginBottom: 5 }}>Phone Number</label>
-                      <IconInput icon={Phone} value={address.phone} onChange={(e) => handleFieldChange("phone", e.target.value)} onBlur={() => handleTouch("phone")} placeholder="0244 123 456" invalid={touched.phone && !address.phone} />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", display: "block", marginBottom: 5 }}>Region</label>
-                      <IconInput icon={MapPin} value={address.region} onChange={(e) => handleFieldChange("region", e.target.value)} onBlur={() => handleTouch("region")} placeholder="Greater Accra" invalid={touched.region && !address.region} />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", display: "block", marginBottom: 5 }}>City / Town</label>
-                      <IconInput icon={MapPin} value={address.city} onChange={(e) => handleFieldChange("city", e.target.value)} onBlur={() => handleTouch("city")} placeholder="Accra" invalid={touched.city && !address.city} />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", display: "block", marginBottom: 5 }}>Landmark (optional)</label>
-                      <IconInput icon={MapPin} value={address.landmark} onChange={(e) => handleFieldChange("landmark", e.target.value)} placeholder="Near Accra Mall" />
+                  <div style={{ background: BLUE_TINT, borderRadius: 12, padding: "10px 12px", display: "flex", alignItems: "flex-start", gap: 8 }}>
+                    <ShieldCheck size={16} color={BLUE} style={{ flexShrink: 0, marginTop: 1 }} />
+                    <p style={{ margin: 0, fontSize: 12, color: "var(--color-text-secondary)" }}>
+                      {payChannel === "card" ? "Card details are entered on Paystack's secure page — Uni-Mart never sees or stores your card." : "You'll get a Paystack prompt to approve payment from your phone."}
+                    </p>
+                  </div>
+
+                  <div style={{ display: "flex", gap: 10, marginTop: "1.5rem" }}>
+                    <GhostButton onClick={goBack}>Back</GhostButton>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <PrimaryButton
+                        onClick={() => {
+                          if (validatePaymentStep()) goNext();
+                          else setTouched((t) => ({ ...t, email: true }));
+                        }}
+                      >
+                        Review Order
+                      </PrimaryButton>
                     </div>
                   </div>
                 </div>
               )}
 
-              <div style={{ display: "flex", gap: 10, marginTop: "1.5rem" }}>
-                <GhostButton onClick={goBack}>Back</GhostButton>
-                <div style={{ flex: 1 }}>
-                  <PrimaryButton
-                    onClick={() => {
-                      if (validateDeliveryStep()) goNext();
-                      else setTouched({ name: true, phone: true, region: true, city: true });
-                    }}
-                  >
-                    Continue to Payment
-                  </PrimaryButton>
-                </div>
-              </div>
-            </div>
-          )}
+              {/* STEP 4 — REVIEW & PLACE ORDER */}
+              {step === 4 && (
+                <div>
+                  <StepHeader icon={ClipboardCheck} title="Review & Place Order" subtitle="Double-check everything before you pay" />
 
-          {/* STEP 3 — PAYMENT (Paystack) */}
-          {step === 3 && (
-            <div className="uc-step-panel">
-              <StepHeader icon={CreditCard} title="Payment" subtitle="Checkout runs securely through Paystack" />
-
-              <label style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", display: "block", marginBottom: 5 }}>Email for receipt</label>
-              <div style={{ marginBottom: "1.25rem" }}>
-                <IconInput icon={Mail} value={buyerEmail} onChange={(e) => setBuyerEmail(e.target.value)} onBlur={() => handleTouch("email")} placeholder="you@example.com" type="email" invalid={touched.email && !validatePaymentStep()} />
-              </div>
-
-              <p style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", margin: "0 0 8px" }}>Payment method</p>
-              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: 10, marginBottom: "1.25rem" }}>
-                {PAYMENT_CHANNELS.map((pm) => {
-                  const selected = payChannel === pm.id;
-                  const Icon = pm.id === "card" ? CreditCard : Smartphone;
-                  return (
-                    <button key={pm.id} onClick={() => setPayChannel(pm.id)} className="uc-option" style={{ padding: "13px 10px", borderRadius: 14, border: selected ? `2px solid ${TEAL}` : "1px solid var(--color-border-tertiary)", background: selected ? TEAL_TINT : "var(--color-background-primary)", textAlign: "center", position: "relative", boxShadow: selected ? "0 4px 12px -4px rgba(13,115,119,0.35)" : "none" }}>
-                      <div style={{ position: "relative", width: 26, height: 26, margin: "0 auto" }}>
-                        <Icon size={22} color={selected ? TEAL : "var(--color-text-secondary)"} />
-                        <span style={{ position: "absolute", bottom: -1, right: -3, width: 8, height: 8, borderRadius: "50%", background: pm.brandColor, border: "1.5px solid var(--color-background-primary)" }} />
-                      </div>
-                      <p style={{ margin: "6px 0 0", fontSize: 12, fontWeight: 700, color: selected ? TEAL_DARK : "var(--color-text-primary)" }}>{pm.label}</p>
-                      {pm.tag && <span style={{ position: "absolute", top: -8, right: 6, fontSize: 9, fontWeight: 700, background: GRAD_CTA, color: "#fff", padding: "2px 7px", borderRadius: 20 }}>{pm.tag}</span>}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div style={{ background: BLUE_TINT, borderRadius: 12, padding: "10px 12px", display: "flex", alignItems: "flex-start", gap: 8 }}>
-                <ShieldCheck size={16} color={BLUE} style={{ flexShrink: 0, marginTop: 1 }} />
-                <p style={{ margin: 0, fontSize: 12, color: "var(--color-text-secondary)" }}>
-                  {payChannel === "card" ? "Card details are entered on Paystack's secure page — Uni-Mart never sees or stores your card." : "You'll get a Paystack prompt to approve payment from your phone."}
-                </p>
-              </div>
-
-              <div style={{ display: "flex", gap: 10, marginTop: "1.5rem" }}>
-                <GhostButton onClick={goBack}>Back</GhostButton>
-                <div style={{ flex: 1 }}>
-                  <PrimaryButton
-                    onClick={() => {
-                      if (validatePaymentStep()) goNext();
-                      else setTouched((t) => ({ ...t, email: true }));
-                    }}
-                  >
-                    Review Order
-                  </PrimaryButton>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 4 — REVIEW & PLACE ORDER */}
-          {step === 4 && (
-            <div className="uc-step-panel">
-              <StepHeader icon={ClipboardCheck} title="Review & Place Order" subtitle="Double-check everything before you pay" />
-
-              {/* delivery route summary */}
-              <div style={{ marginBottom: "1rem" }}>
-                {sellerGroups.map((g, idx) => {
-                  const opt = g.seller.deliveryOptions.find((o) => o.id === deliverySelections[g.seller.id]);
-                  const OptIcon = opt ? deliveryIconFor(opt) : Truck;
-                  return (
-                    <div key={g.seller.id} style={{ display: "flex", gap: 10 }}>
-                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                        <div style={{ width: 26, height: 26, borderRadius: "50%", background: TEAL_TINT, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                          <OptIcon size={13} color={TEAL} />
+                  {/* delivery route summary */}
+                  <div style={{ marginBottom: "1rem" }}>
+                    {sellerGroups.map((g, idx) => {
+                      const opt = g.seller.deliveryOptions.find((o) => o.id === deliverySelections[g.seller.id]);
+                      const OptIcon = opt ? deliveryIconFor(opt) : Truck;
+                      return (
+                        <div key={g.seller.id} style={{ display: "flex", gap: 10 }}>
+                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                            <div style={{ width: 26, height: 26, borderRadius: "50%", background: TEAL_TINT, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                              <OptIcon size={13} color={TEAL} />
+                            </div>
+                            {idx < sellerGroups.length - 1 && <div style={{ width: 1, flex: 1, minHeight: 18, borderLeft: "1.5px dashed var(--color-border-tertiary)" }} />}
+                          </div>
+                          <div style={{ paddingBottom: 14, minWidth: 0 }}>
+                            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "var(--color-text-primary)", overflow: "hidden", textOverflow: "ellipsis" }}>{g.seller.name}</p>
+                            <p style={{ margin: "2px 0 0", fontSize: 12, color: "var(--color-text-secondary)" }}>
+                              {opt?.label ?? "—"} · {opt?.eta}
+                            </p>
+                          </div>
                         </div>
-                        {idx < sellerGroups.length - 1 && <div style={{ width: 1, flex: 1, minHeight: 18, borderLeft: "1.5px dashed var(--color-border-tertiary)" }} />}
+                      );
+                    })}
+                    <div style={{ display: "flex", gap: 10 }}>
+                      <div style={{ width: 26, height: 26, borderRadius: "50%", background: ORANGE_TINT, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <CreditCard size={13} color={ORANGE_DARK} />
                       </div>
-                      <div style={{ paddingBottom: 14 }}>
-                        <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "var(--color-text-primary)" }}>{g.seller.name}</p>
-                        <p style={{ margin: "2px 0 0", fontSize: 12, color: "var(--color-text-secondary)" }}>
-                          {opt?.label ?? "—"} · {opt?.eta}
+                      <div style={{ minWidth: 0 }}>
+                        <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "var(--color-text-primary)" }}>Pay {fmt(total)} with Paystack</p>
+                        <p style={{ margin: "2px 0 0", fontSize: 12, color: "var(--color-text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {PAYMENT_CHANNELS.find((p) => p.id === payChannel)?.label} · receipt to {buyerEmail || "—"}
                         </p>
                       </div>
                     </div>
-                  );
-                })}
-                <div style={{ display: "flex", gap: 10 }}>
-                  <div style={{ width: 26, height: 26, borderRadius: "50%", background: ORANGE_TINT, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <CreditCard size={13} color={ORANGE_DARK} />
                   </div>
-                  <div>
-                    <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "var(--color-text-primary)" }}>Pay {fmt(total)} with Paystack</p>
-                    <p style={{ margin: "2px 0 0", fontSize: 12, color: "var(--color-text-secondary)" }}>
-                      {PAYMENT_CHANNELS.find((p) => p.id === payChannel)?.label} · receipt to {buyerEmail || "—"}
-                    </p>
-                  </div>
-                </div>
-              </div>
 
-              {needsAddress && (
-                <div style={{ background: BLUE_TINT, borderRadius: 14, padding: "0.85rem 1rem", marginBottom: "1.25rem", display: "flex", alignItems: "flex-start", gap: 8 }}>
-                  <MapPin size={15} color={BLUE} style={{ marginTop: 1, flexShrink: 0 }} />
-                  <p style={{ margin: 0, fontSize: 13, color: "var(--color-text-secondary)" }}>
-                    {address.name} · {address.phone} · {address.city}, {address.region}
+                  {needsAddress && (
+                    <div style={{ background: BLUE_TINT, borderRadius: 14, padding: "0.85rem 1rem", marginBottom: "1.25rem", display: "flex", alignItems: "flex-start", gap: 8 }}>
+                      <MapPin size={15} color={BLUE} style={{ marginTop: 1, flexShrink: 0 }} />
+                      <p style={{ margin: 0, fontSize: 13, color: "var(--color-text-secondary)" }}>
+                        {address.name} · {address.phone} · {address.city}, {address.region}
+                      </p>
+                    </div>
+                  )}
+
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <GhostButton onClick={goBack}>Back</GhostButton>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <PrimaryButton onClick={handlePlaceOrder} loading={loading} trailingIcon={Lock}>
+                        {loading ? "Processing" : `Pay ${fmt(total)}`}
+                      </PrimaryButton>
+                    </div>
+                  </div>
+
+                  <p style={{ textAlign: "center", fontSize: 12, color: "var(--color-text-tertiary)", marginTop: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                    <Lock size={12} /> Secured by Paystack · 256-bit encryption
                   </p>
                 </div>
               )}
-
-              <div style={{ display: "flex", gap: 10 }}>
-                <GhostButton onClick={goBack}>Back</GhostButton>
-                <div style={{ flex: 1 }}>
-                  <PrimaryButton onClick={handlePlaceOrder} loading={loading} trailingIcon={Lock}>
-                    {loading ? "Processing" : `Pay ${fmt(total)}`}
-                  </PrimaryButton>
-                </div>
-              </div>
-
-              <p style={{ textAlign: "center", fontSize: 12, color: "var(--color-text-tertiary)", marginTop: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
-                <Lock size={12} /> Secured by Paystack · 256-bit encryption
-              </p>
-            </div>
-          )}
+            </motion.div>
+          </AnimatePresence>
         </div>
 
         {/* RIGHT: order summary — desktop sticky sidebar */}
-        {!isMobile && (
-          <div style={{ position: "sticky", top: 20, width: 340, flexShrink: 0 }}>
-            <OrderSummaryCard subtotal={subtotal} deliveryFee={deliveryFee} discount={discount} total={total} itemCount={cart.reduce((s, i) => s + i.qty, 0)} />
-          </div>
-        )}
+        <div className="uc-summary-sidebar" style={{ position: "sticky", top: 20, width: 340, flexShrink: 0 }}>
+          <OrderSummaryCard subtotal={subtotal} deliveryFee={deliveryFee} discount={discount} total={total} itemCount={cart.reduce((s, i) => s + i.qty, 0)} />
+        </div>
       </div>
 
       {/* MOBILE: sticky bottom summary bar */}
-      {isMobile && (
-        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "var(--color-background-primary)", borderTop: "1px solid var(--color-border-tertiary)", boxShadow: "0 -6px 20px rgba(13,115,119,0.12)", paddingBottom: "env(safe-area-inset-bottom)" }}>
+      <div
+        ref={bottomBarRef}
+        className="uc-hide-desktop"
+        style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "var(--color-background-primary)", borderTop: "1px solid var(--color-border-tertiary)", boxShadow: "0 -6px 20px rgba(13,115,119,0.12)", paddingBottom: "env(safe-area-inset-bottom)", zIndex: 40 }}
+      >
+        <AnimatePresence initial={false}>
           {summaryOpen && (
-            <div style={{ padding: "1rem 1rem 0" }}>
-              <OrderSummaryCard subtotal={subtotal} deliveryFee={deliveryFee} discount={discount} total={total} itemCount={cart.reduce((s, i) => s + i.qty, 0)} flat />
-            </div>
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22, ease: "easeInOut" }} style={{ overflow: "hidden" }}>
+              <div style={{ padding: "1rem 1rem 0" }}>
+                <OrderSummaryCard subtotal={subtotal} deliveryFee={deliveryFee} discount={discount} total={total} itemCount={cart.reduce((s, i) => s + i.qty, 0)} flat />
+              </div>
+            </motion.div>
           )}
-          <button onClick={() => setSummaryOpen((v) => !v)} className="uc-btn-ghost" style={{ width: "100%", padding: "14px 16px", background: "none", border: "none", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", minHeight: 52 }}>
-            <span style={{ fontSize: 13, color: "var(--color-text-secondary)", fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }}>
-              {summaryOpen ? "Hide" : "View"} order summary
-              {summaryOpen ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
-            </span>
-            <span style={{ fontSize: 18, fontWeight: 800, color: TEAL_DARK, fontVariantNumeric: "tabular-nums" }}>{fmt(total)}</span>
-          </button>
-        </div>
-      )}
+        </AnimatePresence>
+        <button onClick={() => setSummaryOpen((v) => !v)} style={{ width: "100%", padding: "14px 16px", background: "none", border: "none", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", minHeight: 52 }}>
+          <span style={{ fontSize: 13, color: "var(--color-text-secondary)", fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }}>
+            {summaryOpen ? "Hide" : "View"} order summary
+            <motion.span animate={{ rotate: summaryOpen ? 180 : 0 }} transition={{ duration: 0.2 }} style={{ display: "flex" }}>
+              <ChevronDown size={14} />
+            </motion.span>
+          </span>
+          <span style={{ fontSize: 18, fontWeight: 800, color: TEAL_DARK, fontVariantNumeric: "tabular-nums" }}>{fmt(total)}</span>
+        </button>
+      </div>
     </div>
   );
 }
@@ -1243,7 +1300,7 @@ function OrderSummaryCard({ subtotal, deliveryFee, discount, total, itemCount, f
       {!flat && (
         <div style={{ margin: "0 1.25rem 1.25rem", background: ORANGE_TINT, border: `1px solid ${ORANGE_BORDER}`, borderRadius: 12, padding: "10px 12px", display: "flex", alignItems: "flex-start", gap: 8 }}>
           <Users size={15} color={ORANGE_DARK} style={{ flexShrink: 0, marginTop: 1 }} />
-          <div>
+          <div style={{ minWidth: 0 }}>
             <p style={{ margin: "0 0 2px", fontSize: 12, fontWeight: 700, color: ORANGE_DARK, display: "flex", alignItems: "center", gap: 4 }}>
               <Sparkles size={11} /> Social Activity
             </p>
@@ -1255,7 +1312,12 @@ function OrderSummaryCard({ subtotal, deliveryFee, discount, total, itemCount, f
         <div style={{ margin: "0 1.25rem 1.25rem", background: BLUE_TINT, borderRadius: 12, padding: "10px 12px" }}>
           <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>Spend {fmt(200 - subtotal)} more for a discount</span>
           <div style={{ height: 6, background: "#fff", borderRadius: 999, overflow: "hidden", marginTop: 6 }}>
-            <div style={{ height: "100%", width: `${Math.min((subtotal / 200) * 100, 100)}%`, background: GRAD_BRAND, borderRadius: 999, transition: "width 0.4s" }} />
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.min((subtotal / 200) * 100, 100)}%` }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              style={{ height: "100%", background: GRAD_BRAND, borderRadius: 999 }}
+            />
           </div>
         </div>
       )}

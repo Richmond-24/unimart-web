@@ -168,10 +168,10 @@ export default function WelcomeBadgeModal() {
               </div>
 
               <h2 id="early-bird-title" className="text-2xl font-black text-slate-900 tracking-tight">
-                Welcome to Uni-Mart{firstName ? `, ${firstName}` : ""}! 🎉
+                Thank you for signing up{firstName ? `, ${firstName}` : ""}! 🎉
               </h2>
               <p className="mt-2 text-sm text-slate-500 leading-relaxed max-w-xs mx-auto">
-                You&apos;re one of our first campus shoppers — your&nbsp;
+                Welcome to Uni-Mart! You&apos;re one of our first campus shoppers — your&nbsp;
                 <span className="text-teal-700 font-semibold">Early Bird</span> badge
                 is now on your profile.
               </p>
