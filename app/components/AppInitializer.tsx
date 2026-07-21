@@ -5,27 +5,36 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from "../context/AuthContext";
 import SplashScreen from "./SplashScreen";
 import AuthFlow from "../AuthFlow";
+import AnimatedOnboarding from "./AnimatedOnboarding";
 
 const AuthFlowComponent = AuthFlow as React.ComponentType<{ onDone: () => void }>;
 
 export default function AppInitializer() {
   const router = useRouter();
   const { isLoading, isAuthenticated, token } = useAuth();
-  const [stage, setStage] = useState<'splash' | 'auth' | 'ready'>('splash');
+  const [stage, setStage] = useState<'splash' | 'onboarding' | 'auth' | 'ready'>('splash');
   const [splashFinished, setSplashFinished] = useState(false);
+  const [onboardingFinished, setOnboardingFinished] = useState(
+    typeof window !== 'undefined' ? !!localStorage.getItem('unimart:onboarding-done') : false
+  );
 
   // Decide app stage based on auth state and splash finished state
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    if (!isLoading && splashFinished) {
+    if (splashFinished) {
+      // After splash finishes, immediately check if user is authenticated
       if (isAuthenticated && token) {
         setStage('ready');
+      } else if (!onboardingFinished) {
+        // First time user - show onboarding
+        setStage('onboarding');
       } else {
+        // Returning user - show auth
         setStage('auth');
       }
     }
-  }, [isLoading, splashFinished, isAuthenticated, token]);
+  }, [splashFinished, onboardingFinished, isAuthenticated, token]);
 
   useEffect(() => {
     const el = document.documentElement;
@@ -102,16 +111,27 @@ export default function AppInitializer() {
     };
   }, []);
 
-  // Show nothing while checking auth or while in auth/splash flow
+  // Show nothing while checking auth or while in auth/splash/onboarding flow
   if (stage !== 'ready') {
     return (
       <div
-        className={`fixed inset-0 w-screen h-screen flex items-center justify-center overflow-hidden transition-colors duration-300 ${stage === 'splash' ? 'bg-[#111b21]' : 'bg-white'
-          }`}
+        className={`fixed inset-0 w-screen h-screen flex items-center justify-center overflow-hidden transition-colors duration-300 ${
+          stage === 'splash' ? 'bg-[#111b21]' : stage === 'onboarding' ? 'bg-white' : 'bg-white'
+        }`}
         style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999 }}
       >
         {stage === 'splash' && (
           <SplashScreen onFinish={() => setSplashFinished(true)} />
+        )}
+
+        {stage === 'onboarding' && (
+          <AnimatedOnboarding
+            onComplete={() => {
+              localStorage.setItem('unimart:onboarding-done', 'true');
+              setOnboardingFinished(true);
+              setStage('auth');
+            }}
+          />
         )}
 
         {stage === 'auth' && (

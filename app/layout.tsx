@@ -66,17 +66,21 @@ export default function RootLayout({
         <style>{`
           html[data-app-stage="initializing"],
           html[data-app-stage="splash"],
+          html[data-app-stage="onboarding"],
           html[data-app-stage="auth"] {
             overflow: hidden;
           }
           html[data-app-stage="initializing"] header,
           html[data-app-stage="splash"] header,
+          html[data-app-stage="onboarding"] header,
           html[data-app-stage="auth"] header,
           html[data-app-stage="initializing"] main,
           html[data-app-stage="splash"] main,
+          html[data-app-stage="onboarding"] main,
           html[data-app-stage="auth"] main,
           html[data-app-stage="initializing"] nav,
           html[data-app-stage="splash"] nav,
+          html[data-app-stage="onboarding"] nav,
           html[data-app-stage="auth"] nav {
             display: none !important;
           }
