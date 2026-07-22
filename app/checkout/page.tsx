@@ -74,7 +74,7 @@ interface Seller {
   name: string;
   avatar: string;
   deliveryOptions: DeliveryOption[];
-  subaccountCode?: string; // Added for split payments
+  subaccountCode?: string;
 }
 
 interface CartItem {
@@ -145,10 +145,24 @@ declare global {
 }
 
 // ─── API CONFIG ──────────────────────────────────────────────
-// UPDATED: Added initializePaystackPayment for split payment support
 const api = {
   async createOrder(payload: OrderPayload): Promise<OrderResponse> {
-    return apiFetch("/orders", { method: "POST", body: JSON.stringify(payload) }) as Promise<OrderResponse>;
+    // 🔍 Debug: Log what's being sent
+    console.log('📤 Sending to /orders:', JSON.stringify(payload, null, 2));
+    
+    // Validate payload before sending
+    if (!payload.items || payload.items.length === 0) {
+      throw new Error('Cart is empty. Please add items before checkout.');
+    }
+    
+    if (!payload.buyerEmail) {
+      throw new Error('Email is required. Please enter your email.');
+    }
+
+    return apiFetch("/orders", { 
+      method: "POST", 
+      body: JSON.stringify(payload) 
+    }) as Promise<OrderResponse>;
   },
   async initializePaystackPayment(data: { 
     email: string; 
@@ -170,7 +184,6 @@ const api = {
 };
 
 // ─── MOCK DATA ──────────────────────────────────────────────
-// UPDATED: Added subaccountCode to sellers for split payment testing
 const SELLER_ADWOA: Seller = {
   id: "seller-adwoa",
   name: "@adwoa.creates",
@@ -180,7 +193,7 @@ const SELLER_ADWOA: Seller = {
     { id: "standard", label: "Standard Delivery", eta: "3–5 days", price: 15 },
     { id: "express", label: "Express Delivery", eta: "1–2 days", price: 35 },
   ],
-  subaccountCode: "ACCT_xxxxxxxxxx", // Replace with actual subaccount code
+  subaccountCode: "ACCT_xxxxxxxxxx",
 };
 
 const SELLER_KWAME: Seller = {
@@ -191,7 +204,7 @@ const SELLER_KWAME: Seller = {
     { id: "standard", label: "Standard Delivery", eta: "4–6 days", price: 20 },
     { id: "express", label: "Express Delivery", eta: "2 days", price: 40 },
   ],
-  subaccountCode: "ACCT_yyyyyyyyyy", // Replace with actual subaccount code
+  subaccountCode: "ACCT_yyyyyyyyyy",
 };
 
 const MOCK_CART: CartItem[] = [
@@ -771,45 +784,105 @@ export default function SocialCheckout() {
   const handleFieldChange = (field: keyof Address, value: string) => setAddress((prev) => ({ ...prev, [field]: value }));
   const handleTouch = (field: string) => setTouched((prev) => ({ ...prev, [field]: true }));
 
-  const buildOrderPayload = (): OrderPayload => ({
-    items: cart.map((i) => ({ productId: i.id, qty: i.qty, price: i.price, sellerId: i.seller.id })),
-    delivery: {
-      perSeller: sellerGroups.map((g) => ({
-        sellerId: g.seller.id,
-        optionId: deliverySelections[g.seller.id],
-        price: g.seller.deliveryOptions.find((o) => o.id === deliverySelections[g.seller.id])?.price ?? 0,
-      })),
-      address: needsAddress ? address : null,
-    },
-    buyerEmail,
-    totals: { subtotal, deliveryFee, discount, total },
-  });
+  const buildOrderPayload = (): OrderPayload => {
+    // ✅ Build items from cart
+    const items = cart.map((i) => ({
+      productId: i.id,
+      qty: i.qty,
+      price: i.price,
+      sellerId: i.seller.id,
+    }));
 
-  // ─── UPDATED: handlePlaceOrder with split payment support ──
+    // ✅ Build delivery per seller
+    const perSeller = sellerGroups.map((g) => ({
+      sellerId: g.seller.id,
+      optionId: deliverySelections[g.seller.id] || g.seller.deliveryOptions[0]?.id || 'standard',
+      price: g.seller.deliveryOptions.find((o) => o.id === deliverySelections[g.seller.id])?.price ?? 0,
+    }));
+
+    // ✅ Build the full payload
+    const payload: OrderPayload = {
+      items,
+      delivery: {
+        perSeller,
+        address: needsAddress ? address : null,
+      },
+      buyerEmail: buyerEmail || '',
+      totals: {
+        subtotal,
+        deliveryFee,
+        discount,
+        total,
+      },
+    };
+
+    // 🔍 Debug: Log the payload before returning
+    console.log('🔍 buildOrderPayload output:', JSON.stringify(payload, null, 2));
+    
+    return payload;
+  };
+
+  // ─── UPDATED: handlePlaceOrder with split payment support and debug ──
   const handlePlaceOrder = async () => {
     setError("");
     
+    // 🔍 Debug: Log environment variables
+    console.log('🔑 PAYSTACK_PUBLIC_KEY:', PAYSTACK_PUBLIC_KEY ? '✅ Set' : '❌ Not Set');
+    console.log('🔑 Environment variable from process:', process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY ? '✅ Set' : '❌ Not Set');
+
+    // ✅ Check if Paystack is configured
     if (!PAYSTACK_PUBLIC_KEY) {
       setError("Paystack isn't configured yet — set NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY.");
+      return;
+    }
+
+    // ✅ Validate cart
+    if (cart.length === 0) {
+      setError("Your cart is empty. Please add items before checkout.");
+      return;
+    }
+
+    // ✅ Validate buyer email
+    if (!buyerEmail) {
+      setError("Please enter your email address.");
       return;
     }
 
     setLoading(true);
     
     try {
-      // 1. Create the order first
-      const order = await api.createOrder(buildOrderPayload());
+      // 🔍 Debug: Log all state before building payload
+      console.log('🔍 Checkout State:');
+      console.log('  - Cart items:', cart.length);
+      console.log('  - Seller groups:', sellerGroups.length);
+      console.log('  - Delivery selections:', deliverySelections);
+      console.log('  - Address:', address);
+      console.log('  - Buyer email:', buyerEmail);
+      console.log('  - Totals:', { subtotal, deliveryFee, discount, total });
+
+      // 1. Build and validate the order payload
+      const payload = buildOrderPayload();
       
-      // 2. Get the split code for this seller
-      // For multiple sellers, you'd need to use a split group
+      // ✅ Validate payload before sending
+      if (payload.items.length === 0) {
+        throw new Error('Cart is empty. Please add items before checkout.');
+      }
+      
+      if (!payload.buyerEmail) {
+        throw new Error('Email is required. Please enter your email.');
+      }
+
+      // 2. Create the order
+      console.log('📤 Creating order with payload:', JSON.stringify(payload, null, 2));
+      const order = await api.createOrder(payload);
+      console.log('✅ Order created:', order);
+      
+      // 3. Get the split code for this seller
       const sellerId = sellerGroups[0]?.seller.id;
       let splitCode = null;
       
-      // If you have a seller, fetch their subaccount code
       if (sellerId) {
         try {
-          // 🔑 REPLACE THIS with your actual database fetch
-          // For now, we check if the mock seller has a subaccountCode
           const seller = sellerGroups[0]?.seller;
           splitCode = seller?.subaccountCode || null;
         } catch (error) {
@@ -817,22 +890,24 @@ export default function SocialCheckout() {
         }
       }
 
-      // 3. Initialize payment with split support
+      // 4. Initialize payment with split support
+      console.log('💳 Initializing Paystack payment...');
       const { access_code, reference } = await api.initializePaystackPayment({
         email: buyerEmail,
         amount: total,
         orderId: order.id,
-        splitCode, // Include the split code for automatic seller payouts
+        splitCode,
       });
+      console.log('✅ Payment initialized:', { access_code, reference });
 
-      // 4. Load Paystack script
+      // 5. Load Paystack script
       await loadPaystackScript();
 
-      // 5. Get the selected payment channel
+      // 6. Get the selected payment channel
       const channel = PAYMENT_CHANNELS.find((c) => c.id === payChannel);
       const channels = channel?.paystackChannels || ["card"];
 
-      // 6. Open Paystack popup
+      // 7. Open Paystack popup
       if (!window.PaystackPop) {
         throw new Error("Paystack failed to load. Please refresh and try again.");
       }
@@ -846,7 +921,7 @@ export default function SocialCheckout() {
         channels: channels,
         metadata: {
           orderId: order.id,
-          split_code: splitCode, // Pass split code in metadata for verification
+          split_code: splitCode,
         },
         callback: async (response: { reference: string }) => {
           try {
@@ -893,6 +968,7 @@ export default function SocialCheckout() {
       handler.openIframe();
 
     } catch (error: unknown) {
+      console.error('❌ Checkout error:', error);
       setError(error instanceof Error ? error.message : "Something went wrong starting checkout.");
       setLoading(false);
     }
