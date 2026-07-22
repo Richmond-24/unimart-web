@@ -145,12 +145,11 @@ declare global {
 }
 
 // ─── API CONFIG ──────────────────────────────────────────────
+// IMPORTANT: apiFetch already adds /api to the URL, so use '/orders' not '/api/orders'
 const api = {
   async createOrder(payload: OrderPayload): Promise<OrderResponse> {
-    // 🔍 Debug: Log what's being sent
     console.log('📤 Sending to /orders:', JSON.stringify(payload, null, 2));
     
-    // Validate payload before sending
     if (!payload.items || payload.items.length === 0) {
       throw new Error('Cart is empty. Please add items before checkout.');
     }
@@ -159,6 +158,7 @@ const api = {
       throw new Error('Email is required. Please enter your email.');
     }
 
+    // ✅ CORRECT: Use '/orders' not '/api/orders' (apiFetch adds /api)
     return apiFetch("/orders", { 
       method: "POST", 
       body: JSON.stringify(payload) 
@@ -170,12 +170,14 @@ const api = {
     orderId: string;
     splitCode?: string | null;
   }): Promise<{ access_code: string; reference: string }> {
+    // ✅ CORRECT: Use '/payments/paystack/initialize' (apiFetch adds /api)
     return apiFetch("/payments/paystack/initialize", {
       method: "POST",
       body: JSON.stringify(data),
     }) as Promise<{ access_code: string; reference: string }>;
   },
   async verifyPaystackPayment(payload: PaystackVerifyPayload): Promise<{ status: string }> {
+    // ✅ CORRECT: Use '/payments/paystack/verify' (apiFetch adds /api)
     return apiFetch("/payments/paystack/verify", {
       method: "POST",
       body: JSON.stringify(payload),
@@ -785,7 +787,6 @@ export default function SocialCheckout() {
   const handleTouch = (field: string) => setTouched((prev) => ({ ...prev, [field]: true }));
 
   const buildOrderPayload = (): OrderPayload => {
-    // ✅ Build items from cart
     const items = cart.map((i) => ({
       productId: i.id,
       qty: i.qty,
@@ -793,14 +794,12 @@ export default function SocialCheckout() {
       sellerId: i.seller.id,
     }));
 
-    // ✅ Build delivery per seller
     const perSeller = sellerGroups.map((g) => ({
       sellerId: g.seller.id,
       optionId: deliverySelections[g.seller.id] || g.seller.deliveryOptions[0]?.id || 'standard',
       price: g.seller.deliveryOptions.find((o) => o.id === deliverySelections[g.seller.id])?.price ?? 0,
     }));
 
-    // ✅ Build the full payload
     const payload: OrderPayload = {
       items,
       delivery: {
@@ -816,33 +815,26 @@ export default function SocialCheckout() {
       },
     };
 
-    // 🔍 Debug: Log the payload before returning
     console.log('🔍 buildOrderPayload output:', JSON.stringify(payload, null, 2));
     
     return payload;
   };
 
-  // ─── UPDATED: handlePlaceOrder with split payment support and debug ──
   const handlePlaceOrder = async () => {
     setError("");
     
-    // 🔍 Debug: Log environment variables
     console.log('🔑 PAYSTACK_PUBLIC_KEY:', PAYSTACK_PUBLIC_KEY ? '✅ Set' : '❌ Not Set');
-    console.log('🔑 Environment variable from process:', process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY ? '✅ Set' : '❌ Not Set');
 
-    // ✅ Check if Paystack is configured
     if (!PAYSTACK_PUBLIC_KEY) {
       setError("Paystack isn't configured yet — set NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY.");
       return;
     }
 
-    // ✅ Validate cart
     if (cart.length === 0) {
       setError("Your cart is empty. Please add items before checkout.");
       return;
     }
 
-    // ✅ Validate buyer email
     if (!buyerEmail) {
       setError("Please enter your email address.");
       return;
@@ -851,19 +843,14 @@ export default function SocialCheckout() {
     setLoading(true);
     
     try {
-      // 🔍 Debug: Log all state before building payload
       console.log('🔍 Checkout State:');
       console.log('  - Cart items:', cart.length);
       console.log('  - Seller groups:', sellerGroups.length);
-      console.log('  - Delivery selections:', deliverySelections);
-      console.log('  - Address:', address);
       console.log('  - Buyer email:', buyerEmail);
       console.log('  - Totals:', { subtotal, deliveryFee, discount, total });
 
-      // 1. Build and validate the order payload
       const payload = buildOrderPayload();
       
-      // ✅ Validate payload before sending
       if (payload.items.length === 0) {
         throw new Error('Cart is empty. Please add items before checkout.');
       }
@@ -872,12 +859,10 @@ export default function SocialCheckout() {
         throw new Error('Email is required. Please enter your email.');
       }
 
-      // 2. Create the order
       console.log('📤 Creating order with payload:', JSON.stringify(payload, null, 2));
       const order = await api.createOrder(payload);
       console.log('✅ Order created:', order);
       
-      // 3. Get the split code for this seller
       const sellerId = sellerGroups[0]?.seller.id;
       let splitCode = null;
       
@@ -890,7 +875,6 @@ export default function SocialCheckout() {
         }
       }
 
-      // 4. Initialize payment with split support
       console.log('💳 Initializing Paystack payment...');
       const { access_code, reference } = await api.initializePaystackPayment({
         email: buyerEmail,
@@ -900,14 +884,11 @@ export default function SocialCheckout() {
       });
       console.log('✅ Payment initialized:', { access_code, reference });
 
-      // 5. Load Paystack script
       await loadPaystackScript();
 
-      // 6. Get the selected payment channel
       const channel = PAYMENT_CHANNELS.find((c) => c.id === payChannel);
       const channels = channel?.paystackChannels || ["card"];
 
-      // 7. Open Paystack popup
       if (!window.PaystackPop) {
         throw new Error("Paystack failed to load. Please refresh and try again.");
       }
@@ -925,19 +906,16 @@ export default function SocialCheckout() {
         },
         callback: async (response: { reference: string }) => {
           try {
-            // Verify payment on the backend
             await api.verifyPaystackPayment({ 
               reference: response.reference, 
               orderId: order.id 
             });
             
-            // Show success
             setSuccess({ 
               orderId: order.orderId || order.id, 
               total 
             });
             
-            // Clear cart
             try {
               if (localStorage.getItem("unimart:token")) {
                 await apiFetch("/cart/clear", { method: "DELETE" });
@@ -947,7 +925,7 @@ export default function SocialCheckout() {
               window.dispatchEvent(new Event("unimart:cartUpdated"));
               setCart([]);
             } catch {
-              // Non-fatal - cart clear failed but order is placed
+              // Non-fatal
             }
           } catch (error: unknown) {
             setError(
@@ -1048,7 +1026,6 @@ export default function SocialCheckout() {
     <div className="uc-root" style={{ minHeight: "100vh", background: "var(--color-background-tertiary)", fontFamily: "var(--font-sans)", paddingBottom: isMobile ? bottomBarHeight + 12 : 40 }}>
       <CheckoutStyles />
 
-      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -1057,7 +1034,6 @@ export default function SocialCheckout() {
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
           <div className="uc-logo-badge" style={{ width: 34, height: 34, borderRadius: 10, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" alt="Uni-Mart" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           </div>
           <span style={{ fontWeight: 800, fontSize: 17, color: "#fff", letterSpacing: -0.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Uni-Mart</span>
@@ -1071,7 +1047,6 @@ export default function SocialCheckout() {
       <Stepper step={step} furthestStep={furthestStep} onJump={(n) => furthestStep >= n && jumpTo(n)} isMobile={isMobile} />
 
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "1rem" : "1.5rem", display: "flex", flexDirection: isMobile ? "column" : "row", gap: "1.5rem", alignItems: "flex-start" }}>
-        {/* LEFT: active step panel only — a true step-by-step flow */}
         <div className="uc-panel-scroll" style={{ flex: 1, width: "100%", minWidth: 0, background: "var(--color-background-primary)", borderRadius: 20, border: "1px solid var(--color-border-tertiary)", padding: isMobile ? "1.1rem" : "1.6rem", boxShadow: "0 2px 10px rgba(16,16,20,0.05)", position: "relative" }}>
           <AnimatePresence>
             {error && (
@@ -1099,7 +1074,6 @@ export default function SocialCheckout() {
               exit="exit"
               transition={{ duration: 0.22, ease: "easeOut" }}
             >
-              {/* STEP 1 — CART */}
               {step === 1 && (
                 <div>
                   <StepHeader icon={ShoppingCart} title="Your Cart" subtitle={`Items from ${sellerGroups.length} local ${sellerGroups.length === 1 ? "creator" : "creators"}`} />
@@ -1160,7 +1134,6 @@ export default function SocialCheckout() {
                 </div>
               )}
 
-              {/* STEP 2 — DELIVERY (per seller) */}
               {step === 2 && (
                 <div>
                   <StepHeader icon={Truck} title="Delivery" subtitle="Each seller sets their own delivery options — choose one per seller" />
@@ -1254,7 +1227,6 @@ export default function SocialCheckout() {
                 </div>
               )}
 
-              {/* STEP 3 — PAYMENT (Paystack) */}
               {step === 3 && (
                 <div>
                   <StepHeader icon={CreditCard} title="Payment" subtitle="Checkout runs securely through Paystack" />
@@ -1313,12 +1285,10 @@ export default function SocialCheckout() {
                 </div>
               )}
 
-              {/* STEP 4 — REVIEW & PLACE ORDER */}
               {step === 4 && (
                 <div>
                   <StepHeader icon={ClipboardCheck} title="Review & Place Order" subtitle="Double-check everything before you pay" />
 
-                  {/* delivery route summary */}
                   <div style={{ marginBottom: "1rem" }}>
                     {sellerGroups.map((g, idx) => {
                       const opt = g.seller.deliveryOptions.find((o) => o.id === deliverySelections[g.seller.id]);
@@ -1380,13 +1350,11 @@ export default function SocialCheckout() {
           </AnimatePresence>
         </div>
 
-        {/* RIGHT: order summary — desktop sticky sidebar */}
         <div className="uc-summary-sidebar" style={{ position: "sticky", top: 20, width: 340, flexShrink: 0 }}>
           <OrderSummaryCard subtotal={subtotal} deliveryFee={deliveryFee} discount={discount} total={total} itemCount={cart.reduce((s, i) => s + i.qty, 0)} />
         </div>
       </div>
 
-      {/* MOBILE: sticky bottom summary bar */}
       <div
         ref={bottomBarRef}
         className="uc-hide-desktop"
@@ -1415,7 +1383,7 @@ export default function SocialCheckout() {
   );
 }
 
-// ─── Order summary card (shared desktop/mobile) ─────────────────
+// ─── Order summary card ─────────────────────────────────
 function OrderSummaryCard({ subtotal, deliveryFee, discount, total, itemCount, flat }: { subtotal: number; deliveryFee: number; discount: number; total: number; itemCount: number; flat?: boolean }) {
   return (
     <div style={{ background: flat ? "transparent" : "var(--color-background-primary)", borderRadius: 20, border: flat ? "none" : "1px solid var(--color-border-tertiary)", overflow: "hidden", boxShadow: flat ? "none" : "0 2px 10px rgba(16,16,20,0.05)" }}>
