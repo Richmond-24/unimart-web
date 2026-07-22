@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
@@ -38,9 +37,6 @@ import {
 } from "lucide-react";
 
 // ─── DESIGN TOKENS ─────────────────────────────────────────────
-// Brand system: deep teal (primary), sky blue (supporting), vivid
-// orange (action / CTA). Gradients built from these three do the
-// heavy lifting for the "bold" look; everything else stays quiet.
 const TEAL = "#0D7377";
 const TEAL_DARK = "#095357";
 const TEAL_LIGHT = "#14A8AE";
@@ -77,10 +73,8 @@ interface Seller {
   id: string;
   name: string;
   avatar: string;
-  // Each seller configures their own delivery options — a campus seller
-  // might only offer pickup, a seller who ships nationally can offer
-  // standard/express couriers too.
   deliveryOptions: DeliveryOption[];
+  subaccountCode?: string; // Added for split payments
 }
 
 interface CartItem {
@@ -151,9 +145,21 @@ declare global {
 }
 
 // ─── API CONFIG ──────────────────────────────────────────────
+// UPDATED: Added initializePaystackPayment for split payment support
 const api = {
   async createOrder(payload: OrderPayload): Promise<OrderResponse> {
     return apiFetch("/orders", { method: "POST", body: JSON.stringify(payload) }) as Promise<OrderResponse>;
+  },
+  async initializePaystackPayment(data: { 
+    email: string; 
+    amount: number; 
+    orderId: string;
+    splitCode?: string | null;
+  }): Promise<{ access_code: string; reference: string }> {
+    return apiFetch("/payments/paystack/initialize", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }) as Promise<{ access_code: string; reference: string }>;
   },
   async verifyPaystackPayment(payload: PaystackVerifyPayload): Promise<{ status: string }> {
     return apiFetch("/payments/paystack/verify", {
@@ -163,7 +169,8 @@ const api = {
   },
 };
 
-// ─── MOCK DATA (replace with real cart/seller data from backend) ─────
+// ─── MOCK DATA ──────────────────────────────────────────────
+// UPDATED: Added subaccountCode to sellers for split payment testing
 const SELLER_ADWOA: Seller = {
   id: "seller-adwoa",
   name: "@adwoa.creates",
@@ -173,17 +180,18 @@ const SELLER_ADWOA: Seller = {
     { id: "standard", label: "Standard Delivery", eta: "3–5 days", price: 15 },
     { id: "express", label: "Express Delivery", eta: "1–2 days", price: 35 },
   ],
+  subaccountCode: "ACCT_xxxxxxxxxx", // Replace with actual subaccount code
 };
 
 const SELLER_KWAME: Seller = {
   id: "seller-kwame",
   name: "@kwame.kicks",
   avatar: "KK",
-  // This seller only ships — no pickup point configured.
   deliveryOptions: [
     { id: "standard", label: "Standard Delivery", eta: "4–6 days", price: 20 },
     { id: "express", label: "Express Delivery", eta: "2 days", price: 40 },
   ],
+  subaccountCode: "ACCT_yyyyyyyyyy", // Replace with actual subaccount code
 };
 
 const MOCK_CART: CartItem[] = [
@@ -263,7 +271,7 @@ function CheckoutStyles() {
       }
       .uc-input {
         transition: border-color 0.15s ease, box-shadow 0.15s ease;
-        font-size: 16px !important; /* prevents iOS auto-zoom which shifts layout */
+        font-size: 16px !important;
       }
       .uc-input:focus {
         outline: none;
@@ -472,7 +480,7 @@ function IconInput({
   );
 }
 
-// ─── STEPPER (progress header) ─────────────────────────────────
+// ─── STEPPER ─────────────────────────────────────────────────
 function Stepper({ step, furthestStep, onJump, isMobile }: { step: number; furthestStep: number; onJump: (n: number) => void; isMobile: boolean }) {
   const pct = ((step - 1) / (STEPS.length - 1)) * 100;
   return (
@@ -547,9 +555,6 @@ export default function SocialCheckout() {
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const [summaryOpen, setSummaryOpen] = useState<boolean>(false);
 
-  // Measure the fixed mobile bottom bar so page content always reserves
-  // exactly enough space for it — this is what was causing the bar to
-  // overlay step content whenever its height changed (e.g. summary open).
   const bottomBarRef = useRef<HTMLDivElement | null>(null);
   const [bottomBarHeight, setBottomBarHeight] = useState<number>(0);
 
@@ -623,6 +628,7 @@ export default function SocialCheckout() {
         Array.isArray(sellerRaw.deliveryOptions) && sellerRaw.deliveryOptions.length > 0
           ? sellerRaw.deliveryOptions
           : [{ id: "standard", label: "Standard Delivery", eta: "3–5 days", price: 15 }],
+      subaccountCode: sellerRaw.subaccountCode || null,
     };
     return {
       id: it.product?._id || it.product?.id || it._id || String(it.product),
@@ -779,21 +785,57 @@ export default function SocialCheckout() {
     totals: { subtotal, deliveryFee, discount, total },
   });
 
+  // ─── UPDATED: handlePlaceOrder with split payment support ──
   const handlePlaceOrder = async () => {
     setError("");
+    
     if (!PAYSTACK_PUBLIC_KEY) {
       setError("Paystack isn't configured yet — set NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY.");
       return;
     }
+
     setLoading(true);
+    
     try {
+      // 1. Create the order first
       const order = await api.createOrder(buildOrderPayload());
+      
+      // 2. Get the split code for this seller
+      // For multiple sellers, you'd need to use a split group
+      const sellerId = sellerGroups[0]?.seller.id;
+      let splitCode = null;
+      
+      // If you have a seller, fetch their subaccount code
+      if (sellerId) {
+        try {
+          // 🔑 REPLACE THIS with your actual database fetch
+          // For now, we check if the mock seller has a subaccountCode
+          const seller = sellerGroups[0]?.seller;
+          splitCode = seller?.subaccountCode || null;
+        } catch (error) {
+          console.error('Failed to fetch split code:', error);
+        }
+      }
+
+      // 3. Initialize payment with split support
+      const { access_code, reference } = await api.initializePaystackPayment({
+        email: buyerEmail,
+        amount: total,
+        orderId: order.id,
+        splitCode, // Include the split code for automatic seller payouts
+      });
+
+      // 4. Load Paystack script
       await loadPaystackScript();
 
-      const channel = PAYMENT_CHANNELS.find((c) => c.id === payChannel)!;
-      const reference = `unimart_${order.orderId || order.id}_${Date.now()}`;
+      // 5. Get the selected payment channel
+      const channel = PAYMENT_CHANNELS.find((c) => c.id === payChannel);
+      const channels = channel?.paystackChannels || ["card"];
 
-      if (!window.PaystackPop) throw new Error("Payment provider failed to load. Check your connection and try again.");
+      // 6. Open Paystack popup
+      if (!window.PaystackPop) {
+        throw new Error("Paystack failed to load. Please refresh and try again.");
+      }
 
       const handler = window.PaystackPop.setup({
         key: PAYSTACK_PUBLIC_KEY,
@@ -801,39 +843,57 @@ export default function SocialCheckout() {
         amount: Math.round(total * 100),
         currency: "GHS",
         ref: reference,
-        channels: channel.paystackChannels,
+        channels: channels,
         metadata: {
           orderId: order.id,
-          custom_fields: [{ display_name: "Order ID", variable_name: "order_id", value: order.orderId || order.id }],
+          split_code: splitCode, // Pass split code in metadata for verification
         },
-        callback: (response: { reference: string }) => {
-          (async () => {
+        callback: async (response: { reference: string }) => {
+          try {
+            // Verify payment on the backend
+            await api.verifyPaystackPayment({ 
+              reference: response.reference, 
+              orderId: order.id 
+            });
+            
+            // Show success
+            setSuccess({ 
+              orderId: order.orderId || order.id, 
+              total 
+            });
+            
+            // Clear cart
             try {
-              await api.verifyPaystackPayment({ reference: response.reference, orderId: order.id });
-              setSuccess({ orderId: order.orderId || order.id, total });
-              try {
-                if (localStorage.getItem("unimart:token")) await apiFetch("/cart/clear", { method: "DELETE" });
-                else localStorage.removeItem("unimart:cart");
-                window.dispatchEvent(new Event("unimart:cartUpdated"));
-                setCart([]);
-              } catch {
-                /* non-fatal */
+              if (localStorage.getItem("unimart:token")) {
+                await apiFetch("/cart/clear", { method: "DELETE" });
+              } else {
+                localStorage.removeItem("unimart:cart");
               }
-            } catch (e: unknown) {
-              setError(e instanceof Error ? e.message : "We couldn't confirm your payment. Contact support with your reference: " + response.reference);
-            } finally {
-              setLoading(false);
+              window.dispatchEvent(new Event("unimart:cartUpdated"));
+              setCart([]);
+            } catch {
+              // Non-fatal - cart clear failed but order is placed
             }
-          })();
+          } catch (error: unknown) {
+            setError(
+              error instanceof Error 
+                ? error.message 
+                : "We couldn't confirm your payment. Contact support with your reference: " + response.reference
+            );
+          } finally {
+            setLoading(false);
+          }
         },
         onClose: () => {
           setLoading(false);
           setError("Payment window closed before it was completed. No charge was made.");
         },
       });
+
       handler.openIframe();
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Something went wrong starting checkout.");
+
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : "Something went wrong starting checkout.");
       setLoading(false);
     }
   };
