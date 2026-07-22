@@ -67,7 +67,7 @@ function MessagesContent() {
     const loadConversations = async () => {
       try {
         setLoading(true);
-        const res = await apiFetch("/api/messages/seller/conversations");
+        const res = await apiFetch("/messages/seller/conversations");
         if (!mounted) return;
 
         const convs = Array.isArray(res?.conversations) ? res.conversations : [];
@@ -110,7 +110,7 @@ function MessagesContent() {
     const handleSellerNewMessage = (data: any) => {
       (async () => {
         try {
-          const res = await apiFetch("/api/messages/seller/conversations");
+          const res = await apiFetch("/messages/seller/conversations");
           const convs = res?.conversations || [];
           setConversations(convs);
 
@@ -153,7 +153,7 @@ function MessagesContent() {
         // Refresh conversations list unread counts
         (async () => {
           try {
-            const res = await apiFetch("/api/messages/seller/conversations");
+            const res = await apiFetch("/messages/seller/conversations");
             const convs = res?.conversations || [];
             setConversations(convs);
           } catch (e) {
@@ -191,7 +191,7 @@ function MessagesContent() {
       try {
         setMessagesLoading(true);
         const res = await apiFetch(
-          `/api/messages/seller/conversations/${selectedConv._id}?limit=100`
+          `/messages/seller/conversations/${selectedConv._id}?limit=100`
         );
         if (!mounted) return;
 
@@ -226,7 +226,7 @@ function MessagesContent() {
     setSending(true);
 
     try {
-      const res = await apiFetch("/api/messages", {
+      const res = await apiFetch("/messages", {
         method: "POST",
         body: {
           conversationId: selectedConv._id,

@@ -20,7 +20,7 @@ export default function CategoryNav() {
     let mounted = true;
     const load = async () => {
       try {
-        const res = await apiFetch("/api/public/categories");
+        const res = await apiFetch("/public/categories");
 
         if (!mounted) return;
 
@@ -68,20 +68,20 @@ export default function CategoryNav() {
                 onClick={() => handleClick(name)}
                 className="flex-shrink-0 flex flex-col items-center gap-1 px-3 py-2 rounded-md hover:bg-[#165ec6] text-white cursor-pointer"
               >
-              {c.image ? (
-                <div className="w-12 h-12 rounded-md bg-white flex items-center justify-center overflow-hidden">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={c.image}
-                    alt={c.name}
-                    className="object-cover w-full h-full"
-                  />
-                </div>
-              ) : (
-                <div className="w-12 h-12 rounded-md bg-white flex items-center justify-center text-[#2874f0] font-semibold">
-                  {(c.name || "")[0]}
-                </div>
-              )}
+                {c.image ? (
+                  <div className="w-12 h-12 rounded-md bg-white flex items-center justify-center overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={c.image}
+                      alt={c.name}
+                      className="object-cover w-full h-full"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-12 h-12 rounded-md bg-white flex items-center justify-center text-[#2874f0] font-semibold">
+                    {(c.name || "")[0]}
+                  </div>
+                )}
                 <span className="text-xs text-white mt-1 flex items-center gap-2">
                   {c.name}
                   {navigating === name && (

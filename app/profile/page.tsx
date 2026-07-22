@@ -316,7 +316,7 @@ export default function ProfilePage() {
       try {
         if (!localStorage.getItem('unimart:token')) return;
 
-        const res = await apiFetch("/api/auth/me");
+        const res = await apiFetch("/auth/me");
         if (!active || !localStorage.getItem('unimart:token')) return;
 
         const u = res?.user || res?.data || null;
@@ -349,7 +349,7 @@ export default function ProfilePage() {
         }
 
         try {
-          const revRes = await apiFetch("/api/reviews");
+          const revRes = await apiFetch("/reviews");
           if (revRes && Array.isArray(revRes.data)) {
             const list = revRes.data;
             const mine = (res && (res.user || res.data)) ? list.filter((r: any) => String(r.user?._id || r.user) === String((res.user || res.data)?._id || (res.user || res.data)?.id)) : list;
