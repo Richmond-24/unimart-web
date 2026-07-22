@@ -62,8 +62,8 @@ export default function HeroCarousel({
   useEffect(() => {
     const fetchSlides = async () => {
       try {
-        // ✅ FIXED: Use "/api/hero-slides" NOT "/api/api/hero-slides"
-        const endpoint = "/api/hero-slides";
+        // ✅ FIXED: Use "/hero-slides" NOT "/hero-slides"
+        const endpoint = "/hero-slides";
         console.log(`📡 [HeroCarousel] Fetching from: ${endpoint}`);
         
         const response = await apiFetch(endpoint, { suppressErrorLog: true });

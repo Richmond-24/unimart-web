@@ -74,7 +74,7 @@ export default function FlashDeals() {
         // First try to fetch flash-deals from the public API
         let flashRes: any = null;
         try {
-          flashRes = await apiFetch('/api/public/flash-deals', { suppressErrorLog: true });
+          flashRes = await apiFetch('/public/flash-deals', { suppressErrorLog: true });
           console.log('📡 [FlashDeals] Flash deals response:', flashRes);
         } catch (err) {
           console.log('ℹ️ [FlashDeals] Flash deals endpoint error:', err);
@@ -94,7 +94,7 @@ export default function FlashDeals() {
         // Also try to get featured items as backup
         let featuredItems: any[] = [];
         try {
-          const featuredRes = await apiFetch('/api/home/featured', { suppressErrorLog: true });
+          const featuredRes = await apiFetch('/home/featured', { suppressErrorLog: true });
           if (featuredRes?.data && Array.isArray(featuredRes.data)) {
             featuredItems = featuredRes.data;
           } else if (Array.isArray(featuredRes)) {
