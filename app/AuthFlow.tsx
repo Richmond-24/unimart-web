@@ -1,1350 +1,308 @@
 "use client";
 
-import React, { useEffect, useState, memo } from "react";
-import { useRouter } from 'next/navigation';
-import ReactDOM from "react-dom";
-import { useAuth } from "./context/AuthContext";
-import TermsModal from "./components/TermsModal";
-import { apiFetch } from "@/lib/apiClient";
-import SuccessModal from "./components/SuccessModal";
-import detectUserLocation from "../lib/location";
-import { persistAuthToken } from "../lib/authCookie";
-import LoadingSpinner from "./components/LoadingSpinner";
+import React, { useEffect, useState } from "react";
 
-type Screen = "welcome" | "login" | "signup";
+type SuccessModalProps = {
+  userName: string;
+  message: string;
+  type: "signup" | "login";
+  isOpen: boolean;
+  onClose: () => void;
+  userRole?: "buyer" | "seller";
+  /** ms until auto-close; must match the caller's own setTimeout. Only drives the visual progress bar. */
+  autoCloseMs?: number;
+};
 
-const UNIVERSITY_OPTIONS = [
-  { label: "University of Ghana (UG)", value: "UG" },
-  { label: "Kwame Nkrumah University of Science & Technology (KNUST)", value: "KNUST" },
-  { label: "University of Cape Coast (UCC)", value: "UCC" },
-  { label: "University for Development Studies (UDS)", value: "UDS" },
-  { label: "University of Education Winneba (UEW)", value: "UEW" },
-  { label: "University of Professional Studies Accra (UPSA)", value: "UPSA" },
-  { label: "University of Energy and Natural Resources (UENR)", value: "UENR" },
-  { label: "Not a student", value: "NOT_A_STUDENT" },
+const CONFETTI = [
+  { x: -64, y: -58, rot: -30, delay: 0.05, shape: "rect",   color: "var(--sm-amber)" },
+  { x: 60,  y: -64, rot: 18,  delay: 0.10, shape: "circle", color: "var(--sm-teal)" },
+  { x: -78, y: 6,   rot: 50,  delay: 0.02, shape: "tri",    color: "var(--sm-coral)" },
+  { x: 76,  y: 2,   rot: -40, delay: 0.14, shape: "rect",   color: "var(--sm-teal-light)" },
+  { x: -46, y: -86, rot: 8,   delay: 0.18, shape: "circle", color: "var(--sm-coral)" },
+  { x: 46,  y: -84, rot: -12, delay: 0.06, shape: "tri",    color: "var(--sm-amber)" },
+  { x: -20, y: 90,  rot: 22,  delay: 0.12, shape: "circle", color: "var(--sm-teal)" },
+  { x: 22,  y: 92,  rot: -18, delay: 0.08, shape: "rect",   color: "var(--sm-coral)" },
+  { x: -92, y: -20, rot: 34,  delay: 0.16, shape: "circle", color: "var(--sm-amber)" },
+  { x: 92,  y: -18, rot: -34, delay: 0.04, shape: "tri",    color: "var(--sm-teal-light)" },
 ];
 
-// ─── FLOATING GLASSMORPHIC E-COMMERCE ICONS ───────────────────────────────────
-const ICONS = [
-  { path: <><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></>, size: 48, top: "8%", left: "5%", delay: "0s", duration: "14s" },
-  { path: <><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></>, size: 36, top: "15%", left: "82%", delay: "2s", duration: "18s" },
-  { path: <><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></>, size: 44, top: "60%", left: "3%", delay: "4s", duration: "16s" },
-  { path: <><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></>, size: 42, top: "75%", left: "88%", delay: "1s", duration: "20s" },
-  { path: <><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/></>, size: 38, top: "35%", left: "90%", delay: "3s", duration: "22s" },
-  { path: <><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></>, size: 32, top: "85%", left: "18%", delay: "5s", duration: "17s" },
-  { path: <><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></>, size: 50, top: "48%", left: "93%", delay: "6s", duration: "19s" },
-  { path: <><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></>, size: 34, top: "92%", left: "60%", delay: "1.5s", duration: "15s" },
-  { path: <><path d="M3 18v-6a9 9 0 0118 0v6"/><path d="M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3z"/><path d="M3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3z"/></>, size: 40, top: "22%", left: "10%", delay: "7s", duration: "21s" },
-  { path: <><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></>, size: 30, top: "5%", left: "50%", delay: "8s", duration: "23s" },
-  { path: <><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></>, size: 36, top: "55%", left: "8%", delay: "9s", duration: "16s" },
-  { path: <><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></>, size: 38, top: "40%", left: "-2%", delay: "2.5s", duration: "18s" },
-];
+function ConfettiPiece({ x, y, rot, delay, shape, color }: (typeof CONFETTI)[number]) {
+  const style: React.CSSProperties = {
+    ['--sm-x' as any]: `${x}px`,
+    ['--sm-y' as any]: `${y}px`,
+    ['--sm-rot' as any]: `${rot}deg`,
+    animationDelay: `${delay}s`,
+    color,
+  };
+  if (shape === "circle") {
+    return <span className="sm-confetti sm-confetti--circle" style={style} />;
+  }
+  if (shape === "tri") {
+    return <span className="sm-confetti sm-confetti--tri" style={style} />;
+  }
+  return <span className="sm-confetti sm-confetti--rect" style={style} />;
+}
 
-const FloatingIcons = memo(function FloatingIcons() {
+function CelebrationIcon({ type }: { type: "signup" | "login" }) {
   return (
-    <div className="um-float-layer">
-      {ICONS.map((icon, i) => (
-        <div
-          key={i}
-          className="um-float-icon"
-          style={{
-            top: icon.top,
-            left: icon.left,
-            animationDelay: icon.delay,
-            animationDuration: icon.duration,
-          }}
-        >
-          <svg
-            width={icon.size}
-            height={icon.size}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            {icon.path}
-          </svg>
+    <div className="sm-icon-stage">
+      <span className="sm-ring sm-ring--1" />
+      <span className="sm-ring sm-ring--2" />
+      <span className="sm-ring sm-ring--3" />
+
+      {type === "signup" && (
+        <div className="sm-confetti-layer">
+          {CONFETTI.map((c, i) => <ConfettiPiece key={i} {...c} />)}
         </div>
-      ))}
+      )}
+
+      <svg className="sm-badge" width="88" height="88" viewBox="0 0 88 88" fill="none">
+        <defs>
+          <linearGradient id="sm-badge-grad" x1="0" y1="0" x2="88" y2="88" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="var(--sm-teal)" />
+            <stop offset="100%" stopColor="var(--sm-teal-dark)" />
+          </linearGradient>
+        </defs>
+        <circle className="sm-badge-circle" cx="44" cy="44" r="40" fill="url(#sm-badge-grad)" />
+        <polyline
+          className="sm-badge-check"
+          points="27,45 39,57 62,32"
+          fill="none"
+          stroke="white"
+          strokeWidth="5.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+
+      {[0, 1, 2, 3].map(i => <span key={i} className={`sm-sparkle sm-sparkle--${i}`} />)}
     </div>
   );
-});
+}
 
-// ─── WELCOME SCREEN ──────────────────────────────────────────────────────────
-type WelcomeScreenProps = {
-  onSignup: () => void;
-  onLogin: () => void;
-  onTerms: () => void;
-};
-
-const WelcomeScreen = memo(function WelcomeScreen({ onSignup, onLogin, onTerms }: WelcomeScreenProps) {
-  return (
-    <div className="um-screen um-welcome">
-      <FloatingIcons />
-      <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", alignItems: "center", flex: 1, width: "100%" }}>
-        <div className="um-logo-wrap">
-          <img src="/logo.png" alt="Uni-Mart" className="um-logo-img" />
-        </div>
-
-        <div className="um-app-name">Uni-Mart</div>
-        <p className="um-app-sub">Campus marketplace</p>
-
-        <div className="um-trust-row">
-          {[
-            { icon: <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>, icon2: <polyline points="22 4 12 14.01 9 11.01"/>, label: "Verified" },
-            { icon: <rect x="3" y="11" width="18" height="11" rx="2"/>, icon2: <path d="M7 11V7a5 5 0 0110 0v4"/>, label: "Secure" },
-            { icon: <circle cx="12" cy="12" r="10"/>, icon2: <polyline points="12 6 12 12 16 14"/>, label: "Fast" },
-          ].map((item, i) => (
-            <React.Fragment key={i}>
-              {i > 0 && <div className="um-trust-div" />}
-              <div className="um-trust-item">
-                <div className="um-trust-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                    {item.icon}{item.icon2}
-                  </svg>
-                </div>
-                <span className="um-trust-label">{item.label}</span>
-              </div>
-            </React.Fragment>
-          ))}
-        </div>
-
-        <div className="um-cta-stack">
-          <button type="button" className="um-btn-primary" onClick={onSignup}>
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
-            Sign up free
-          </button>
-          <button type="button" className="um-btn-secondary" onClick={onLogin}>
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-            Log in
-          </button>
-        </div>
-
-        <p className="um-legal">
-          By continuing, you agree to our{" "}
-          <button type="button" className="um-legal-link" onClick={onTerms}>Terms &amp; Conditions</button>
-        </p>
-      </div>
-    </div>
-  );
-});
-
-// ─── FORM SCREEN ─────────────────────────────────────────────────────────────
-type FormScreenProps = {
-  mode: "login" | "signup";
-  name: string; setName: (v: string) => void;
-  phone: string; setPhone: (v: string) => void;
-  email: string; setEmail: (v: string) => void;
-  password: string; setPassword: (v: string) => void;
-  passwordConfirm: string; setPasswordConfirm: (v: string) => void;
-  pwVisible: boolean; setPwVisible: (v: boolean) => void;
-  error: string | null;
-  isLoading: boolean;
-  onBack: () => void;
-  onSubmit: () => void;
-  onTerms: () => void;
-  onSwitchMode: () => void;
-  role: 'buyer'|'seller';
-  setRole: (v: 'buyer'|'seller') => void;
-  university: string;
-  setUniversity: (v: string) => void;
-  storeName: string;
-  setStoreName: (v: string) => void;
-  storeBio: string;
-  setStoreBio: (v: string) => void;
-};
-
-const FormScreen = memo(function FormScreen({
-  mode, name, setName, phone, setPhone,
-  email, setEmail, password, setPassword,
-  passwordConfirm, setPasswordConfirm,
-  pwVisible, setPwVisible,
-  error, isLoading,
-  onBack, onSubmit, onTerms, onSwitchMode,
-  role, setRole,
-  university, setUniversity,
-  storeName, setStoreName,
-  storeBio, setStoreBio,
-}: FormScreenProps) {
-  return (
-    <div className="um-screen um-form-screen">
-      <FloatingIcons />
-      <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", flex: 1 }}>
-        <div className="um-form-header">
-          <button className="um-back-btn" onClick={onBack} aria-label="Back">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-          </button>
-          <span className="um-form-title">{mode === "signup" ? "Create account" : "Welcome back"}</span>
-        </div>
-
-        <div className="um-form-body">
-          {mode === "signup" && (
-            <div className="um-input-group">
-              <label className="um-input-label">Full name</label>
-              <div className="um-input-wrap">
-                <span className="um-input-icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                </span>
-                <input
-                  className="um-field-input"
-                  type="text"
-                  placeholder="Your full name"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  autoComplete="name"
-                />
-              </div>
-            </div>
-          )}
-
-          {mode === "signup" && (
-            <div className="um-input-group">
-              <label className="um-input-label">I am a</label>
-              <div className="flex gap-3 mt-2" role="tablist" aria-label="Role selection">
-                <button
-                  type="button"
-                  aria-pressed={role === 'buyer'}
-                  onClick={() => setRole('buyer')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition ${role === 'buyer' ? 'bg-teal-700 text-white' : 'bg-white text-slate-600 border border-slate-200'}`}
-                >
-                  Buyer
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={role === 'seller'}
-                  onClick={() => setRole('seller')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition ${role === 'seller' ? 'bg-teal-700 text-white' : 'bg-white text-slate-600 border border-slate-200'}`}
-                >
-                  Seller
-                </button>
-              </div>
-            </div>
-          )}
-
-          {mode === "signup" && role === 'buyer' && (
-            <div className="um-input-group">
-              <label className="um-input-label">University</label>
-              <div className="um-input-wrap">
-                <select
-                  className="um-field-input"
-                  value={university}
-                  onChange={(e) => setUniversity(e.target.value)}
-                >
-                  <option value="">Select your university</option>
-                  {UNIVERSITY_OPTIONS.map((item) => (
-                    <option key={item.value} value={item.value}>{item.label}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
-
-          {mode === "signup" && role === 'seller' && (
-            <div className="um-input-group">
-              <label className="um-input-label">Shop / Store name</label>
-              <div className="um-input-wrap">
-                <input
-                  className="um-field-input"
-                  type="text"
-                  placeholder="Your shop or store name"
-                  value={storeName}
-                  onChange={e => setStoreName(e.target.value)}
-                />
-              </div>
-              <div style={{ marginTop: 8 }}>
-                <label className="um-input-label">Shop Bio (optional)</label>
-                <textarea
-                  className="um-field-input"
-                  placeholder="A short description about your shop"
-                  value={storeBio}
-                  onChange={e => setStoreBio(e.target.value)}
-                  rows={3}
-                  style={{ padding: '10px', height: 'auto' }}
-                />
-              </div>
-            </div>
-          )}
-
-          {mode === "signup" && (
-            <div className="um-input-group">
-              <label className="um-input-label">Phone (optional)</label>
-              <div className="um-input-wrap">
-                <span className="um-input-icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.08 4.18 2 2 0 0 1 4 2h3a2 2 0 0 1 2 1.72c.12 1.05.38 2.07.78 3.03a2 2 0 0 1-.45 2.11L8.09 10.91a14.05 14.05 0 0 0 6 6l1.05-1.05a2 2 0 0 1 2.11-.45c.96.4 1.98.66 3.03.78A2 2 0 0 1 22 16.92z"/></svg>
-                </span>
-                <input
-                  className="um-field-input"
-                  type="tel"
-                  placeholder="e.g. +2348012345678"
-                  value={phone}
-                  onChange={e => setPhone(e.target.value)}
-                  autoComplete="tel"
-                />
-              </div>
-            </div>
-          )}
-
-          <div className="um-input-group">
-            <label className="um-input-label">Email</label>
-            <div className="um-input-wrap">
-              <span className="um-input-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-              </span>
-              <input
-                className="um-field-input"
-                type="email"
-                placeholder="you@university.edu"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                autoComplete="email"
-              />
-            </div>
-          </div>
-
-          <div className="um-input-group">
-            <div className="um-label-row">
-              <label className="um-input-label">Password</label>
-              {mode === "login" && <button className="um-forgot-link" type="button">Forgot password?</button>}
-            </div>
-            <div className="um-input-wrap">
-              <span className="um-input-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-              </span>
-              <input
-                className="um-field-input"
-                type={pwVisible ? "text" : "password"}
-                placeholder={mode === "signup" ? "Create a password" : "Your password"}
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                autoComplete={mode === "signup" ? "new-password" : "current-password"}
-              />
-              <button className="um-pw-btn" type="button" onClick={() => setPwVisible(!pwVisible)} aria-label="Toggle password">
-                {pwVisible
-                  ? <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-                  : <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                }
-              </button>
-            </div>
-          </div>
-
-          {mode === "signup" && (
-            <div className="um-input-group">
-              <label className="um-input-label">Confirm password</label>
-              <div className="um-input-wrap">
-                <span className="um-input-icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-                </span>
-                <input
-                  className="um-field-input"
-                  type={pwVisible ? "text" : "password"}
-                  placeholder="Confirm password"
-                  value={passwordConfirm}
-                  onChange={e => setPasswordConfirm(e.target.value)}
-                  autoComplete="new-password"
-                />
-              </div>
-            </div>
-          )}
-
-          {error && (
-            <div className="um-error">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              {error}
-            </div>
-          )}
-
-          <button className="um-btn-primary" type="button" onClick={onSubmit} disabled={isLoading} style={{ marginTop: 4 }}>
-            {isLoading ? <LoadingSpinner size={18} className="inline-block" /> : mode === "login" ? "Log in" : "Create account"}
-          </button>
-
-          <div className="um-divider-row"><span className="um-divider-txt">or</span></div>
-
-          {mode === "signup" && (
-            <p className="um-legal">By signing up, you agree to our <button type="button" className="um-legal-link" onClick={onTerms}>Terms &amp; Conditions</button></p>
-          )}
-        </div>
-
-        <div className="um-mode-switch">
-          <span>{mode === "login" ? "New to Uni-Mart?" : "Already have an account?"}</span>
-          <button type="button" className="um-mode-switch-btn" onClick={onSwitchMode}>
-            {mode === "login" ? "Sign up free" : "Log in"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-});
-
-// ─── DESKTOP LAYOUT ───────────────────────────────────────────────────────────
-type DesktopLayoutProps = {
-  screen: Screen;
-  name: string; setName: (v: string) => void;
-  phone: string; setPhone: (v: string) => void;
-  email: string; setEmail: (v: string) => void;
-  password: string; setPassword: (v: string) => void;
-  passwordConfirm: string; setPasswordConfirm: (v: string) => void;
-  pwVisible: boolean; setPwVisible: (v: boolean) => void;
-  error: string | null;
-  isLoading: boolean;
-  onLogin: () => void;
-  onSignup: () => void;
-  onSubmit: () => void;
-  onTerms: () => void;
-  role: 'buyer'|'seller';
-  setRole: (v: 'buyer'|'seller') => void;
-  university: string;
-  setUniversity: (v: string) => void;
-  storeName: string;
-  setStoreName: (v: string) => void;
-  storeBio: string;
-  setStoreBio: (v: string) => void;
-};
-
-const DesktopLayout = memo(function DesktopLayout({
-  screen, name, setName, phone, setPhone, email, setEmail,
-  password, setPassword, passwordConfirm, setPasswordConfirm, pwVisible, setPwVisible,
-  error, isLoading,
-  onLogin, onSignup, onSubmit, onTerms,
-  role, setRole,
-  university, setUniversity,
-  storeName, setStoreName,
-  storeBio, setStoreBio,
-}: DesktopLayoutProps) {
-  return (
-    <div className="um-desktop-overlay">
-      <div className="um-desktop-card um-anim-pop">
-        <div className="um-desktop-left" style={{ position: "relative", overflow: "hidden" }}>
-          <FloatingIcons />
-          <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", height: "100%" }}>
-            <div className="um-dl-logo-wrap">
-              <img src="/logo.png" alt="Uni-Mart" className="um-dl-logo-img" />
-            </div>
-            <div className="um-dl-wordmark">Uni-Mart</div>
-            <p className="um-dl-tagline">Your campus. Your marketplace.</p>
-            <p className="um-dl-desc">Buy, sell, and discover deals within your university community. Student-verified, safe, and free.</p>
-            <div className="um-dl-features">
-              {["Student-verified sellers","Free campus delivery","Secure payments","In-app messaging"].map((f,i)=>(
-                <div key={i} className="um-dl-feat">
-                  <div className="um-dl-feat-dot">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-                  </div>
-                  {f}
-                </div>
-              ))}
-            </div>
-            <p className="um-dl-foot">Trusted by 12,000+ students</p>
-          </div>
-        </div>
-
-        <div className="um-desktop-right">
-          <div className="um-dr-tabs">
-            <button type="button" className={`um-dr-tab ${screen === "login" ? "active" : ""}`} onClick={onLogin}>Log in</button>
-            <button type="button" className={`um-dr-tab ${screen === "signup" ? "active" : ""}`} onClick={onSignup}>Sign up</button>
-          </div>
-          <div className="um-dr-form">
-            {screen === "signup" && (
-              <div className="um-input-group">
-                <label className="um-input-label">Full name</label>
-                <div className="um-input-wrap">
-                  <span className="um-input-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
-                  <input className="um-field-input" type="text" placeholder="Your full name" value={name} onChange={e => setName(e.target.value)} autoComplete="name" />
-                </div>
-              </div>
-            )}
-            {screen === "signup" && (
-              <div className="um-input-group">
-                <label className="um-input-label">I am a</label>
-                <div className="flex gap-3 mt-2" role="tablist" aria-label="Role selection">
-                  <button
-                    type="button"
-                    aria-pressed={role === 'buyer'}
-                    onClick={() => setRole('buyer')}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition ${role === 'buyer' ? 'bg-teal-700 text-white' : 'bg-white text-slate-600 border border-slate-200'}`}
-                  >
-                    Buyer
-                  </button>
-                  <button
-                    type="button"
-                    aria-pressed={role === 'seller'}
-                    onClick={() => setRole('seller')}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition ${role === 'seller' ? 'bg-teal-700 text-white' : 'bg-white text-slate-600 border border-slate-200'}`}
-                  >
-                    Seller
-                  </button>
-                </div>
-              </div>
-            )}
-            {screen === "signup" && role === 'buyer' && (
-              <div className="um-input-group">
-                <label className="um-input-label">University</label>
-                <div className="um-input-wrap">
-                  <select
-                    className="um-field-input"
-                    value={university}
-                    onChange={(e) => setUniversity(e.target.value)}
-                  >
-                    <option value="">Select your university</option>
-                    {UNIVERSITY_OPTIONS.map((item) => (
-                      <option key={item.value} value={item.value}>{item.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            )}
-            {screen === "signup" && role === 'seller' && (
-              <div className="um-input-group">
-                <label className="um-input-label">Shop / Store name</label>
-                <div className="um-input-wrap">
-                  <input className="um-field-input" type="text" placeholder="Your shop or store name" value={storeName} onChange={e => setStoreName(e.target.value)} />
-                </div>
-                <div style={{ marginTop: 8 }}>
-                  <label className="um-input-label">Shop Bio (optional)</label>
-                  <textarea
-                    className="um-field-input"
-                    placeholder="A short description about your shop"
-                    value={storeBio}
-                    onChange={e => setStoreBio(e.target.value)}
-                    rows={3}
-                    style={{ padding: '10px', height: 'auto' }}
-                  />
-                </div>
-              </div>
-            )}
-            {screen === "signup" && (
-              <div className="um-input-group">
-                <label className="um-input-label">Phone (optional)</label>
-                <div className="um-input-wrap">
-                  <span className="um-input-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.08 4.18 2 2 0 0 1 4 2h3a2 2 0 0 1 2 1.72c.12 1.05.38 2.07.78 3.03a2 2 0 0 1-.45 2.11L8.09 10.91a14.05 14.05 0 0 0 6 6l1.05-1.05a2 2 0 0 1 2.11-.45c.96.4 1.98.66 3.03.78A2 2 0 0 1 22 16.92z"/></svg></span>
-                  <input className="um-field-input" type="tel" placeholder="e.g. +2348012345678" value={phone} onChange={e => setPhone(e.target.value)} autoComplete="tel" />
-                </div>
-              </div>
-            )}
-            <div className="um-input-group">
-              <label className="um-input-label">Email</label>
-              <div className="um-input-wrap">
-                <span className="um-input-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
-                <input className="um-field-input" type="email" placeholder="you@university.edu" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" />
-              </div>
-            </div>
-            <div className="um-input-group">
-              <div className="um-label-row">
-                <label className="um-input-label">Password</label>
-                {screen === "login" && <button type="button" className="um-forgot-link">Forgot password?</button>}
-              </div>
-              <div className="um-input-wrap">
-                <span className="um-input-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span>
-                <input
-                  className="um-field-input"
-                  type={pwVisible ? "text" : "password"}
-                  placeholder="Password"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  autoComplete={screen === "signup" ? "new-password" : "current-password"}
-                />
-                <button type="button" className="um-pw-btn" onClick={() => setPwVisible(!pwVisible)} aria-label="Toggle password">
-                  {pwVisible
-                    ? <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-                    : <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                  }
-                </button>
-              </div>
-            </div>
-            {screen === "signup" && (
-              <div className="um-input-group">
-                <label className="um-input-label">Confirm password</label>
-                <div className="um-input-wrap">
-                  <span className="um-input-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span>
-                  <input
-                    className="um-field-input"
-                    type={pwVisible ? "text" : "password"}
-                    placeholder="Confirm password"
-                    value={passwordConfirm}
-                    onChange={e => setPasswordConfirm(e.target.value)}
-                    autoComplete="new-password"
-                  />
-                </div>
-              </div>
-            )}
-            {error && <div className="um-error"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{error}</div>}
-            <button type="button" className="um-btn-primary" onClick={onSubmit} disabled={isLoading}>
-              {isLoading ? <LoadingSpinner size={18} className="inline-block" /> : screen === "login" ? "Log in" : "Create account"}
-            </button>
-            <div className="um-divider-row"><span className="um-divider-txt">or</span></div>
-            <p className="um-legal" style={{ marginTop: "auto", paddingTop: 8 }}>
-              By continuing, you agree to our <button type="button" className="um-legal-link" onClick={onTerms}>Terms &amp; Conditions</button>
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-});
-
-// ─── AUTH FLOW ───────────────────────────────────────────────────────────────────
-export default function AuthFlow({ onDone }: { onDone?: (role?: 'buyer'|'seller'|'guest') => void }) {
-  const router = useRouter();
-  const { setToken, setUser } = useAuth();
-  const [mounted, setMounted] = useState(false);
-  const [screen, setScreen] = useState<Screen>("welcome");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [pwVisible, setPwVisible] = useState(false);
-  const [phone, setPhone] = useState("");
-  const [passwordConfirm, setPasswordConfirm] = useState("");
-  const [role, setRole] = useState<'buyer'|'seller'>('buyer');
-  const [university, setUniversity] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const isSubmittingRef = React.useRef(false);
-  const [showTerms, setShowTerms] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [successName, setSuccessName] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
-  const [successType, setSuccessType] = useState<"signup" | "login">("signup");
-  const [successUserRole, setSuccessUserRole] = useState<"buyer" | "seller">("buyer");
-  const [storeName, setStoreName] = useState("");
-  const [storeBio, setStoreBio] = useState("");
+export default function SuccessModal({ userName, message, type, isOpen, onClose, userRole, autoCloseMs = 2500 }: SuccessModalProps) {
+  const [render, setRender] = useState(isOpen);
+  const [closing, setClosing] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = prev; };
-  }, []);
-
-  function goTo(s: Screen) {
-    setScreen(s);
-    setPwVisible(false);
-    setError(null);
-    setSuccessMessage("");
-  }
-
-  // ─── SIGNUP HANDLER ──────────────────────────────────────────────────────────
-  async function handleSignup() {
-    if (isSubmittingRef.current) return;
-    setError(null);
-
-    if (!name || name.trim() === "") {
-      setError("Please enter your full name");
-      return;
+    if (isOpen) {
+      setRender(true);
+      setClosing(false);
+    } else if (render) {
+      setClosing(true);
+      const t = setTimeout(() => setRender(false), 220);
+      return () => clearTimeout(t);
     }
+  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    if (!email || email.trim() === "") {
-      setError("Please enter your email address");
-      return;
-    }
+  if (!render) return null;
 
-    if (!email.includes("@") || !email.includes(".")) {
-      setError("Please enter a valid email address");
-      return;
-    }
+  const heading = type === "signup" ? `You're in, ${userName}!` : `Welcome back, ${userName}!`;
+  const roleNote =
+    type === "signup" && userRole
+      ? userRole === "seller"
+        ? "Your shop is ready — start listing items whenever you like."
+        : "Your account is ready — start browsing the campus marketplace."
+      : null;
 
-    if (!password || password.trim() === "") {
-      setError("Please create a password (at least 8 characters)");
-      return;
-    }
+  return (
+    <div className={`sm-overlay ${closing ? "sm-overlay--out" : ""}`} role="dialog" aria-modal="true" aria-label={heading}>
+      <div className={`sm-card ${closing ? "sm-card--out" : ""}`}>
+        <button type="button" className="sm-close" onClick={onClose} aria-label="Close">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
 
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters");
-      return;
-    }
+        <CelebrationIcon type={type} />
 
-    if (!passwordConfirm || passwordConfirm.trim() === "") {
-      setError("Please confirm your password");
-      return;
-    }
+        <h2 className="sm-title">{heading}</h2>
+        <p className="sm-message">{message}</p>
+        {roleNote && <p className="sm-role-note">{roleNote}</p>}
 
-    if (password !== passwordConfirm) {
-      setError("Passwords do not match. Please check and try again.");
-      return;
-    }
-
-    if (phone && phone.trim() !== "") {
-      if (!/^\+?[0-9\s\-]{7,15}$/.test(phone)) {
-        setError("Please enter a valid phone number (7-15 digits)");
-        return;
-      }
-    }
-
-    if (role === 'buyer' && (!university || university.trim() === "")) {
-      setError("Please select your university");
-      return;
-    }
-
-    isSubmittingRef.current = true;
-    setIsLoading(true);
-
-    try {
-      const locationPromise = detectUserLocation(1000).catch(() => null);
-
-      let locPayload: any = {};
-      try {
-        const loc = await Promise.race([locationPromise, new Promise(resolve => setTimeout(() => resolve(null), 1000))]);
-        if (loc && typeof loc === 'object' && (loc as any).display) {
-          const location = loc as any;
-          locPayload.location = location.display;
-          if (location.lat != null && location.lon != null) locPayload.locationCoords = { lat: location.lat, lon: location.lon };
-          try { localStorage.setItem('unimart:locationDetected', '1'); } catch (e) {}
-        }
-      } catch (e) {}
-
-      // ✅ FIXED: Removed duplicate /api
-      console.debug("Registering user with email:", email.substring(0, 3) + "***");
-      const res = await apiFetch('/auth/register', { 
-        method: 'POST', 
-        body: { 
-          name: name.trim(), 
-          fullName: name.trim(),
-          email: email.trim().toLowerCase(), 
-          password, 
-          passwordConfirm,
-          phone: phone ? phone.trim() : '',
-          phoneNumber: phone ? phone.trim() : '',
-          role,
-          university: role === 'buyer'
-            ? (university.trim() === 'NOT_A_STUDENT' ? 'Not a student' : university.trim())
-            : '',
-          shopName: role === 'seller' && storeName ? storeName.trim() : undefined,
-          shopBio: role === 'seller' && storeBio ? storeBio.trim() : undefined,
-          ...locPayload 
-        } 
-      });
-      
-      if (!res || !res.success) {
-        const errorMsg = res?.message || 'Registration failed. Please try again.';
-        setError(errorMsg);
-        return;
-      }
-      
-      if (!res.token) {
-        setError("Registration successful but authentication failed. Please log in.");
-        return;
-      }
-
-      try { persistAuthToken(res.token); } catch (e) { console.warn('Could not persist token:', e); }
-      try { setToken(res.token); } catch (e) { console.warn('Could not set token in context:', e); }
-      try { setUser(res.user ? { ...res.user } : null); } catch (e) { console.warn('Could not set user in context:', e); }
-      try { localStorage.removeItem('unimart:guest'); } catch (e) {}
-      try {
-        const savedUser = res.user ? { ...res.user } : {};
-        if (!savedUser.role) savedUser.role = role;
-        if (!savedUser.university && role === 'buyer' && university) {
-          savedUser.university = university.trim() === 'NOT_A_STUDENT' ? 'Not a student' : university.trim();
-        }
-        if (!savedUser.shopName && role === 'seller' && storeName) savedUser.shopName = storeName;
-        if (!savedUser.shopBio && role === 'seller' && storeBio) savedUser.shopBio = storeBio;
-        if (!savedUser.createdAt) savedUser.createdAt = new Date().toISOString();
-        localStorage.setItem('unimart:user', JSON.stringify(savedUser));
-      } catch (e) { console.warn('Could not save user:', e); }
-      try { localStorage.setItem('unimart:university', role === 'buyer' ? university : ''); } catch (e) {}
-      try { localStorage.setItem('unimart:onboarded', '1'); } catch (e) {}
-      
-      setIsLoading(false);
-      setSuccessName(name.split(" ")[0]);
-      setSuccessMessage('Account created successfully. Redirecting...');
-      setSuccessType('signup');
-      const newUserRole = role === 'seller' ? 'seller' : 'buyer';
-      setSuccessUserRole(newUserRole);
-      setShowSuccess(true);
-
-      setTimeout(() => {
-        setShowSuccess(false);
-        try { window.dispatchEvent(new Event('unimart:authChanged')); } catch (e) {}
-        if (onDone) {
-          onDone(newUserRole);
-        } else {
-          const redirectPath = newUserRole === 'seller' ? '/seller' : '/';
-          router.replace(redirectPath);
-        }
-      }, 2500);
-      
-    } catch (err: any) { 
-      const backendMsg = err?.payload?.message || err?.message || 'Network error';
-      const displayError = backendMsg.includes('Cannot reach backend') || backendMsg.includes('Failed to fetch')
-        ? 'Cannot connect to server. Please check your connection and try again.'
-        : backendMsg;
-      setError(displayError);
-      console.error("Registration error:", err);
-    } finally {
-      setIsLoading(false);
-      isSubmittingRef.current = false;
-    }
-  }
-
-  // ─── LOGIN HANDLER ──────────────────────────────────────────────────────────
-  async function handleLogin() {
-    setError(null);
-    
-    if (!email || email.trim() === "") {
-      setError("Please enter your email address");
-      return;
-    }
-    
-    if (!email.includes("@") || !email.includes(".")) {
-      setError("Please enter a valid email address");
-      return;
-    }
-    
-    if (!password || password.trim() === "") {
-      setError("Please enter your password");
-      return;
-    }
-    
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters");
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      console.debug("Attempting login with email:", email.substring(0, 3) + "***");
-      // ✅ FIXED: Removed duplicate /api
-      console.debug("API URL will be: " + process.env.NEXT_PUBLIC_API_URL + "/auth/login");
-      
-      // ✅ FIXED: Removed duplicate /api
-      const res = await apiFetch('/auth/login', { 
-        method: 'POST', 
-        body: { 
-          email: email.trim().toLowerCase(), 
-          password 
-        } 
-      });
-      
-      if (!res) {
-        setError("No response from server. Please check your connection and try again.");
-        setIsLoading(false);
-        return;
-      }
-      
-      if (!res.success) {
-        const errorMsg = res.message || 'Login failed. Please check your email and password.';
-        setError(errorMsg);
-        console.debug("Login failed:", errorMsg);
-        setIsLoading(false);
-        return;
-      }
-
-      if (!res.token) {
-        setError("Authentication failed. No token received.");
-        setIsLoading(false);
-        return;
-      }
-
-      try { persistAuthToken(res.token); } catch (e) { console.warn('Could not persist token:', e); }
-      try { setToken(res.token); } catch (e) { console.warn('Could not set token in context:', e); }
-      try { setUser(res.user ? { ...res.user } : null); } catch (e) { console.warn('Could not set user in context:', e); }
-      try { localStorage.removeItem('unimart:guest'); } catch (e) {}
-      try {
-        const saved = res.user ? { ...res.user } : {};
-        if (!saved.role) saved.role = (res.user && res.user.role) || 'buyer';
-        if (saved.university) {
-          try { localStorage.setItem('unimart:university', saved.university); } catch (e) {}
-        }
-        if (!saved.createdAt) {
-          try {
-            const tok = res.token || (typeof window !== 'undefined' ? localStorage.getItem('unimart:token') : null);
-            if (tok) {
-              const parts = tok.split('.');
-              if (parts.length === 3) {
-                const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
-                if (payload && payload.iat) saved.createdAt = new Date(payload.iat * 1000).toISOString();
-              }
-            }
-          } catch (e) {}
-        }
-        if (!saved.createdAt) saved.createdAt = new Date().toISOString();
-        localStorage.setItem('unimart:user', JSON.stringify(saved));
-        try { localStorage.setItem('unimart:onboarded', '1'); } catch (e) {}
-        if (!saved.university) {
-          const existing = localStorage.getItem('unimart:university');
-          if (existing) {
-            try { localStorage.setItem('unimart:university', existing); } catch (e) {}
-          }
-        }
-      } catch (e) { console.warn('Could not save user:', e); }
-      
-      setIsLoading(false);
-      setSuccessName(res.user?.name ? res.user.name.split(" ")[0] : "Welcome");
-      setSuccessMessage('Logged in successfully. Redirecting...');
-      setSuccessType('login');
-      const userRole = res?.user?.role === 'seller' ? 'seller' : 'buyer';
-      setSuccessUserRole(userRole);
-      setShowSuccess(true);
-
-      setTimeout(() => {
-        setShowSuccess(false);
-        try { window.dispatchEvent(new Event('unimart:authChanged')); } catch (e) {}
-        if (onDone) {
-          onDone(userRole);
-        } else {
-          const redirectPath = userRole === 'seller' ? '/seller' : '/';
-          router.replace(redirectPath);
-        }
-      }, 2500);
-      
-    } catch (err: any) { 
-      const backendMsg = err?.payload?.message || err?.message || 'Network error';
-      const displayError = backendMsg.includes('Cannot reach backend') || backendMsg.includes('Failed to fetch')
-        ? 'Cannot connect to server. Please check your connection and try again.'
-        : backendMsg;
-      setError(displayError);
-      console.error("Login error:", err);
-      setIsLoading(false); 
-    }
-  }
-
-  if (!mounted) return null;
-
-  const authContent = (
-    <>
-      {/* MOBILE */}
-      <div className="um-mobile-root">
-        {screen === "welcome" && (
-          <WelcomeScreen
-            onSignup={() => goTo("signup")}
-            onLogin={() => goTo("login")}
-            onTerms={() => setShowTerms(true)}
-          />
-        )}
-        {(screen === "signup" || screen === "login") && (
-          <FormScreen
-            mode={screen}
-            name={name} setName={setName}
-            phone={phone} setPhone={setPhone}
-            email={email} setEmail={setEmail}
-            password={password} setPassword={setPassword}
-            passwordConfirm={passwordConfirm} setPasswordConfirm={setPasswordConfirm}
-            pwVisible={pwVisible} setPwVisible={setPwVisible}
-            error={error}
-            isLoading={isLoading}
-            onBack={() => goTo("welcome")}
-            onSubmit={screen === "login" ? handleLogin : handleSignup}
-            onTerms={() => setShowTerms(true)}
-            onSwitchMode={() => goTo(screen === "login" ? "signup" : "login")}
-            role={role}
-            setRole={setRole}
-            university={university}
-            setUniversity={setUniversity}
-            storeName={storeName}
-            setStoreName={setStoreName}
-            storeBio={storeBio}
-            setStoreBio={setStoreBio}
-          />
-        )}
+        <div className="sm-progress-track">
+          <div className="sm-progress-fill" style={{ animationDuration: `${autoCloseMs}ms` }} />
+        </div>
       </div>
 
-      {/* DESKTOP */}
-      <div className="um-desktop-root">
-        <DesktopLayout
-          screen={screen}
-          name={name} setName={setName}
-          phone={phone} setPhone={setPhone}
-          email={email} setEmail={setEmail}
-          password={password} setPassword={setPassword}
-          passwordConfirm={passwordConfirm} setPasswordConfirm={setPasswordConfirm}
-          pwVisible={pwVisible} setPwVisible={setPwVisible}
-          error={error}
-          isLoading={isLoading}
-          onLogin={() => goTo("login")}
-          onSignup={() => goTo("signup")}
-          onSubmit={screen === "login" ? handleLogin : handleSignup}
-          onTerms={() => setShowTerms(true)}
-          role={role}
-          setRole={setRole}
-          university={university}
-          setUniversity={setUniversity}
-          storeName={storeName}
-          setStoreName={setStoreName}
-          storeBio={storeBio}
-          setStoreBio={setStoreBio}
-        />
-      </div>
-
-      {showTerms && <TermsModal onClose={() => setShowTerms(false)} />}
-      <SuccessModal
-        userName={successName}
-        message={successMessage}
-        type={successType}
-        isOpen={showSuccess}
-        onClose={() => setShowSuccess(false)}
-      />
-
-      <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
-        :root {
-          --um-teal:        #0d9488;
-          --um-teal-dark:   #0f766e;
-          --um-teal-light:  #ccfbf1;
-          --um-teal-bg:     #f0fdfa;
-          --um-white:       #FFFFFF;
-          --um-bg:          #F7F8FA;
-          --um-text:        #1A1A2E;
-          --um-text-2:      #555566;
-          --um-text-3:      #9999AA;
-          --um-border:      #E2E4EA;
-          --um-red:         #DC2626;
-          --um-red-bg:      #FEF2F2;
-          --um-red-border:  #FECACA;
+      <style jsx>{`
+        :global(:root) {
+          --sm-teal: #0d9488;
+          --sm-teal-dark: #0f766e;
+          --sm-teal-light: #5eead4;
+          --sm-amber: #f59e0b;
+          --sm-coral: #fb7185;
         }
 
-        @keyframes um-float {
-          0%   { transform: translateY(0px) rotate(0deg); }
-          33%  { transform: translateY(-12px) rotate(3deg); }
-          66%  { transform: translateY(6px) rotate(-2deg); }
-          100% { transform: translateY(0px) rotate(0deg); }
+        @keyframes sm-fade-in { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes sm-fade-out { from { opacity: 1; } to { opacity: 0; } }
+        @keyframes sm-card-in {
+          0%   { opacity: 0; transform: scale(.82) translateY(18px); }
+          60%  { opacity: 1; transform: scale(1.03) translateY(-2px); }
+          100% { opacity: 1; transform: scale(1) translateY(0); }
         }
-        .um-float-layer {
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
-          overflow: hidden;
-          z-index: 0;
-        }
-        .um-float-icon {
-          position: absolute;
-          color: rgba(13, 148, 136, 0.12);
-          background: rgba(255,255,255,0.06);
-          backdrop-filter: blur(4px);
-          -webkit-backdrop-filter: blur(4px);
-          border: 1px solid rgba(13,148,136,0.08);
-          border-radius: 16px;
-          padding: 10px;
-          animation: um-float var(--dur, 18s) ease-in-out infinite;
-          animation-delay: var(--delay, 0s);
-        }
+        @keyframes sm-card-out { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(.92) translateY(8px); } }
 
-        @keyframes um-slide-up   { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes um-screen-in  { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:translateX(0)} }
-        @keyframes um-pop        { 0%{opacity:0;transform:scale(0.9)} 60%{transform:scale(1.02)} 100%{opacity:1;transform:scale(1)} }
-        @keyframes um-check-pop  { 0%{transform:scale(0)} 60%{transform:scale(1.2)} 100%{transform:scale(1)} }
-        @keyframes um-shake      { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
-        @keyframes um-spin       { to{transform:rotate(360deg)} }
-        @keyframes um-fade-in    { from{opacity:0} to{opacity:1} }
+        @keyframes sm-badge-pop {
+          0%   { transform: scale(0); }
+          55%  { transform: scale(1.14); }
+          80%  { transform: scale(0.96); }
+          100% { transform: scale(1); }
+        }
+        @keyframes sm-check-draw { from { stroke-dashoffset: 46; } to { stroke-dashoffset: 0; } }
+        @keyframes sm-ring-pulse {
+          0%   { transform: scale(0.5); opacity: 0.55; }
+          100% { transform: scale(1.9); opacity: 0; }
+        }
+        @keyframes sm-confetti-burst {
+          0%   { transform: translate(0, 0) rotate(0deg) scale(0.4); opacity: 0; }
+          18%  { opacity: 1; }
+          100% { transform: translate(var(--sm-x), var(--sm-y)) rotate(var(--sm-rot)) scale(1); opacity: 0; }
+        }
+        @keyframes sm-sparkle-twinkle {
+          0%, 100% { transform: scale(0) rotate(0deg); opacity: 0; }
+          50%      { transform: scale(1) rotate(45deg); opacity: 1; }
+        }
+        @keyframes sm-progress-shrink { from { width: 100%; } to { width: 0%; } }
 
-        .um-mobile-root {
-          position: fixed; inset: 0; z-index: 10001;
+        .sm-overlay {
+          position: fixed; inset: 0; z-index: 10010;
+          background: rgba(10, 20, 40, 0.5);
+          backdrop-filter: blur(6px);
+          -webkit-backdrop-filter: blur(6px);
+          display: flex; align-items: center; justify-content: center;
+          padding: 24px;
+          animation: sm-fade-in 0.22s ease both;
           font-family: 'Inter', sans-serif;
-          background: var(--um-white);
         }
-        .um-desktop-root {
-          display: none;
-          position: fixed; inset: 0; z-index: 10001;
-        }
-        @media (min-width: 640px) {
-          .um-mobile-root  { display: none; }
-          .um-desktop-root { display: block; }
-        }
+        .sm-overlay--out { animation: sm-fade-out 0.2s ease both; }
 
-        .um-screen {
-          display: flex; flex-direction: column;
-          min-height: 100dvh;
+        .sm-card {
           position: relative;
+          width: 100%; max-width: 320px;
+          background: #ffffff;
+          border-radius: 20px;
+          padding: 40px 28px 26px;
+          text-align: center;
+          box-shadow: 0 24px 60px rgba(15, 30, 30, 0.28);
+          animation: sm-card-in 0.5s cubic-bezier(.24, 1.3, .4, 1) both;
+        }
+        .sm-card--out { animation: sm-card-out 0.2s ease both; }
+
+        .sm-close {
+          position: absolute; top: 14px; right: 14px;
+          width: 30px; height: 30px; border-radius: 50%;
+          background: #F7F8FA; border: none; cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+          color: #9999AA; transition: background .15s, color .15s, transform .15s;
+        }
+        .sm-close:hover { background: #E2E4EA; color: #555566; }
+        .sm-close:active { transform: scale(0.9); }
+
+        .sm-icon-stage {
+          position: relative;
+          width: 120px; height: 120px;
+          margin: 4px auto 18px;
+          display: flex; align-items: center; justify-content: center;
+        }
+
+        .sm-ring {
+          position: absolute;
+          width: 88px; height: 88px;
+          border-radius: 50%;
+          border: 2px solid var(--sm-teal);
+          animation: sm-ring-pulse 1.8s cubic-bezier(.22,.8,.32,1) infinite;
+        }
+        .sm-ring--1 { animation-delay: 0s; }
+        .sm-ring--2 { animation-delay: 0.5s; }
+        .sm-ring--3 { animation-delay: 1s; }
+
+        .sm-badge { position: relative; z-index: 2; animation: sm-badge-pop 0.6s cubic-bezier(.24,1.4,.4,1) 0.08s both; }
+        .sm-badge-circle { filter: drop-shadow(0 8px 18px rgba(13,148,136,0.35)); }
+        .sm-badge-check {
+          stroke-dasharray: 46;
+          stroke-dashoffset: 46;
+          animation: sm-check-draw 0.45s ease 0.42s forwards;
+        }
+
+        .sm-confetti-layer {
+          position: absolute; inset: 0;
+          pointer-events: none;
+        }
+        .sm-confetti {
+          position: absolute; top: 50%; left: 50%;
+          display: block;
+          animation: sm-confetti-burst 0.95s cubic-bezier(.19,.87,.32,1.15) both;
+        }
+        .sm-confetti--rect {
+          width: 8px; height: 8px; margin: -4px 0 0 -4px;
+          background: currentColor; border-radius: 2px;
+        }
+        .sm-confetti--circle {
+          width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px;
+          background: currentColor; border-radius: 50%;
+        }
+        .sm-confetti--tri {
+          width: 0; height: 0; margin: -4px 0 0 -4px;
+          border-left: 5px solid transparent;
+          border-right: 5px solid transparent;
+          border-bottom: 8px solid currentColor;
+        }
+
+        .sm-sparkle {
+          position: absolute;
+          width: 8px; height: 8px;
+          background: var(--sm-amber);
+          clip-path: polygon(50% 0%, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0% 50%, 38% 38%);
+          animation: sm-sparkle-twinkle 2.2s ease-in-out infinite;
+        }
+        .sm-sparkle--0 { top: 4px; left: 10px; animation-delay: 0.2s; }
+        .sm-sparkle--1 { top: 14px; right: 2px; background: var(--sm-coral); animation-delay: 0.9s; }
+        .sm-sparkle--2 { bottom: 8px; left: 0; background: var(--sm-teal-light); animation-delay: 1.4s; }
+        .sm-sparkle--3 { bottom: 2px; right: 12px; animation-delay: 0.55s; }
+
+        .sm-title {
+          font-size: 19px; font-weight: 700; color: #1A1A2E;
+          margin: 0 0 8px; letter-spacing: -0.2px;
+          animation: sm-fade-in 0.4s ease 0.5s both;
+        }
+        .sm-message {
+          font-size: 13.5px; color: #555566;
+          margin: 0; line-height: 1.55;
+          animation: sm-fade-in 0.4s ease 0.56s both;
+        }
+        .sm-role-note {
+          font-size: 12.5px; color: var(--sm-teal-dark);
+          background: #f0fdfa;
+          border-radius: 8px;
+          padding: 8px 10px;
+          margin: 12px 0 0;
+          line-height: 1.5;
+          animation: sm-fade-in 0.4s ease 0.62s both;
+        }
+
+        .sm-progress-track {
+          margin-top: 20px;
+          height: 3px; border-radius: 3px;
+          background: #E2E4EA;
           overflow: hidden;
-          animation: um-screen-in 0.28s ease both;
+          animation: sm-fade-in 0.4s ease 0.7s both;
+        }
+        .sm-progress-fill {
+          height: 100%;
+          background: var(--sm-teal);
+          border-radius: 3px;
+          animation-name: sm-progress-shrink;
+          animation-timing-function: linear;
+          animation-fill-mode: forwards;
         }
 
-        .um-welcome {
-          background: var(--um-white);
-          padding: max(36px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom));
-          align-items: center; text-align: center;
-        }
-        .um-logo-wrap {
-          width: 96px; height: 96px; border-radius: 20px;
-          background: var(--um-teal);
-          display: flex; align-items: center; justify-content: center;
-          margin: 0 auto 18px;
-          animation: um-slide-up .4s ease both;
-        }
-        .um-logo-img { width: 80px; height: 80px; object-fit: contain; display: block; }
-        .um-app-name {
-          font-size: 26px; font-weight: 700; color: var(--um-text);
-          letter-spacing: -0.5px; margin-bottom: 8px;
-          animation: um-slide-up .4s .05s ease both;
-        }
-        .um-app-sub {
-          font-size: 14px; color: var(--um-text-2);
-          line-height: 1.5; margin-bottom: 28px;
-          animation: um-slide-up .4s .1s ease both;
-        }
-        .um-trust-row {
-          display: flex; align-items: center; justify-content: center; gap: 24px;
-          margin-bottom: 48px;
-          animation: um-slide-up .4s .15s ease both;
-        }
-        .um-trust-item { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-        .um-trust-icon {
-          width: 44px; height: 44px; border-radius: 12px;
-          background: var(--um-teal-bg);
-          display: flex; align-items: center; justify-content: center;
-          color: var(--um-teal);
-        }
-        .um-trust-label { font-size: 11px; color: var(--um-text-3); font-weight: 500; }
-        .um-trust-div   { width: 1px; height: 36px; background: var(--um-border); }
-        .um-cta-stack {
-          width: 100%; display: flex; flex-direction: column; gap: 12px;
-          animation: um-slide-up .4s .2s ease both;
-        }
-
-        .um-btn-primary {
-          width: 100%; height: 50px;
-          background: var(--um-teal); color: var(--um-white);
-          border: none; border-radius: 10px;
-          font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600;
-          cursor: pointer; letter-spacing: 0.1px;
-          display: flex; align-items: center; justify-content: center; gap: 8px;
-          transition: background .15s, transform .1s;
-        }
-        .um-btn-primary:hover:not(:disabled) { background: var(--um-teal-dark); }
-        .um-btn-primary:active:not(:disabled) { transform: scale(0.97); }
-        .um-btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
-
-        .um-btn-secondary {
-          width: 100%; height: 50px;
-          background: var(--um-white); color: var(--um-teal);
-          border: 1.5px solid var(--um-teal); border-radius: 10px;
-          font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600;
-          cursor: pointer;
-          display: flex; align-items: center; justify-content: center; gap: 8px;
-          transition: background .15s, transform .1s;
-        }
-        .um-btn-secondary:hover { background: var(--um-teal-bg); }
-        .um-btn-secondary:active { transform: scale(0.97); }
-
-        .um-btn-ghost {
-          background: none; border: none; cursor: pointer;
-          font-family: 'Inter', sans-serif; font-size: 14px; color: var(--um-text-3);
-          padding: 4px; width: 100%; text-align: center;
-          transition: color .15s;
-        }
-        .um-btn-ghost:hover { color: var(--um-text-2); }
-
-        .um-spinner {
-          width: 18px; height: 18px;
-          border: 2.5px solid rgba(255,255,255,.3);
-          border-top-color: #fff; border-radius: 50%;
-          animation: um-spin .65s linear infinite;
-        }
-
-        .um-legal {
-          font-size: 11.5px; color: var(--um-text-3);
-          text-align: center; line-height: 1.6; margin: 16px 0 0;
-          animation: um-slide-up .4s .25s ease both;
-        }
-        .um-legal-link {
-          background: none; border: none; cursor: pointer;
-          font-size: 11.5px; color: var(--um-text-2);
-          text-decoration: underline; padding: 0;
-        }
-        .um-legal-link:hover { color: var(--um-teal); }
-
-        .um-form-screen { background: var(--um-white); }
-        .um-form-header {
-          display: flex; align-items: center; gap: 14px;
-          padding: max(52px, env(safe-area-inset-top)) 24px 18px;
-          border-bottom: 1px solid var(--um-border);
-          background: rgba(255,255,255,0.85);
-          backdrop-filter: blur(8px);
-        }
-        .um-back-btn {
-          width: 36px; height: 36px; border-radius: 50%;
-          background: var(--um-bg); border: none;
-          display: flex; align-items: center; justify-content: center;
-          cursor: pointer; color: var(--um-text-2); flex-shrink: 0;
-          transition: background .15s;
-        }
-        .um-back-btn:hover { background: var(--um-border); }
-        .um-form-title { font-size: 18px; font-weight: 700; color: var(--um-text); }
-
-        .um-form-body {
-          padding: 20px 18px 16px;
-          display: flex; flex-direction: column; gap: 12px; flex: 1;
-          background: rgba(255,255,255,0.92);
-          backdrop-filter: blur(6px);
-          overflow: auto;
-          -webkit-overflow-scrolling: touch;
-          padding-bottom: 88px;
-          max-height: calc(100dvh - 140px);
-        }
-
-        .um-input-group { display: flex; flex-direction: column; gap: 6px; }
-        .um-input-label {
-          font-size: 12px; font-weight: 600; color: var(--um-text-2);
-          letter-spacing: 0.4px; text-transform: uppercase;
-        }
-        .um-label-row { display: flex; justify-content: space-between; align-items: center; }
-        .um-input-wrap { position: relative; display: flex; align-items: center; }
-        .um-input-icon {
-          position: absolute; left: 14px; color: var(--um-text-3);
-          pointer-events: none; display: flex;
-        }
-        .um-field-input {
-          width: 100%; height: 50px;
-          background: var(--um-bg); border: 1.5px solid var(--um-border);
-          border-radius: 10px; padding: 0 44px 0 44px;
-          font-family: 'Inter', sans-serif; font-size: 15px; color: var(--um-text);
-          outline: none; transition: border-color .18s, box-shadow .18s, background .18s;
-          font-size: max(16px, 15px);
-        }
-        .um-field-input::placeholder { color: var(--um-text-3); }
-        .um-field-input:focus {
-          border-color: var(--um-teal);
-          box-shadow: 0 0 0 3px rgba(13,148,136,0.12);
-          background: var(--um-white);
-        }
-        .um-pw-btn {
-          position: absolute; right: 13px;
-          background: none; border: none; cursor: pointer;
-          color: var(--um-text-3); display: flex; align-items: center; padding: 4px;
-          transition: color .15s;
-        }
-        .um-pw-btn:hover { color: var(--um-text-2); }
-
-        .um-forgot-link {
-          background: none; border: none; cursor: pointer;
-          font-family: 'Inter', sans-serif; font-size: 13px; color: var(--um-teal);
-          padding: 0; transition: color .15s;
-        }
-        .um-forgot-link:hover { color: var(--um-teal-dark); text-decoration: underline; }
-
-        .um-error {
-          display: flex; align-items: center; gap: 8px;
-          padding: 11px 14px;
-          background: var(--um-red-bg); border: 1px solid var(--um-red-border);
-          border-radius: 9px; font-size: 13px; color: var(--um-red);
-          animation: um-shake .3s ease;
-        }
-
-        .um-divider-row {
-          display: flex; align-items: center; gap: 12px;
-        }
-        .um-divider-row::before, .um-divider-row::after {
-          content: ''; flex: 1; height: 1px; background: var(--um-border);
-        }
-        .um-divider-txt { font-size: 12px; color: var(--um-text-3); font-weight: 500; }
-
-        .um-mode-switch {
-          display: flex; align-items: center; justify-content: center; gap: 6px;
-          padding: 12px 16px;
-          border-top: 1px solid var(--um-border);
-          margin-top: 0;
-          background: rgba(255,255,255,0.96);
-          backdrop-filter: blur(6px);
-          position: sticky;
-          bottom: env(safe-area-inset-bottom, 0);
-          z-index: 30;
-        }
-        .um-mode-switch span { font-size: 13.5px; color: var(--um-text-2); }
-        .um-mode-switch-btn {
-          background: none; border: none; cursor: pointer;
-          font-family: 'Inter', sans-serif; font-size: 13.5px;
-          color: var(--um-teal); font-weight: 600; padding: 0;
-          transition: color .15s;
-        }
-        .um-mode-switch-btn:hover { color: var(--um-teal-dark); text-decoration: underline; }
-
-        .um-success-overlay {
-          position: fixed; inset: 0; z-index: 100;
-          background: rgba(0,0,0,0.4);
-          display: flex; align-items: center; justify-content: center;
-          padding: 24px;
-          animation: um-fade-in .2s ease;
-        }
-        .um-success-card {
-          background: var(--um-white); border-radius: 18px;
-          padding: 40px 28px; text-align: center;
-          max-width: 300px; width: 100%;
-          animation: um-pop .4s cubic-bezier(.34,1.4,.64,1) both;
-        }
-        .um-success-check {
-          width: 68px; height: 68px; border-radius: 50%;
-          background: var(--um-teal);
-          display: flex; align-items: center; justify-content: center;
-          margin: 0 auto 20px;
-          animation: um-check-pop .4s cubic-bezier(.34,1.5,.64,1) both;
-        }
-        .um-success-title { font-size: 20px; font-weight: 700; color: var(--um-text); margin: 0 0 8px; }
-        .um-success-sub { font-size: 14px; color: var(--um-text-2); margin: 0; }
-
-        .um-anim-pop { animation: um-pop .45s cubic-bezier(.34,1.4,.64,1) both; }
-        .um-desktop-overlay {
-          position: fixed; inset: 0; z-index: 10002;
-          background: rgba(10,20,40,0.55);
-          backdrop-filter: blur(6px);
-          display: flex; align-items: center; justify-content: center;
-          padding: 24px;
-        }
-        .um-desktop-card {
-          width: 100%; max-width: 900px; min-height: 560px;
-          display: flex; border-radius: 16px;
-          box-shadow: 0 24px 64px rgba(0,0,0,0.22);
-          max-height: calc(100vh - 48px);
-          overflow: hidden;
-        }
-        .um-desktop-left {
-          flex: 0 0 360px;
-          background: var(--um-teal);
-          padding: 44px 36px;
-          display: flex; flex-direction: column;
-          color: white;
-        }
-        .um-dl-logo-wrap {
-          width: 44px; height: 44px; border-radius: 12px;
-          background: rgba(255,255,255,0.18);
-          display: flex; align-items: center; justify-content: center;
-          margin-bottom: 28px;
-        }
-        .um-dl-logo-img { width: 28px; height: 28px; object-fit: contain; display: block; border-radius: 8px; }
-        .um-dl-wordmark { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 8px; }
-        .um-dl-tagline { font-size: 22px; font-weight: 700; line-height: 1.25; margin: 0 0 14px; letter-spacing: -0.3px; }
-        .um-dl-desc { font-size: 14px; color: rgba(255,255,255,0.7); margin: 0 0 32px; line-height: 1.65; }
-        .um-dl-features { display: flex; flex-direction: column; gap: 14px; flex: 1; }
-        .um-dl-feat { display: flex; align-items: center; gap: 12px; font-size: 13.5px; color: rgba(255,255,255,0.88); }
-        .um-dl-feat-dot {
-          width: 22px; height: 22px; flex-shrink: 0;
-          background: rgba(255,255,255,0.18); border-radius: 50%;
-          display: flex; align-items: center; justify-content: center;
-        }
-        .um-dl-foot { font-size: 12px; color: rgba(255,255,255,0.4); margin: 0; padding-top: 24px; }
-        .um-desktop-right {
-          flex: 1; background: var(--um-white);
-          padding: 44px 44px 36px;
-          display: flex; flex-direction: column;
-          font-family: 'Inter', sans-serif;
-          overflow: auto;
-        }
-        .um-dr-tabs {
-          display: flex; gap: 0; margin-bottom: 32px;
-          border-bottom: 1.5px solid var(--um-border);
-        }
-        .um-dr-tab {
-          flex: 1; height: 40px;
-          background: none; border: none; border-radius: 0;
-          font-family: 'Inter', sans-serif;
-          font-size: 14.5px; font-weight: 500;
-          color: var(--um-text-3); cursor: pointer;
-          position: relative; transition: color .15s;
-        }
-        .um-dr-tab:hover { color: var(--um-text); }
-        .um-dr-tab.active { color: var(--um-teal); font-weight: 700; }
-        .um-dr-tab.active::after {
-          content: ''; position: absolute;
-          bottom: -1.5px; left: 0; right: 0; height: 2.5px;
-          background: var(--um-teal); border-radius: 2px;
-        }
-        .um-dr-form { display: flex; flex-direction: column; gap: 16px; flex: 1; }
-
-        .um-desktop-left .um-float-icon {
-          color: rgba(255,255,255,0.12);
-          background: rgba(255,255,255,0.06);
-          border-color: rgba(255,255,255,0.1);
+        @media (prefers-reduced-motion: reduce) {
+          .sm-overlay, .sm-card, .sm-badge, .sm-badge-check, .sm-ring,
+          .sm-confetti, .sm-sparkle, .sm-title, .sm-message, .sm-role-note, .sm-progress-track {
+            animation: none !important;
+          }
+          .sm-badge-check { stroke-dashoffset: 0; }
         }
       `}</style>
-    </>
+    </div>
   );
-
-  return ReactDOM.createPortal(authContent, document.body);
 }

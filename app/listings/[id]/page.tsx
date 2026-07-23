@@ -19,6 +19,9 @@ import {
   Zap,
   Heart,
   Home,
+  Play,
+  Video,
+  X,
 } from "lucide-react";
 import {
   FaFacebook,
@@ -52,6 +55,8 @@ export default function ListingPage() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [otherProducts, setOtherProducts] = useState<any[]>([]);
   const [loadingOthers, setLoadingOthers] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
+  const [showVideoModal, setShowVideoModal] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const shareMenuRef = useRef<HTMLDivElement | null>(null);
   const shareButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -71,6 +76,7 @@ export default function ListingPage() {
 
   // --- data derived from listing ---
   const images: string[] = listing?.imageUrls?.length ? listing.imageUrls : [];
+  const videos: string[] = listing?.videoUrls?.length ? listing.videoUrls : [];
   const discountPct =
     listing?.originalPrice && listing?.price
       ? Math.round((1 - listing.price / listing.originalPrice) * 100)
@@ -340,6 +346,17 @@ export default function ListingPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // --- Handle video modal ---
+  const openVideoModal = (videoUrl: string) => {
+    setSelectedVideo(videoUrl);
+    setShowVideoModal(true);
+  };
+
+  const closeVideoModal = () => {
+    setSelectedVideo(null);
+    setShowVideoModal(false);
+  };
+
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <LoadingSpinner size={48} />
@@ -445,7 +462,6 @@ export default function ListingPage() {
                   </button>
                 );
               })}
-              {/* Copy action removed from share menu per UX request */}
             </div>
           </div>
         )}
@@ -460,6 +476,7 @@ export default function ListingPage() {
           )}
         </div>
 
+        {/* Image Gallery */}
         {images.length > 0 ? (
           <div className="relative overflow-hidden bg-[#fafafa]">
             <div
@@ -520,6 +537,7 @@ export default function ListingPage() {
           </div>
         )}
 
+        {/* Image thumbnails */}
         {images.length > 1 && (
           <div className="flex gap-2 overflow-x-auto px-3 py-2 scrollbar-hide bg-white border-b border-gray-100">
             {images.map((url, idx) => (
@@ -533,7 +551,70 @@ export default function ListingPage() {
             ))}
           </div>
         )}
+
+        {/* ===== VIDEOS SECTION ===== */}
+        {videos.length > 0 && (
+          <div className="bg-white px-4 py-4 border-b border-gray-100">
+            <div className="flex items-center gap-2 mb-3">
+              <Video className="w-4 h-4 text-[#fb6f20]" />
+              <h3 className="text-sm font-bold text-gray-900">Product Videos</h3>
+              <span className="text-xs text-gray-400 ml-auto">{videos.length} video{videos.length > 1 ? 's' : ''}</span>
+            </div>
+            <div className="flex gap-3 overflow-x-auto scrollbar-hide">
+              {videos.map((videoUrl, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => openVideoModal(videoUrl)}
+                  className="relative flex-shrink-0 w-32 h-20 rounded-xl overflow-hidden bg-gray-100 group hover:ring-2 hover:ring-[#fb6f20] transition"
+                >
+                  {/* Video thumbnail */}
+                  <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                    <Play className="w-8 h-8 text-white drop-shadow-lg" fill="white" />
+                    <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition" />
+                  </div>
+                  <div className="absolute bottom-1 right-1 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded">
+                    Video {idx + 1}
+                  </div>
+                  <div className="absolute top-1 left-1 bg-[#fb6f20] text-white text-[8px] font-bold px-1.5 py-0.5 rounded">
+                    ▶
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* ===== Video Modal ===== */}
+      {showVideoModal && selectedVideo && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 p-4"
+          onClick={closeVideoModal}
+        >
+          <div
+            className="relative max-w-4xl w-full bg-black rounded-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={closeVideoModal}
+              className="absolute top-3 right-3 z-10 p-2 rounded-full bg-black/60 text-white hover:bg-black/80 transition"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <div className="aspect-video w-full">
+              <video
+                src={selectedVideo}
+                controls
+                autoPlay
+                className="w-full h-full"
+                controlsList="nodownload"
+              >
+                Your browser does not support the video tag.
+              </video>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-3xl mx-auto px-0">
         <div className="space-y-2">
