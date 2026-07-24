@@ -829,6 +829,46 @@ export default function SocialCheckout() {
     return payload;
   };
 
+  // ─── FIXED: Payment callback handler ──────────────────────────────────────────
+  const handlePaystackCallback = useCallback(async (response: { reference: string }, orderId: string) => {
+    try {
+      await api.verifyPaystackPayment({ 
+        reference: response.reference, 
+        orderId: orderId 
+      });
+      
+      setSuccess({ 
+        orderId: orderId, 
+        total 
+      });
+      
+      try {
+        // Buy Now purchases never touched the persisted cart, so leave
+        // it untouched — only clear it for a normal cart checkout.
+        if (!isBuyNowRef.current) {
+          if (localStorage.getItem("unimart:token")) {
+            await apiFetch("/cart/clear", { method: "DELETE" });
+          } else {
+            localStorage.removeItem("unimart:cart");
+          }
+          window.dispatchEvent(new Event("unimart:cartUpdated"));
+        }
+        setCart([]);
+      } catch {
+        // Non-fatal
+      }
+    } catch (error: unknown) {
+      setError(
+        error instanceof Error 
+          ? error.message 
+          : "We couldn't confirm your payment. Contact support with your reference: " + response.reference
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [total, isBuyNowRef]);
+
+  // ─── FIXED: handlePlaceOrder with proper callback ────────────────────────────
   const handlePlaceOrder = async () => {
     setError("");
     
@@ -890,6 +930,17 @@ export default function SocialCheckout() {
         throw new Error("Paystack failed to load. Please refresh and try again.");
       }
 
+      // ─── FIXED: Create a properly defined callback function ───
+      const paymentCallback = (response: { reference: string }) => {
+        // Call the handler with the order ID
+        handlePaystackCallback(response, order.id);
+      };
+
+      const onCloseHandler = () => {
+        setLoading(false);
+        setError("Payment window closed before it was completed. No charge was made.");
+      };
+
       const handler = window.PaystackPop.setup({
         key: PAYSTACK_PUBLIC_KEY,
         email: buyerEmail,
@@ -901,47 +952,8 @@ export default function SocialCheckout() {
           orderId: order.id,
           split_code: splitCode,
         },
-        callback: async (response: { reference: string }) => {
-          try {
-            await api.verifyPaystackPayment({ 
-              reference: response.reference, 
-              orderId: order.id 
-            });
-            
-            setSuccess({ 
-              orderId: order.orderId || order.id, 
-              total 
-            });
-            
-            try {
-              // Buy Now purchases never touched the persisted cart, so leave
-              // it untouched — only clear it for a normal cart checkout.
-              if (!isBuyNowRef.current) {
-                if (localStorage.getItem("unimart:token")) {
-                  await apiFetch("/cart/clear", { method: "DELETE" });
-                } else {
-                  localStorage.removeItem("unimart:cart");
-                }
-                window.dispatchEvent(new Event("unimart:cartUpdated"));
-              }
-              setCart([]);
-            } catch {
-              // Non-fatal
-            }
-          } catch (error: unknown) {
-            setError(
-              error instanceof Error 
-                ? error.message 
-                : "We couldn't confirm your payment. Contact support with your reference: " + response.reference
-            );
-          } finally {
-            setLoading(false);
-          }
-        },
-        onClose: () => {
-          setLoading(false);
-          setError("Payment window closed before it was completed. No charge was made.");
-        },
+        callback: paymentCallback,  // FIXED: Pass the properly defined function
+        onClose: onCloseHandler,     // FIXED: Pass the properly defined function
       });
 
       handler.openIframe();
