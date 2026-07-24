@@ -528,6 +528,11 @@ export default function SocialCheckout() {
   const bottomBarRef = useRef<HTMLDivElement | null>(null);
   const [bottomBarHeight, setBottomBarHeight] = useState<number>(0);
 
+  // True when this checkout session was started via "Buy Now" on a listing.
+  // Buy Now items are never part of the persisted cart, so quantity changes
+  // here must stay purely in-memory instead of touching localStorage/backend.
+  const isBuyNowRef = useRef(false);
+
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
@@ -612,25 +617,42 @@ export default function SocialCheckout() {
     };
   };
 
+  const mapRawToCartItem = (c: any): CartItem => ({
+    id: c.id,
+    name: c.title || c.name || "Item",
+    seller: c.seller || SELLER_ADWOA,
+    price: Number(c.price || 0),
+    qty: Number(c.qty || 1),
+    color: c.color || "#DDD",
+    likes: Number(c.likes || 0),
+    friendsBought: Array.isArray(c.friendsBought) ? c.friendsBought : [],
+  });
+
   const readLocalCart = (): CartItem[] => {
     try {
       const raw = localStorage.getItem("unimart:cart");
       const cur = raw ? JSON.parse(raw) : [];
       if (!Array.isArray(cur)) return [];
-      return cur.map(
-        (c: any): CartItem => ({
-          id: c.id,
-          name: c.title || c.name || "Item",
-          seller: c.seller || SELLER_ADWOA,
-          price: Number(c.price || 0),
-          qty: Number(c.qty || 1),
-          color: c.color || "#DDD",
-          likes: Number(c.likes || 0),
-          friendsBought: Array.isArray(c.friendsBought) ? c.friendsBought : [],
-        })
-      );
+      return cur.map(mapRawToCartItem);
     } catch {
       return [];
+    }
+  };
+
+  // Reads (and consumes) a one-off "Buy Now" item stashed by the listing page.
+  // Buy Now intentionally bypasses the persistent cart, mirroring Temu's flow
+  // where "Buy Now" checks out just that item without touching the cart.
+  const readAndClearBuyNow = (): CartItem[] | null => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = sessionStorage.getItem("unimart:buynow");
+      if (!raw) return null;
+      sessionStorage.removeItem("unimart:buynow");
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed) || parsed.length === 0) return null;
+      return parsed.map(mapRawToCartItem);
+    } catch {
+      return null;
     }
   };
 
@@ -651,6 +673,17 @@ export default function SocialCheckout() {
 
   const loadCart = useCallback(async () => {
     try {
+      // A "Buy Now" click takes priority: check out just that single item.
+      if (!isBuyNowRef.current) {
+        const buyNowItems = readAndClearBuyNow();
+        if (buyNowItems) {
+          isBuyNowRef.current = true;
+          setCart(buyNowItems);
+          return;
+        }
+      }
+      if (isBuyNowRef.current) return; // stay on the ephemeral single-item cart
+
       const localItems = readLocalCart();
       if (typeof window !== "undefined" && localStorage.getItem("unimart:token")) {
         try {
@@ -687,26 +720,38 @@ export default function SocialCheckout() {
   const updateQty = (id: string, delta: number) => {
     (async () => {
       const next = cart.map((i) => (i.id === id ? { ...i, qty: i.qty + delta } : i)).filter((i) => i.qty > 0);
+      setCart(next);
+
+      // Buy Now items are ephemeral and never touch the persisted cart, so
+      // quantity changes here should never write to localStorage/backend.
+      if (isBuyNowRef.current) return;
+
+      // Always keep the local cart in sync first — items added from the
+      // listing page only ever exist in localStorage, never the backend cart,
+      // so skipping this step is what let "removed" items silently reappear.
       try {
-        if (typeof window !== "undefined" && localStorage.getItem("unimart:token")) {
+        localStorage.setItem("unimart:cart", JSON.stringify(next));
+      } catch {
+        /* ignore */
+      }
+
+      if (typeof window !== "undefined" && localStorage.getItem("unimart:token")) {
+        try {
           const target = next.find((it) => it.id === id);
           const qty = target ? target.qty : 0;
           if (qty <= 0) await apiFetch(`/cart/${id}`, { method: "DELETE" });
           else await apiFetch("/cart/update", { method: "PUT", body: { productId: id, quantity: qty } });
-          window.dispatchEvent(new Event("unimart:cartUpdated"));
-          await loadCart();
-          return;
+        } catch {
+          /* backend cart may not have this item — local update above still applies */
         }
-      } catch {
-        /* fall through */
       }
-      setCart(next);
+
       try {
-        localStorage.setItem("unimart:cart", JSON.stringify(next));
         window.dispatchEvent(new Event("unimart:cartUpdated"));
       } catch {
         /* ignore */
       }
+      await loadCart();
     })();
   };
 
@@ -858,12 +903,16 @@ export default function SocialCheckout() {
             });
             
             try {
-              if (localStorage.getItem("unimart:token")) {
-                await apiFetch("/cart/clear", { method: "DELETE" });
-              } else {
-                localStorage.removeItem("unimart:cart");
+              // Buy Now purchases never touched the persisted cart, so leave
+              // it untouched — only clear it for a normal cart checkout.
+              if (!isBuyNowRef.current) {
+                if (localStorage.getItem("unimart:token")) {
+                  await apiFetch("/cart/clear", { method: "DELETE" });
+                } else {
+                  localStorage.removeItem("unimart:cart");
+                }
+                window.dispatchEvent(new Event("unimart:cartUpdated"));
               }
-              window.dispatchEvent(new Event("unimart:cartUpdated"));
               setCart([]);
             } catch {
               // Non-fatal

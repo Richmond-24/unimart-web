@@ -83,16 +83,13 @@ export default function CartPage() {
     return () => { window.removeEventListener("unimart:cartUpdated", onCustom as EventListener); };
   }, []);
 
+  // Items added from the listing page only ever live in localStorage (never
+  // the backend cart), so the local copy must always be updated first —
+  // otherwise a "successful" (but no-op) backend call leaves the item intact
+  // in localStorage and it reappears after the next reload/merge.
   const updateQty = async (id: string, qty: number) => {
     if (qty <= 0) return removeItem(id);
-    try {
-      if (localStorage.getItem("unimart:token")) {
-        await apiFetch("/cart/update", { method: "PUT", body: { productId: id, quantity: qty } });
-        try { window.dispatchEvent(new Event("unimart:cartUpdated")); } catch (e) {}
-        await load();
-        return;
-      }
-    } catch (e) {}
+
     try {
       const raw = localStorage.getItem("unimart:cart");
       const cur = raw ? JSON.parse(raw) : [];
@@ -100,29 +97,39 @@ export default function CartPage() {
       if (idx >= 0) {
         cur[idx].qty = qty;
         localStorage.setItem("unimart:cart", JSON.stringify(cur));
-        try { window.dispatchEvent(new Event("unimart:cartUpdated")); } catch (e) {}
-        setItems(cur.map((c: any) => ({ id: c.id, title: c.title, price: c.price || 0, qty: c.qty || 1, image: c.image || null })));
       }
     } catch (e) {}
+
+    if (localStorage.getItem("unimart:token")) {
+      try {
+        await apiFetch("/cart/update", { method: "PUT", body: { productId: id, quantity: qty } });
+      } catch (e) {
+        /* backend cart may not have this item — local update above still applies */
+      }
+    }
+
+    try { window.dispatchEvent(new Event("unimart:cartUpdated")); } catch (e) {}
+    await load();
   };
 
   const removeItem = async (id: string) => {
-    try {
-      if (localStorage.getItem("unimart:token")) {
-        await apiFetch(`/cart/${id}`, { method: "DELETE" });
-        try { window.dispatchEvent(new Event("unimart:cartUpdated")); } catch (e) {}
-        await load();
-        return;
-      }
-    } catch (e) {}
     try {
       const raw = localStorage.getItem("unimart:cart");
       const cur = raw ? JSON.parse(raw) : [];
       const next = cur.filter((c: any) => c.id !== id);
       localStorage.setItem("unimart:cart", JSON.stringify(next));
-      try { window.dispatchEvent(new Event("unimart:cartUpdated")); } catch (e) {}
-      setItems(next.map((c: any) => ({ id: c.id, title: c.title, price: c.price || 0, qty: c.qty || 1, image: c.image || null })));
     } catch (e) {}
+
+    if (localStorage.getItem("unimart:token")) {
+      try {
+        await apiFetch(`/cart/${id}`, { method: "DELETE" });
+      } catch (e) {
+        /* backend cart may not have this item — local removal above still applies */
+      }
+    }
+
+    try { window.dispatchEvent(new Event("unimart:cartUpdated")); } catch (e) {}
+    await load();
   };
 
   const subtotal = items.reduce((s, it) => s + Number(it.price || 0) * Number(it.qty || 1), 0);

@@ -107,9 +107,21 @@ export default function ListingPage() {
     setTimeout(() => setCartAdded(false), 2000);
   };
 
-  const handleBuyNow = async () => {
-    await handleAddCart();
-    router.push('/checkout');
+  const handleBuyNow = () => {
+    if (!listing) return;
+    // Temu-style "Buy Now": skip the persistent cart entirely and go straight
+    // to a single-item checkout session, instead of mixing it into the cart.
+    const item = {
+      id: listing._id || listing.id,
+      title: listing.title,
+      price: listing.price,
+      qty: 1,
+      image: listing.videoThumbnail || listing.imageUrls?.[0],
+    };
+    try {
+      sessionStorage.setItem('unimart:buynow', JSON.stringify([item]));
+    } catch (e) {}
+    router.push('/checkout?buyNow=1');
   };
 
   const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
