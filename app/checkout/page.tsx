@@ -194,6 +194,17 @@ const MOCK_CART: CartItem[] = [
   { id: "p2", name: "Retro Runner Sneakers", seller: SELLER_KWAME, price: 180, qty: 1, color: "#4361EE", likes: 512, friendsBought: ["Nana"] },
 ];
 
+// Fallback seller for real items that don't carry seller info (e.g. items
+// added straight from a listing page). Deliberately has NO subaccountCode —
+// unlike the demo sellers above, sending a fake split code to Paystack for a
+// real checkout causes it to reject the payment with "Invalid Split code."
+const DEFAULT_SELLER: Seller = {
+  id: "unknown-seller",
+  name: "Uni-Mart Seller",
+  avatar: "US",
+  deliveryOptions: [{ id: "standard", label: "Standard Delivery", eta: "3–5 days", price: 15 }],
+};
+
 const PAYMENT_CHANNELS: PaymentChannel[] = [
   { id: "mtn", label: "MTN MoMo", brandColor: "#FFCB05", paystackChannels: ["mobile_money"], tag: "Popular" },
   { id: "vodafone", label: "Vodafone Cash", brandColor: "#E60000", paystackChannels: ["mobile_money"], tag: null },
@@ -620,7 +631,7 @@ export default function SocialCheckout() {
   const mapRawToCartItem = (c: any): CartItem => ({
     id: c.id,
     name: c.title || c.name || "Item",
-    seller: c.seller || SELLER_ADWOA,
+    seller: c.seller || DEFAULT_SELLER,
     price: Number(c.price || 0),
     qty: Number(c.qty || 1),
     color: c.color || "#DDD",
