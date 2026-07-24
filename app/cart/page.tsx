@@ -87,7 +87,7 @@ export default function CartPage() {
     if (qty <= 0) return removeItem(id);
     try {
       if (localStorage.getItem("unimart:token")) {
-        await apiFetch("/cart/update", { method: "PUT", body: JSON.stringify({ productId: id, quantity: qty }) });
+        await apiFetch("/cart/update", { method: "PUT", body: { productId: id, quantity: qty } });
         try { window.dispatchEvent(new Event("unimart:cartUpdated")); } catch (e) {}
         await load();
         return;

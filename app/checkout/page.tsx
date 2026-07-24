@@ -21,7 +21,6 @@ import {
   Minus,
   Plus,
   ChevronDown,
-  ChevronUp,
   ArrowRight,
   ArrowLeft,
   AlertTriangle,
@@ -36,29 +35,24 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-// ─── DESIGN TOKENS ─────────────────────────────────────────────
+// ─── DESIGN TOKENS (Teal Blue & Orange Only) ─────────────────────────────────────────────
 const TEAL = "#0D7377";
 const TEAL_DARK = "#095357";
 const TEAL_LIGHT = "#14A8AE";
 const TEAL_TINT = "#E6F6F6";
 const TEAL_BORDER = "#BFE7E7";
 
-const BLUE = "#2E6FBA";
-const BLUE_LIGHT = "#5B93D6";
-const BLUE_TINT = "#EAF2FB";
-const BLUE_BORDER = "#C6DBF4";
-
 const ORANGE = "#FF6B35";
 const ORANGE_DARK = "#E5502A";
 const ORANGE_TINT = "#FFEDE4";
 const ORANGE_BORDER = "#FFCBAE";
 
-const MONEY = "#12A87F";
-const MONEY_TINT = "#E4F7F0";
-const DANGER = "#E24C4B";
-const DANGER_TINT = "#FDEBEB";
+const MONEY = "#0D7377"; // Using Teal for money/success to stick to 2 colors
+const MONEY_TINT = "#E6F6F6";
+const DANGER = "#E5502A"; // Using Orange Dark for danger/errors
+const DANGER_TINT = "#FFEDE4";
 
-const GRAD_BRAND = `linear-gradient(135deg, ${TEAL} 0%, ${BLUE} 100%)`;
+const GRAD_BRAND = `linear-gradient(135deg, ${TEAL} 0%, ${TEAL_LIGHT} 100%)`;
 const GRAD_CTA = `linear-gradient(135deg, ${ORANGE} 0%, ${ORANGE_DARK} 100%)`;
 
 // ─── TYPES ──────────────────────────────────────────────────
@@ -145,23 +139,11 @@ declare global {
 }
 
 // ─── API CONFIG ──────────────────────────────────────────────
-// IMPORTANT: apiFetch already adds /api to the URL, so use '/orders' not '/api/orders'
 const api = {
   async createOrder(payload: OrderPayload): Promise<OrderResponse> {
-    console.log('📤 Sending to /orders:', JSON.stringify(payload, null, 2));
-    
-    if (!payload.items || payload.items.length === 0) {
-      throw new Error('Cart is empty. Please add items before checkout.');
-    }
-    
-    if (!payload.buyerEmail) {
-      throw new Error('Email is required. Please enter your email.');
-    }
-
-    // ✅ CORRECT: Use '/orders' not '/api/orders' (apiFetch adds /api)
     return apiFetch("/orders", { 
       method: "POST", 
-      body: JSON.stringify(payload) 
+      body: payload 
     }) as Promise<OrderResponse>;
   },
   async initializePaystackPayment(data: { 
@@ -170,17 +152,15 @@ const api = {
     orderId: string;
     splitCode?: string | null;
   }): Promise<{ access_code: string; reference: string }> {
-    // ✅ CORRECT: Use '/payments/paystack/initialize' (apiFetch adds /api)
     return apiFetch("/payments/paystack/initialize", {
       method: "POST",
-      body: JSON.stringify(data),
+      body: data,
     }) as Promise<{ access_code: string; reference: string }>;
   },
   async verifyPaystackPayment(payload: PaystackVerifyPayload): Promise<{ status: string }> {
-    // ✅ CORRECT: Use '/payments/paystack/verify' (apiFetch adds /api)
     return apiFetch("/payments/paystack/verify", {
       method: "POST",
-      body: JSON.stringify(payload),
+      body: payload,
     }) as Promise<{ status: string }>;
   },
 };
@@ -218,7 +198,7 @@ const PAYMENT_CHANNELS: PaymentChannel[] = [
   { id: "mtn", label: "MTN MoMo", brandColor: "#FFCB05", paystackChannels: ["mobile_money"], tag: "Popular" },
   { id: "vodafone", label: "Vodafone Cash", brandColor: "#E60000", paystackChannels: ["mobile_money"], tag: null },
   { id: "airteltigo", label: "AirtelTigo", brandColor: "#ED1C24", paystackChannels: ["mobile_money"], tag: null },
-  { id: "card", label: "Card", brandColor: BLUE, paystackChannels: ["card"], tag: null },
+  { id: "card", label: "Card", brandColor: TEAL, paystackChannels: ["card"], tag: null },
 ];
 
 const PAYSTACK_PUBLIC_KEY = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || "";
@@ -278,12 +258,8 @@ const listItem: Variants = {
 function CheckoutStyles() {
   return (
     <style jsx global>{`
-      * {
-        box-sizing: border-box;
-      }
-      .uc-root {
-        overflow-x: hidden;
-      }
+      * { box-sizing: border-box; }
+      .uc-root { overflow-x: hidden; font-family: 'Inter', system-ui, sans-serif; }
       .uc-input {
         transition: border-color 0.15s ease, box-shadow 0.15s ease;
         font-size: 16px !important;
@@ -293,51 +269,30 @@ function CheckoutStyles() {
         border-color: ${TEAL} !important;
         box-shadow: 0 0 0 3px ${TEAL_TINT};
       }
-      .uc-btn-primary:focus-visible {
-        outline: 2px solid ${ORANGE};
-        outline-offset: 2px;
-      }
-      .uc-btn-ghost:hover {
-        border-color: ${TEAL} !important;
-        background: ${TEAL_TINT} !important;
-      }
-      .uc-option {
-        cursor: pointer;
-      }
-      .uc-option:hover {
-        border-color: ${TEAL_LIGHT} !important;
-      }
-      .uc-logo-badge {
-        box-shadow: 0 4px 14px -3px rgba(13, 115, 119, 0.55);
-      }
-      .uc-panel-scroll {
-        overflow: hidden;
-      }
+      .uc-btn-primary:focus-visible { outline: 2px solid ${ORANGE}; outline-offset: 2px; }
+      .uc-btn-ghost:hover { border-color: ${TEAL} !important; background: ${TEAL_TINT} !important; }
+      .uc-option { cursor: pointer; }
+      .uc-option:hover { border-color: ${TEAL_LIGHT} !important; }
+      .uc-logo-badge { box-shadow: 0 4px 14px -3px rgba(13, 115, 119, 0.55); }
+      .uc-panel-scroll { overflow: hidden; }
       @media (max-width: 767px) {
-        .uc-hide-mobile {
-          display: none !important;
-        }
-        .uc-summary-sidebar {
-          display: none !important;
-        }
+        .uc-hide-mobile { display: none !important; }
+        .uc-summary-sidebar { display: none !important; }
       }
       @media (min-width: 768px) {
-        .uc-hide-desktop {
-          display: none !important;
-        }
+        .uc-hide-desktop { display: none !important; }
       }
     `}</style>
   );
 }
 
 // ─── SMALL UI PRIMITIVES ──────────────────────────────────────
-function IconBadge({ icon: Icon, tone = "teal", size = 36 }: { icon: LucideIcon; tone?: "teal" | "blue" | "orange" | "money" | "muted"; size?: number }) {
+function IconBadge({ icon: Icon, tone = "teal", size = 36 }: { icon: LucideIcon; tone?: "teal" | "orange" | "money" | "muted"; size?: number }) {
   const map: Record<string, { bg: string; fg: string }> = {
     teal: { bg: TEAL_TINT, fg: TEAL },
-    blue: { bg: BLUE_TINT, fg: BLUE },
     orange: { bg: ORANGE_TINT, fg: ORANGE_DARK },
     money: { bg: MONEY_TINT, fg: MONEY },
-    muted: { bg: "var(--color-background-secondary)", fg: "var(--color-text-secondary)" },
+    muted: { bg: "#F5F5F5", fg: "#9CA3AF" },
   };
   const { bg, fg } = map[tone];
   return (
@@ -352,8 +307,8 @@ function StepHeader({ icon, title, subtitle }: { icon: LucideIcon; title: string
     <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: "1.35rem", minWidth: 0 }}>
       <IconBadge icon={icon} tone="teal" />
       <div style={{ minWidth: 0 }}>
-        <h2 style={{ margin: 0, fontSize: "clamp(17px, 4.2vw, 19px)", fontWeight: 800, color: "var(--color-text-primary)", letterSpacing: -0.3 }}>{title}</h2>
-        <p style={{ margin: "3px 0 0", fontSize: 13, color: "var(--color-text-secondary)" }}>{subtitle}</p>
+        <h2 style={{ margin: 0, fontSize: "clamp(17px, 4.2vw, 19px)", fontWeight: 800, color: "#111827", letterSpacing: -0.3 }}>{title}</h2>
+        <p style={{ margin: "3px 0 0", fontSize: 13, color: "#6B7280" }}>{subtitle}</p>
       </div>
     </div>
   );
@@ -362,15 +317,15 @@ function StepHeader({ icon, title, subtitle }: { icon: LucideIcon; title: string
 function Row({ label, value, bold, valueColor, mono }: { label: string; value: string; bold?: boolean; valueColor?: string; mono?: boolean }) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem" }}>
-      <span style={{ fontSize: 13, color: bold ? "var(--color-text-primary)" : "var(--color-text-secondary)", fontWeight: bold ? 700 : 400 }}>{label}</span>
+      <span style={{ fontSize: 13, color: bold ? "#111827" : "#6B7280", fontWeight: bold ? 700 : 400 }}>{label}</span>
       <span
         style={{
           fontSize: bold ? 16 : 13,
           fontWeight: bold ? 800 : 500,
-          color: valueColor || "var(--color-text-primary)",
+          color: valueColor || "#111827",
           textAlign: "right",
           fontVariantNumeric: "tabular-nums",
-          fontFamily: mono ? "var(--font-mono, monospace)" : undefined,
+          fontFamily: mono ? "monospace" : undefined,
         }}
       >
         {value}
@@ -389,12 +344,12 @@ function QtyBtn({ onClick, children, disabled }: { onClick: () => void; children
         width: 32,
         height: 32,
         borderRadius: 9,
-        border: "1px solid var(--color-border-secondary)",
-        background: "var(--color-background-secondary)",
+        border: "1px solid #E5E7EB",
+        background: "#F9FAFB",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        color: "var(--color-text-primary)",
+        color: "#111827",
         flexShrink: 0,
         opacity: disabled ? 0.4 : 1,
         cursor: disabled ? "not-allowed" : "pointer",
@@ -419,7 +374,7 @@ function PrimaryButton({ children, onClick, disabled, loading, trailingIcon: Tra
         padding: "15px",
         borderRadius: 13,
         border: "none",
-        background: disabled || loading ? "var(--color-border-secondary)" : GRAD_CTA,
+        background: disabled || loading ? "#E5E7EB" : GRAD_CTA,
         color: "#fff",
         fontSize: 15,
         fontWeight: 700,
@@ -452,9 +407,9 @@ function GhostButton({ children, onClick, leadingIcon: Leading = ArrowLeft }: { 
       style={{
         padding: "14px 18px",
         borderRadius: 13,
-        border: "1px solid var(--color-border-secondary)",
+        border: "1px solid #E5E7EB",
         background: "transparent",
-        color: "var(--color-text-primary)",
+        color: "#111827",
         fontSize: 14,
         fontWeight: 600,
         cursor: "pointer",
@@ -478,7 +433,7 @@ function IconInput({
 }: { icon: LucideIcon; invalid?: boolean } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <div style={{ position: "relative" }}>
-      <Icon size={16} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--color-text-tertiary)", pointerEvents: "none" }} />
+      <Icon size={16} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9CA3AF", pointerEvents: "none" }} />
       <input
         {...props}
         className="uc-input"
@@ -486,9 +441,9 @@ function IconInput({
           width: "100%",
           padding: "12px 12px 12px 36px",
           borderRadius: 11,
-          border: `1px solid ${invalid ? DANGER : "var(--color-border-secondary)"}`,
-          background: "var(--color-background-primary)",
-          color: "var(--color-text-primary)",
+          border: `1px solid ${invalid ? DANGER : "#E5E7EB"}`,
+          background: "#FFFFFF",
+          color: "#111827",
         }}
       />
     </div>
@@ -501,7 +456,7 @@ function Stepper({ step, furthestStep, onJump, isMobile }: { step: number; furth
   return (
     <div style={{ width: "100%", maxWidth: 1100, margin: "0 auto", padding: isMobile ? "0.9rem 1rem 0" : "1.25rem 1.5rem 0" }}>
       <div style={{ position: "relative", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <div style={{ position: "absolute", top: 16, left: `${100 / (STEPS.length * 2)}%`, right: `${100 / (STEPS.length * 2)}%`, height: 3, background: "var(--color-border-tertiary)", borderRadius: 999, zIndex: 0 }} />
+        <div style={{ position: "absolute", top: 16, left: `${100 / (STEPS.length * 2)}%`, right: `${100 / (STEPS.length * 2)}%`, height: 3, background: "#E5E7EB", borderRadius: 999, zIndex: 0 }} />
         <motion.div
           initial={false}
           animate={{ width: `calc(${pct}% * ${(STEPS.length - 1) / STEPS.length})` }}
@@ -530,18 +485,18 @@ function Stepper({ step, furthestStep, onJump, isMobile }: { step: number; furth
                   width: 32,
                   height: 32,
                   borderRadius: "50%",
-                  background: done ? GRAD_BRAND : active ? GRAD_CTA : "var(--color-background-primary)",
-                  border: active || done ? "none" : "2px solid var(--color-border-tertiary)",
+                  background: done ? GRAD_BRAND : active ? GRAD_CTA : "#FFFFFF",
+                  border: active || done ? "none" : "2px solid #E5E7EB",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  color: done || active ? "#fff" : "var(--color-text-tertiary)",
+                  color: done || active ? "#fff" : "#9CA3AF",
                   boxShadow: active ? "0 4px 12px -2px rgba(255,107,53,0.5)" : done ? "0 4px 12px -2px rgba(13,115,119,0.4)" : "none",
                 }}
               >
                 {done ? <Check size={15} strokeWidth={2.6} /> : <Icon size={14} strokeWidth={2.2} />}
               </motion.div>
-              <span style={{ fontSize: isMobile ? 10 : 12, fontWeight: active ? 700 : 500, color: active ? "var(--color-text-primary)" : "var(--color-text-tertiary)", whiteSpace: "nowrap" }}>{label}</span>
+              <span style={{ fontSize: isMobile ? 10 : 12, fontWeight: active ? 700 : 500, color: active ? "#111827" : "#9CA3AF", whiteSpace: "nowrap" }}>{label}</span>
             </button>
           );
         })}
@@ -737,7 +692,7 @@ export default function SocialCheckout() {
           const target = next.find((it) => it.id === id);
           const qty = target ? target.qty : 0;
           if (qty <= 0) await apiFetch(`/cart/${id}`, { method: "DELETE" });
-          else await apiFetch("/cart/update", { method: "PUT", body: JSON.stringify({ productId: id, quantity: qty }) });
+          else await apiFetch("/cart/update", { method: "PUT", body: { productId: id, quantity: qty } });
           window.dispatchEvent(new Event("unimart:cartUpdated"));
           await loadCart();
           return;
@@ -814,8 +769,6 @@ export default function SocialCheckout() {
         total,
       },
     };
-
-    console.log('🔍 buildOrderPayload output:', JSON.stringify(payload, null, 2));
     
     return payload;
   };
@@ -823,8 +776,6 @@ export default function SocialCheckout() {
   const handlePlaceOrder = async () => {
     setError("");
     
-    console.log('🔑 PAYSTACK_PUBLIC_KEY:', PAYSTACK_PUBLIC_KEY ? '✅ Set' : '❌ Not Set');
-
     if (!PAYSTACK_PUBLIC_KEY) {
       setError("Paystack isn't configured yet — set NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY.");
       return;
@@ -843,12 +794,6 @@ export default function SocialCheckout() {
     setLoading(true);
     
     try {
-      console.log('🔍 Checkout State:');
-      console.log('  - Cart items:', cart.length);
-      console.log('  - Seller groups:', sellerGroups.length);
-      console.log('  - Buyer email:', buyerEmail);
-      console.log('  - Totals:', { subtotal, deliveryFee, discount, total });
-
       const payload = buildOrderPayload();
       
       if (payload.items.length === 0) {
@@ -859,9 +804,7 @@ export default function SocialCheckout() {
         throw new Error('Email is required. Please enter your email.');
       }
 
-      console.log('📤 Creating order with payload:', JSON.stringify(payload, null, 2));
       const order = await api.createOrder(payload);
-      console.log('✅ Order created:', order);
       
       const sellerId = sellerGroups[0]?.seller.id;
       let splitCode = null;
@@ -875,14 +818,12 @@ export default function SocialCheckout() {
         }
       }
 
-      console.log('💳 Initializing Paystack payment...');
       const { access_code, reference } = await api.initializePaystackPayment({
         email: buyerEmail,
         amount: total,
         orderId: order.id,
         splitCode,
       });
-      console.log('✅ Payment initialized:', { access_code, reference });
 
       await loadPaystackScript();
 
@@ -955,20 +896,20 @@ export default function SocialCheckout() {
   // ─── SUCCESS SCREEN ─────────────────────────────────────────
   if (success) {
     return (
-      <div className="uc-root" style={{ minHeight: "100vh", background: `linear-gradient(180deg, ${TEAL_TINT} 0%, var(--color-background-tertiary) 340px)`, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
+      <div className="uc-root" style={{ minHeight: "100vh", background: `linear-gradient(180deg, ${TEAL_TINT} 0%, #F9FAFB 340px)`, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
         <CheckoutStyles />
         <motion.div
           initial={{ opacity: 0, y: 24, scale: 0.96 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ type: "spring", stiffness: 260, damping: 22 }}
-          style={{ background: "var(--color-background-primary)", borderRadius: 26, border: "1px solid var(--color-border-tertiary)", padding: "2.25rem 1.75rem", maxWidth: 440, width: "100%", textAlign: "center", boxShadow: "0 20px 50px -20px rgba(13,115,119,0.35)" }}
+          style={{ background: "#FFFFFF", borderRadius: 26, border: "1px solid #E5E7EB", padding: "2.25rem 1.75rem", maxWidth: 440, width: "100%", textAlign: "center", boxShadow: "0 20px 50px -20px rgba(13,115,119,0.35)" }}
         >
           <div style={{ position: "relative", width: 76, height: 76, margin: "0 auto 1.25rem" }}>
             <motion.div
               initial={{ scale: 0.85, opacity: 0.55 }}
               animate={{ scale: 1.55, opacity: 0 }}
               transition={{ duration: 1.6, repeat: Infinity, ease: "easeOut" }}
-              style={{ position: "absolute", inset: 0, borderRadius: "50%", background: MONEY }}
+              style={{ position: "absolute", inset: 0, borderRadius: "50%", background: TEAL }}
             />
             <motion.div
               initial={{ scale: 0, rotate: -30 }}
@@ -981,9 +922,9 @@ export default function SocialCheckout() {
           </div>
           <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 4 }}>
             <PartyPopper size={18} color={ORANGE} />
-            <h2 style={{ fontSize: 22, fontWeight: 800, margin: 0, color: "var(--color-text-primary)" }}>Order Placed</h2>
+            <h2 style={{ fontSize: 22, fontWeight: 800, margin: 0, color: "#111827" }}>Order Placed</h2>
           </motion.div>
-          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.32 }} style={{ color: "var(--color-text-secondary)", margin: "0 0 1.5rem", fontSize: 14 }}>
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.32 }} style={{ color: "#6B7280", margin: "0 0 1.5rem", fontSize: 14 }}>
             Order <strong>{success.orderId}</strong> is confirmed and each seller has been notified.
           </motion.p>
           <motion.div
@@ -1007,7 +948,7 @@ export default function SocialCheckout() {
                 setFurthestStep(1);
                 setCart(MOCK_CART);
               }}
-              style={{ padding: "11px 20px", borderRadius: 11, border: "1px solid var(--color-border-secondary)", background: "transparent", cursor: "pointer", fontSize: 14, fontWeight: 600, color: "var(--color-text-primary)" }}
+              style={{ padding: "11px 20px", borderRadius: 11, border: "1px solid #E5E7EB", background: "transparent", cursor: "pointer", fontSize: 14, fontWeight: 600, color: "#111827" }}
             >
               Continue Shopping
             </motion.button>
@@ -1023,31 +964,15 @@ export default function SocialCheckout() {
 
   // ─── MAIN WIZARD ─────────────────────────────────────────────
   return (
-    <div className="uc-root" style={{ minHeight: "100vh", background: "var(--color-background-tertiary)", fontFamily: "var(--font-sans)", paddingBottom: isMobile ? bottomBarHeight + 12 : 40 }}>
+    <div className="uc-root" style={{ minHeight: "100vh", background: "#F9FAFB", paddingBottom: isMobile ? bottomBarHeight + 20 : 40 }}>
       <CheckoutStyles />
 
-      <motion.div
-        initial={{ opacity: 0, y: -12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        style={{ background: GRAD_BRAND, padding: isMobile ? "0.85rem 1rem" : "0.9rem 2rem", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, boxShadow: "0 4px 16px -6px rgba(13,115,119,0.5)" }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-          <div className="uc-logo-badge" style={{ width: 34, height: 34, borderRadius: 10, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
-            <img src="/logo.png" alt="Uni-Mart" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-          </div>
-          <span style={{ fontWeight: 800, fontSize: 17, color: "#fff", letterSpacing: -0.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Uni-Mart</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.92)", background: "rgba(255,255,255,0.16)", padding: "6px 12px", borderRadius: 999, flexShrink: 0, whiteSpace: "nowrap" }}>
-          <ShoppingCart size={14} />
-          {cart.reduce((s, i) => s + i.qty, 0)} items
-        </div>
-      </motion.div>
+      {/* Header removed as requested */}
 
       <Stepper step={step} furthestStep={furthestStep} onJump={(n) => furthestStep >= n && jumpTo(n)} isMobile={isMobile} />
 
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "1rem" : "1.5rem", display: "flex", flexDirection: isMobile ? "column" : "row", gap: "1.5rem", alignItems: "flex-start" }}>
-        <div className="uc-panel-scroll" style={{ flex: 1, width: "100%", minWidth: 0, background: "var(--color-background-primary)", borderRadius: 20, border: "1px solid var(--color-border-tertiary)", padding: isMobile ? "1.1rem" : "1.6rem", boxShadow: "0 2px 10px rgba(16,16,20,0.05)", position: "relative" }}>
+        <div className="uc-panel-scroll" style={{ flex: 1, width: "100%", minWidth: 0, background: "#FFFFFF", borderRadius: 20, border: "1px solid #E5E7EB", padding: isMobile ? "1.1rem" : "1.6rem", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", position: "relative", marginBottom: isMobile ? bottomBarHeight + 20 : 0 }}>
           <AnimatePresence>
             {error && (
               <motion.div
@@ -1078,7 +1003,7 @@ export default function SocialCheckout() {
                 <div>
                   <StepHeader icon={ShoppingCart} title="Your Cart" subtitle={`Items from ${sellerGroups.length} local ${sellerGroups.length === 1 ? "creator" : "creators"}`} />
 
-                  {cart.length === 0 && <p style={{ fontSize: 14, color: "var(--color-text-secondary)" }}>Your cart is empty.</p>}
+                  {cart.length === 0 && <p style={{ fontSize: 14, color: "#6B7280" }}>Your cart is empty.</p>}
 
                   <motion.div variants={listStagger} initial="hidden" animate="show">
                     {sellerGroups.map((group) => (
@@ -1088,18 +1013,18 @@ export default function SocialCheckout() {
                           <span style={{ fontSize: 12, fontWeight: 700, color: TEAL_DARK, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{group.seller.name}</span>
                         </div>
 
-                        {group.items.map((item) => (
-                          <motion.div variants={listItem} key={item.id} style={{ display: "flex", gap: 12, padding: "10px 0", borderBottom: "1px solid var(--color-border-tertiary)" }}>
+                        {group.items.map((item, itemIdx) => (
+                          <motion.div variants={listItem} key={`${group.seller.id}-${item.id}-${itemIdx}`} style={{ display: "flex", gap: 12, padding: "10px 0", borderBottom: "1px solid #F3F4F6" }}>
                             <div style={{ width: isMobile ? 54 : 60, height: isMobile ? 54 : 60, borderRadius: 14, background: item.color + "1F", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                               <Package size={24} color={item.color} strokeWidth={1.8} />
                             </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                                <p style={{ margin: 0, fontWeight: 600, fontSize: 13.5, color: "var(--color-text-primary)", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</p>
-                                <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: "var(--color-text-primary)", fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>{fmt(item.price * item.qty)}</p>
+                                <p style={{ margin: 0, fontWeight: 600, fontSize: 13.5, color: "#111827", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</p>
+                                <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: "#111827", fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>{fmt(item.price * item.qty)}</p>
                               </div>
                               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 6, flexWrap: "wrap", gap: 6 }}>
-                                <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: "var(--color-text-tertiary)", minWidth: 0 }}>
+                                <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: "#9CA3AF", minWidth: 0 }}>
                                   <span style={{ display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
                                     <Heart size={12} fill="currentColor" color={ORANGE} /> {item.likes.toLocaleString()}
                                   </span>
@@ -1142,8 +1067,8 @@ export default function SocialCheckout() {
                     <div key={group.seller.id} style={{ marginBottom: "1.25rem" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, minWidth: 0, flexWrap: "wrap" }}>
                         <div style={{ width: 20, height: 20, borderRadius: "50%", background: GRAD_BRAND, color: "#fff", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{group.seller.avatar}</div>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-text-primary)", overflow: "hidden", textOverflow: "ellipsis" }}>{group.seller.name}</span>
-                        <span style={{ fontSize: 11, color: "var(--color-text-tertiary)", whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#111827", overflow: "hidden", textOverflow: "ellipsis" }}>{group.seller.name}</span>
+                        <span style={{ fontSize: 11, color: "#9CA3AF", whiteSpace: "nowrap" }}>
                           · {group.items.length} item{group.items.length > 1 ? "s" : ""}
                         </span>
                       </div>
@@ -1161,19 +1086,19 @@ export default function SocialCheckout() {
                               style={{
                                 padding: "13px 12px",
                                 borderRadius: 14,
-                                border: selected ? `2px solid ${TEAL}` : "1px solid var(--color-border-tertiary)",
-                                background: selected ? TEAL_TINT : "var(--color-background-primary)",
+                                border: selected ? `2px solid ${TEAL}` : "1px solid #E5E7EB",
+                                background: selected ? TEAL_TINT : "#FFFFFF",
                                 textAlign: "left",
                                 boxShadow: selected ? "0 4px 12px -4px rgba(13,115,119,0.35)" : "none",
                                 minWidth: 0,
                               }}
                             >
                               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, minWidth: 0 }}>
-                                <OptIcon size={14} color={selected ? TEAL : "var(--color-text-secondary)"} style={{ flexShrink: 0 }} />
-                                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: selected ? TEAL_DARK : "var(--color-text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{opt.label}</p>
+                                <OptIcon size={14} color={selected ? TEAL : "#6B7280"} style={{ flexShrink: 0 }} />
+                                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: selected ? TEAL_DARK : "#111827", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{opt.label}</p>
                               </div>
-                              <p style={{ margin: 0, fontSize: 11, color: "var(--color-text-secondary)" }}>{opt.eta}</p>
-                              <p style={{ margin: "4px 0 0", fontSize: 13, fontWeight: 800, color: opt.price === 0 ? MONEY : "var(--color-text-primary)", fontVariantNumeric: "tabular-nums" }}>{opt.price === 0 ? "Free" : fmt(opt.price)}</p>
+                              <p style={{ margin: 0, fontSize: 11, color: "#6B7280" }}>{opt.eta}</p>
+                              <p style={{ margin: "4px 0 0", fontSize: 13, fontWeight: 800, color: opt.price === 0 ? MONEY : "#111827", fontVariantNumeric: "tabular-nums" }}>{opt.price === 0 ? "Free" : fmt(opt.price)}</p>
                             </motion.button>
                           );
                         })}
@@ -1183,28 +1108,28 @@ export default function SocialCheckout() {
 
                   {needsAddress && (
                     <div style={{ marginTop: "0.5rem" }}>
-                      <p style={{ fontSize: 13, fontWeight: 700, margin: "0 0 10px", color: "var(--color-text-primary)", display: "flex", alignItems: "center", gap: 6 }}>
-                        <MapPin size={14} color={BLUE} /> Delivery address
+                      <p style={{ fontSize: 13, fontWeight: 700, margin: "0 0 10px", color: "#111827", display: "flex", alignItems: "center", gap: 6 }}>
+                        <MapPin size={14} color={TEAL} /> Delivery address
                       </p>
                       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
                         <div style={{ gridColumn: !isMobile ? "span 2" : "span 1" }}>
-                          <label style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", display: "block", marginBottom: 5 }}>Full Name</label>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: "#6B7280", display: "block", marginBottom: 5 }}>Full Name</label>
                           <IconInput icon={User} value={address.name} onChange={(e) => handleFieldChange("name", e.target.value)} onBlur={() => handleTouch("name")} placeholder="Ama Owusu" invalid={touched.name && !address.name} />
                         </div>
                         <div>
-                          <label style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", display: "block", marginBottom: 5 }}>Phone Number</label>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: "#6B7280", display: "block", marginBottom: 5 }}>Phone Number</label>
                           <IconInput icon={Phone} value={address.phone} onChange={(e) => handleFieldChange("phone", e.target.value)} onBlur={() => handleTouch("phone")} placeholder="0244 123 456" invalid={touched.phone && !address.phone} />
                         </div>
                         <div>
-                          <label style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", display: "block", marginBottom: 5 }}>Region</label>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: "#6B7280", display: "block", marginBottom: 5 }}>Region</label>
                           <IconInput icon={MapPin} value={address.region} onChange={(e) => handleFieldChange("region", e.target.value)} onBlur={() => handleTouch("region")} placeholder="Greater Accra" invalid={touched.region && !address.region} />
                         </div>
                         <div>
-                          <label style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", display: "block", marginBottom: 5 }}>City / Town</label>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: "#6B7280", display: "block", marginBottom: 5 }}>City / Town</label>
                           <IconInput icon={MapPin} value={address.city} onChange={(e) => handleFieldChange("city", e.target.value)} onBlur={() => handleTouch("city")} placeholder="Accra" invalid={touched.city && !address.city} />
                         </div>
                         <div>
-                          <label style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", display: "block", marginBottom: 5 }}>Landmark (optional)</label>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: "#6B7280", display: "block", marginBottom: 5 }}>Landmark (optional)</label>
                           <IconInput icon={MapPin} value={address.landmark} onChange={(e) => handleFieldChange("landmark", e.target.value)} placeholder="Near Accra Mall" />
                         </div>
                       </div>
@@ -1231,12 +1156,12 @@ export default function SocialCheckout() {
                 <div>
                   <StepHeader icon={CreditCard} title="Payment" subtitle="Checkout runs securely through Paystack" />
 
-                  <label style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", display: "block", marginBottom: 5 }}>Email for receipt</label>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: "#6B7280", display: "block", marginBottom: 5 }}>Email for receipt</label>
                   <div style={{ marginBottom: "1.25rem" }}>
                     <IconInput icon={Mail} value={buyerEmail} onChange={(e) => setBuyerEmail(e.target.value)} onBlur={() => handleTouch("email")} placeholder="you@example.com" type="email" invalid={touched.email && !validatePaymentStep()} />
                   </div>
 
-                  <p style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", margin: "0 0 8px" }}>Payment method</p>
+                  <p style={{ fontSize: 12, fontWeight: 600, color: "#6B7280", margin: "0 0 8px" }}>Payment method</p>
                   <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: 10, marginBottom: "1.25rem" }}>
                     {PAYMENT_CHANNELS.map((pm) => {
                       const selected = payChannel === pm.id;
@@ -1247,24 +1172,24 @@ export default function SocialCheckout() {
                           onClick={() => setPayChannel(pm.id)}
                           className="uc-option"
                           whileTap={{ scale: 0.98 }}
-                          style={{ padding: "13px 10px", borderRadius: 14, border: selected ? `2px solid ${TEAL}` : "1px solid var(--color-border-tertiary)", background: selected ? TEAL_TINT : "var(--color-background-primary)", textAlign: "center", position: "relative", boxShadow: selected ? "0 4px 12px -4px rgba(13,115,119,0.35)" : "none", minWidth: 0, overflow: "hidden" }}
+                          style={{ padding: "13px 10px", borderRadius: 14, border: selected ? `2px solid ${TEAL}` : "1px solid #E5E7EB", background: selected ? TEAL_TINT : "#FFFFFF", textAlign: "center", position: "relative", boxShadow: selected ? "0 4px 12px -4px rgba(13,115,119,0.35)" : "none", minWidth: 0, overflow: "hidden" }}
                         >
                           {pm.tag && (
                             <span style={{ position: "absolute", top: 6, right: 6, fontSize: 9, fontWeight: 700, background: GRAD_CTA, color: "#fff", padding: "2px 6px", borderRadius: 20, lineHeight: 1.4 }}>{pm.tag}</span>
                           )}
                           <div style={{ position: "relative", width: 26, height: 26, margin: "6px auto 0" }}>
-                            <Icon size={22} color={selected ? TEAL : "var(--color-text-secondary)"} />
-                            <span style={{ position: "absolute", bottom: -1, right: -3, width: 8, height: 8, borderRadius: "50%", background: pm.brandColor, border: "1.5px solid var(--color-background-primary)" }} />
+                            <Icon size={22} color={selected ? TEAL : "#6B7280"} />
+                            <span style={{ position: "absolute", bottom: -1, right: -3, width: 8, height: 8, borderRadius: "50%", background: pm.brandColor, border: "1.5px solid #FFFFFF" }} />
                           </div>
-                          <p style={{ margin: "6px 0 0", fontSize: 12, fontWeight: 700, color: selected ? TEAL_DARK : "var(--color-text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pm.label}</p>
+                          <p style={{ margin: "6px 0 0", fontSize: 12, fontWeight: 700, color: selected ? TEAL_DARK : "#111827", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pm.label}</p>
                         </motion.button>
                       );
                     })}
                   </div>
 
-                  <div style={{ background: BLUE_TINT, borderRadius: 12, padding: "10px 12px", display: "flex", alignItems: "flex-start", gap: 8 }}>
-                    <ShieldCheck size={16} color={BLUE} style={{ flexShrink: 0, marginTop: 1 }} />
-                    <p style={{ margin: 0, fontSize: 12, color: "var(--color-text-secondary)" }}>
+                  <div style={{ background: TEAL_TINT, borderRadius: 12, padding: "10px 12px", display: "flex", alignItems: "flex-start", gap: 8 }}>
+                    <ShieldCheck size={16} color={TEAL} style={{ flexShrink: 0, marginTop: 1 }} />
+                    <p style={{ margin: 0, fontSize: 12, color: "#6B7280" }}>
                       {payChannel === "card" ? "Card details are entered on Paystack's secure page — Uni-Mart never sees or stores your card." : "You'll get a Paystack prompt to approve payment from your phone."}
                     </p>
                   </div>
@@ -1299,11 +1224,11 @@ export default function SocialCheckout() {
                             <div style={{ width: 26, height: 26, borderRadius: "50%", background: TEAL_TINT, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                               <OptIcon size={13} color={TEAL} />
                             </div>
-                            {idx < sellerGroups.length - 1 && <div style={{ width: 1, flex: 1, minHeight: 18, borderLeft: "1.5px dashed var(--color-border-tertiary)" }} />}
+                            {idx < sellerGroups.length - 1 && <div style={{ width: 1, flex: 1, minHeight: 18, borderLeft: "1.5px dashed #E5E7EB" }} />}
                           </div>
                           <div style={{ paddingBottom: 14, minWidth: 0 }}>
-                            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "var(--color-text-primary)", overflow: "hidden", textOverflow: "ellipsis" }}>{g.seller.name}</p>
-                            <p style={{ margin: "2px 0 0", fontSize: 12, color: "var(--color-text-secondary)" }}>
+                            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#111827", overflow: "hidden", textOverflow: "ellipsis" }}>{g.seller.name}</p>
+                            <p style={{ margin: "2px 0 0", fontSize: 12, color: "#6B7280" }}>
                               {opt?.label ?? "—"} · {opt?.eta}
                             </p>
                           </div>
@@ -1315,8 +1240,8 @@ export default function SocialCheckout() {
                         <CreditCard size={13} color={ORANGE_DARK} />
                       </div>
                       <div style={{ minWidth: 0 }}>
-                        <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "var(--color-text-primary)" }}>Pay {fmt(total)} with Paystack</p>
-                        <p style={{ margin: "2px 0 0", fontSize: 12, color: "var(--color-text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#111827" }}>Pay {fmt(total)} with Paystack</p>
+                        <p style={{ margin: "2px 0 0", fontSize: 12, color: "#6B7280", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {PAYMENT_CHANNELS.find((p) => p.id === payChannel)?.label} · receipt to {buyerEmail || "—"}
                         </p>
                       </div>
@@ -1324,9 +1249,9 @@ export default function SocialCheckout() {
                   </div>
 
                   {needsAddress && (
-                    <div style={{ background: BLUE_TINT, borderRadius: 14, padding: "0.85rem 1rem", marginBottom: "1.25rem", display: "flex", alignItems: "flex-start", gap: 8 }}>
-                      <MapPin size={15} color={BLUE} style={{ marginTop: 1, flexShrink: 0 }} />
-                      <p style={{ margin: 0, fontSize: 13, color: "var(--color-text-secondary)" }}>
+                    <div style={{ background: TEAL_TINT, borderRadius: 14, padding: "0.85rem 1rem", marginBottom: "1.25rem", display: "flex", alignItems: "flex-start", gap: 8 }}>
+                      <MapPin size={15} color={TEAL} style={{ marginTop: 1, flexShrink: 0 }} />
+                      <p style={{ margin: 0, fontSize: 13, color: "#6B7280" }}>
                         {address.name} · {address.phone} · {address.city}, {address.region}
                       </p>
                     </div>
@@ -1341,7 +1266,7 @@ export default function SocialCheckout() {
                     </div>
                   </div>
 
-                  <p style={{ textAlign: "center", fontSize: 12, color: "var(--color-text-tertiary)", marginTop: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                  <p style={{ textAlign: "center", fontSize: 12, color: "#9CA3AF", marginTop: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
                     <Lock size={12} /> Secured by Paystack · 256-bit encryption
                   </p>
                 </div>
@@ -1358,7 +1283,7 @@ export default function SocialCheckout() {
       <div
         ref={bottomBarRef}
         className="uc-hide-desktop"
-        style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "var(--color-background-primary)", borderTop: "1px solid var(--color-border-tertiary)", boxShadow: "0 -6px 20px rgba(13,115,119,0.12)", paddingBottom: "env(safe-area-inset-bottom)", zIndex: 40 }}
+        style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#FFFFFF", borderTop: "1px solid #E5E7EB", boxShadow: "0 -6px 20px rgba(13,115,119,0.12)", paddingBottom: "env(safe-area-inset-bottom)", zIndex: 40 }}
       >
         <AnimatePresence initial={false}>
           {summaryOpen && (
@@ -1370,7 +1295,7 @@ export default function SocialCheckout() {
           )}
         </AnimatePresence>
         <button onClick={() => setSummaryOpen((v) => !v)} style={{ width: "100%", padding: "14px 16px", background: "none", border: "none", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", minHeight: 52 }}>
-          <span style={{ fontSize: 13, color: "var(--color-text-secondary)", fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }}>
+          <span style={{ fontSize: 13, color: "#6B7280", fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }}>
             {summaryOpen ? "Hide" : "View"} order summary
             <motion.span animate={{ rotate: summaryOpen ? 180 : 0 }} transition={{ duration: 0.2 }} style={{ display: "flex" }}>
               <ChevronDown size={14} />
@@ -1386,9 +1311,9 @@ export default function SocialCheckout() {
 // ─── Order summary card ─────────────────────────────────
 function OrderSummaryCard({ subtotal, deliveryFee, discount, total, itemCount, flat }: { subtotal: number; deliveryFee: number; discount: number; total: number; itemCount: number; flat?: boolean }) {
   return (
-    <div style={{ background: flat ? "transparent" : "var(--color-background-primary)", borderRadius: 20, border: flat ? "none" : "1px solid var(--color-border-tertiary)", overflow: "hidden", boxShadow: flat ? "none" : "0 2px 10px rgba(16,16,20,0.05)" }}>
+    <div style={{ background: flat ? "transparent" : "#FFFFFF", borderRadius: 20, border: flat ? "none" : "1px solid #E5E7EB", overflow: "hidden", boxShadow: flat ? "none" : "0 2px 10px rgba(0,0,0,0.05)" }}>
       {!flat && (
-        <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid var(--color-border-tertiary)", display: "flex", alignItems: "center", gap: 8, background: TEAL_TINT }}>
+        <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", gap: 8, background: TEAL_TINT }}>
           <Receipt size={16} color={TEAL} />
           <p style={{ margin: 0, fontWeight: 800, fontSize: 15, color: TEAL_DARK }}>Order Summary</p>
         </div>
@@ -1397,7 +1322,7 @@ function OrderSummaryCard({ subtotal, deliveryFee, discount, total, itemCount, f
         <Row label={`Subtotal (${itemCount} items)`} value={fmt(subtotal)} />
         <Row label="Delivery" value={deliveryFee === 0 ? "Free" : fmt(deliveryFee)} valueColor={deliveryFee === 0 ? MONEY : undefined} />
         {discount > 0 && <Row label="Friend discount" value={`–${fmt(discount)}`} valueColor={MONEY} />}
-        <div style={{ borderTop: "1px dashed var(--color-border-tertiary)", paddingTop: 10, marginTop: 4 }}>
+        <div style={{ borderTop: "1px dashed #E5E7EB", paddingTop: 10, marginTop: 4 }}>
           <Row label="Total" value={fmt(total)} bold valueColor={TEAL_DARK} />
         </div>
       </div>
@@ -1413,8 +1338,8 @@ function OrderSummaryCard({ subtotal, deliveryFee, discount, total, itemCount, f
         </div>
       )}
       {!flat && subtotal < 200 && (
-        <div style={{ margin: "0 1.25rem 1.25rem", background: BLUE_TINT, borderRadius: 12, padding: "10px 12px" }}>
-          <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>Spend {fmt(200 - subtotal)} more for a discount</span>
+        <div style={{ margin: "0 1.25rem 1.25rem", background: TEAL_TINT, borderRadius: 12, padding: "10px 12px" }}>
+          <span style={{ fontSize: 12, color: "#6B7280" }}>Spend {fmt(200 - subtotal)} more for a discount</span>
           <div style={{ height: 6, background: "#fff", borderRadius: 999, overflow: "hidden", marginTop: 6 }}>
             <motion.div
               initial={{ width: 0 }}

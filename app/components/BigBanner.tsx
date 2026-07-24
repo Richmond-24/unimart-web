@@ -1,44 +1,19 @@
-
 "use client";
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-
-function BagIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
-      <path
-        d="M6 8h12l-1 12a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 8Z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-      />
-      <path d="M9 8V6a3 3 0 0 1 6 0v2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function UsersIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
-      <circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-      <circle cx="17" cy="9" r="2.4" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M15.5 14.2c2.6.5 4.5 2.7 4.5 5.8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  );
-}
+import { ShoppingBag, Users, ArrowRight, Sparkles, Zap, TrendingUp } from "lucide-react";
 
 export default function BigBanner() {
   const bannerRef = useRef<HTMLDivElement | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [hasEntered, setHasEntered] = useState(false);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     const node = bannerRef.current;
     if (!node) return;
 
-    // Respect reduced-motion users: show immediately, skip the animation state machine.
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReduced) {
       setIsVisible(true);
@@ -50,8 +25,6 @@ export default function BigBanner() {
       ([entry]) => {
         if (entry.isIntersecting) {
           setIsVisible(true);
-          // Mark "entered" a beat after becoming visible so the entrance
-          // transition finishes before the attention nudge kicks in.
           const timer = setTimeout(() => setHasEntered(true), 700);
           return () => clearTimeout(timer);
         }
@@ -63,125 +36,140 @@ export default function BigBanner() {
     return () => observer.disconnect();
   }, []);
 
+  // Parallax effect for background blobs
+  const handleMouseMove = (e: React.MouseEvent) => {
+    const rect = bannerRef.current?.getBoundingClientRect();
+    if (rect) {
+      const x = (e.clientX - rect.left) / rect.width;
+      const y = (e.clientY - rect.top) / rect.height;
+      setMousePos({ x, y });
+    }
+  };
+
   return (
     <div
       ref={bannerRef}
-      className={`w-full rounded-2xl shadow-md overflow-hidden bg-gradient-to-br from-orange-600 via-orange-600 to-orange-500 relative transition-all duration-700 ease-out ${
-        isVisible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-6 scale-[0.97]"
-      } ${hasEntered ? "animate-attention-nudge" : ""}`}
+      onMouseMove={handleMouseMove}
+      className={`w-full rounded-3xl overflow-hidden relative transition-all duration-1000 ease-out group ${
+        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-12"
+      }`}
+      style={{
+        background: "linear-gradient(135deg, #6C5CE7 0%, #FF6B9D 50%, #FFB88C 100%)",
+        boxShadow: "0 20px 40px -10px rgba(108, 92, 231, 0.3)"
+      }}
     >
-      {/* Shimmer sweep */}
-      <div className="pointer-events-none absolute inset-0 animate-banner-shimmer bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+      {/* Animated Noise Texture */}
+      <div className="absolute inset-0 opacity-[0.08] mix-blend-overlay pointer-events-none" 
+           style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")` }} />
 
-      {/* Soft decorative glow */}
-      <div className="pointer-events-none absolute -top-10 -right-10 w-40 h-40 rounded-full bg-orange-400/30 blur-2xl animate-glow-pulse" />
-      <div className="pointer-events-none absolute -bottom-8 left-1/4 w-28 h-28 rounded-full bg-orange-300/20 blur-2xl animate-glow-pulse [animation-delay:1.2s]" />
+      {/* Dynamic Gradient Blobs with Parallax */}
+      <div 
+        className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl transition-transform duration-500 ease-out"
+        style={{ transform: `translate(${mousePos.x * -20}px, ${mousePos.y * -20}px)` }}
+      />
+      <div 
+        className="absolute bottom-0 left-0 w-48 h-48 bg-[#FFB88C]/20 rounded-full blur-3xl transition-transform duration-500 ease-out"
+        style={{ transform: `translate(${mousePos.x * 20}px, ${mousePos.y * 20}px)` }}
+      />
+      
+      {/* Floating Geometric Shapes */}
+      <div className="absolute top-4 left-1/4 w-8 h-8 border-2 border-white/20 rounded-lg rotate-12 animate-float-slow" />
+      <div className="absolute bottom-8 right-1/3 w-4 h-4 bg-white/20 rounded-full animate-float-fast" />
+      <div className="absolute top-1/2 right-10 w-6 h-6 bg-[#FFB88C]/30 rounded-md rotate-45 animate-float-med" />
 
-      <div className="relative flex flex-col sm:flex-row items-stretch">
-        {/* Left: the pitch */}
-        <div className="flex-1 min-w-0 px-5 py-5 sm:px-6 flex items-center gap-4">
-          <div className="flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-orange-400 flex items-center justify-center shadow-inner animate-badge-float">
-            <BagIcon className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+      {/* Shimmer Sweep */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 translate-x-[-200%] animate-shimmer" />
+
+      <div className="relative flex flex-col md:flex-row items-center justify-between p-6 md:p-8 gap-6">
+        
+        {/* Left Content */}
+        <div className="flex-1 min-w-0 z-10">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-[#00D9A3]" />
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/20 backdrop-blur-md text-[10px] font-bold uppercase tracking-wider text-white border border-white/10">
+              <Zap size={10} fill="white" />
+              Live Flash Sale
+            </span>
           </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5 mb-0.5">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-200 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-100" />
-              </span>
-              <p className="text-xs font-bold uppercase tracking-wider text-orange-100">
-                Live now &middot; 128 shopping this deal
-              </p>
+
+          <h2 className="text-2xl md:text-3xl lg:text-4xl font-black text-white leading-[1.1] mb-2 drop-shadow-sm">
+            Dorm Essentials, <br/>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-orange-100">picked by your community.</span>
+          </h2>
+
+          <div className="flex items-center gap-4 mt-4">
+            <div className="flex -space-x-2">
+              {[1,2,3].map(i => (
+                <div key={i} className="w-8 h-8 rounded-full bg-white/20 border-2 border-white/50 flex items-center justify-center text-[10px] font-bold text-white backdrop-blur-sm">
+                  {String.fromCharCode(64+i)}
+                </div>
+              ))}
+              <div className="w-8 h-8 rounded-full bg-[#00D9A3] border-2 border-white flex items-center justify-center text-[10px] font-bold text-white">
+                +128
+              </div>
             </div>
-            <p className="text-base sm:text-lg font-extrabold text-white leading-snug break-words">
-              Dorm Essentials, picked by your community
-            </p>
-            <p className="text-sm text-orange-100 break-words flex items-center gap-1.5">
-              <UsersIcon className="w-4 h-4 flex-shrink-0" />
-              Trending among students near you — up to 50% off
+            <p className="text-sm text-white/90 font-medium flex items-center gap-1.5">
+              <TrendingUp size={14} />
+              Trending near you • Up to 50% off
             </p>
           </div>
         </div>
 
-        {/* Right: the CTA */}
+        {/* Right CTA */}
         <Link
           href="/search?category=flash-deals"
-          className="group flex-shrink-0 bg-orange-50 px-6 py-4 sm:py-5 flex flex-row sm:flex-col items-center justify-center gap-2 sm:gap-1.5 hover:bg-white transition-colors"
+          className="group relative z-10 flex-shrink-0"
         >
-          <BagIcon className="w-5 h-5 text-orange-500" />
-          <span className="px-4 py-2 rounded-full bg-slate-900 text-white font-bold text-sm whitespace-nowrap flex items-center gap-1.5 transition-transform group-hover:translate-x-0.5">
-            Shop the deals
-            <span className="transition-transform group-hover:translate-x-1">→</span>
-          </span>
+          <div className="absolute inset-0 bg-white rounded-2xl blur opacity-40 group-hover:opacity-60 transition-opacity duration-300" />
+          <div className="relative bg-white text-[#6C5CE7] px-6 py-4 rounded-2xl flex items-center gap-3 shadow-xl hover:scale-105 active:scale-95 transition-all duration-300">
+            <div className="w-10 h-10 rounded-xl bg-[#6C5CE7]/10 flex items-center justify-center group-hover:bg-[#6C5CE7] group-hover:text-white transition-colors">
+              <ShoppingBag size={20} />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">Shop Now</span>
+              <span className="text-sm font-black text-gray-900 flex items-center gap-1">
+                View Deals 
+                <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
+              </span>
+            </div>
+          </div>
         </Link>
       </div>
 
       <style jsx>{`
-        @keyframes bannerShimmer {
-          0% {
-            transform: translateX(-100%);
-          }
-          60%,
-          100% {
-            transform: translateX(100%);
-          }
+        @keyframes shimmer {
+          0% { transform: translateX(-100%) skewX(-12deg); }
+          100% { transform: translateX(200%) skewX(-12deg); }
         }
-        @keyframes glowPulse {
-          0%,
-          100% {
-            opacity: 0.5;
-            transform: scale(1);
-          }
-          50% {
-            opacity: 0.9;
-            transform: scale(1.15);
-          }
+        @keyframes floatSlow {
+          0%, 100% { transform: translateY(0) rotate(12deg); }
+          50% { transform: translateY(-10px) rotate(15deg); }
         }
-        @keyframes badgeFloat {
-          0%,
-          100% {
-            transform: translateY(0);
-          }
-          50% {
-            transform: translateY(-4px);
-          }
+        @keyframes floatMed {
+          0%, 100% { transform: translateY(0) rotate(45deg); }
+          50% { transform: translateY(-8px) rotate(50deg); }
         }
-        @keyframes attentionNudge {
-          0%,
-          100% {
-            transform: scale(1);
-          }
-          4% {
-            transform: scale(1.015);
-          }
-          8% {
-            transform: scale(1);
-          }
-          12% {
-            transform: scale(1.01);
-          }
-          16%,
-          100% {
-            transform: scale(1);
-          }
+        @keyframes floatFast {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-6px); }
         }
-        .animate-banner-shimmer {
-          animation: bannerShimmer 5s ease-in-out infinite;
+        .animate-shimmer {
+          animation: shimmer 4s infinite linear;
         }
-        .animate-glow-pulse {
-          animation: glowPulse 4s ease-in-out infinite;
+        .animate-float-slow {
+          animation: floatSlow 6s ease-in-out infinite;
         }
-        .animate-badge-float {
-          animation: badgeFloat 3s ease-in-out infinite;
+        .animate-float-med {
+          animation: floatMed 5s ease-in-out infinite;
         }
-        .animate-attention-nudge {
-          animation: attentionNudge 6s ease-in-out infinite;
+        .animate-float-fast {
+          animation: floatFast 4s ease-in-out infinite;
         }
         @media (prefers-reduced-motion: reduce) {
-          .animate-banner-shimmer,
-          .animate-glow-pulse,
-          .animate-badge-float,
-          .animate-attention-nudge {
+          .animate-shimmer, .animate-float-slow, .animate-float-med, .animate-float-fast {
             animation: none;
           }
         }

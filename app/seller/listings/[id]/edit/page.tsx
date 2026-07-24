@@ -61,7 +61,7 @@ export default function SellerListingEdit() {
       const headers: any = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      await apiFetch(`/listings/${id}`, { method: 'PATCH', body: JSON.stringify(payload), headers });
+      await apiFetch(`/listings/${id}`, { method: 'PATCH', body: payload, headers });
       // go back to products page
       router.push('/seller/products');
     } catch (e) {

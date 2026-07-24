@@ -89,7 +89,7 @@ export default function SellerProducts() {
         name: form.name, title: form.name, description: form.description,
         price: Number(form.price || 0), category: form.category, stock: Number(form.stock || 1),
       };
-      await apiFetch('/products', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } });
+      await apiFetch('/products', { method: 'POST', body: payload, headers: { 'Content-Type': 'application/json' } });
       await load();
       setForm({ name: '', description: '', price: '', category: '', stock: '1' });
       setCreateOpen(false);
@@ -101,7 +101,7 @@ export default function SellerProducts() {
     setSaving(true);
     try {
       const endpoint = local._type === 'product' ? `/products/${local._id}` : `/listings/${local._id}`;
-      await apiFetch(endpoint, { method: 'PATCH', body: JSON.stringify(local), headers: { 'Content-Type': 'application/json' } });
+      await apiFetch(endpoint, { method: 'PATCH', body: local, headers: { 'Content-Type': 'application/json' } });
       await load();
       setSelected(null);
       setEditMode(false);

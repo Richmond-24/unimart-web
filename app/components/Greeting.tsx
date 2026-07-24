@@ -5,12 +5,27 @@ import { motion } from "framer-motion";
 import {
   Sun, Cloud, Moon, Flame, Coins,
   ShoppingBag, MessageCircle, Gift,
-  Trophy, AlertTriangle, RefreshCw
+  Trophy, AlertTriangle
 } from "lucide-react";
 import { apiFetch } from "@/lib/apiClient";
 
+// Helper to get avatar based on gender or name initial
+const getAvatarUrl = (gender?: string, name?: string) => {
+  if (gender === 'male') return "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop";
+  if (gender === 'female') return "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop";
+  
+  // Fallback to initial-based avatars with consistent colors
+  const initial = name ? name.charAt(0).toUpperCase() : 'U';
+  const colors = ['6C5CE7', 'FF6B9D', '00D9A3', 'FFB88C', '3B82F6'];
+  const colorIndex = initial.charCodeAt(0) % colors.length;
+  const bgColor = colors[colorIndex];
+  
+  return `https://ui-avatars.com/api/?name=${initial}&background=${bgColor}&color=fff&size=128&font-size=0.4`;
+};
+
 export default function Greeting() {
   const [firstName, setFirstName] = useState<string | null>(null);
+  const [userGender, setUserGender] = useState<string | undefined>(undefined);
   const [greeting, setGreeting] = useState("Welcome");
   const [timeIcon, setTimeIcon] = useState<React.ReactNode>(null);
   const [streakDays, setStreakDays] = useState<number>(0);
@@ -48,13 +63,14 @@ export default function Greeting() {
         const u = JSON.parse(raw);
         const name = u?.firstName || (u?.name ? String(u.name).split(" ")[0] : null);
         if (name) setFirstName(name);
+        if (u?.gender) setUserGender(u.gender);
       }
     } catch (e) {}
     const h = new Date().getHours();
-    if (h < 12) { setGreeting("Good morning"); setTimeIcon(<Sun size={12} />); }
-    else if (h < 17) { setGreeting("Good afternoon"); setTimeIcon(<Cloud size={12} />); }
-    else if (h < 21) { setGreeting("Good evening"); setTimeIcon(<Moon size={12} />); }
-    else { setGreeting("Good night"); setTimeIcon(<Moon size={12} />); }
+    if (h < 12) { setGreeting("Good morning"); setTimeIcon(<Sun size={12} className="text-teal-600" />); }
+    else if (h < 17) { setGreeting("Good afternoon"); setTimeIcon(<Cloud size={12} className="text-teal-600" />); }
+    else if (h < 21) { setGreeting("Good evening"); setTimeIcon(<Moon size={12} className="text-teal-600" />); }
+    else { setGreeting("Good night"); setTimeIcon(<Moon size={12} className="text-teal-600" />); }
   }, []);
 
   // Data Loading logic
@@ -78,6 +94,7 @@ export default function Greeting() {
                 const lu = JSON.parse(raw);
                 const name = lu?.firstName || (lu?.name ? String(lu.name).split(" ")[0] : null);
                 if (name) setFirstName(name as string);
+                if (lu?.gender) setUserGender(lu.gender);
                 setStreakDays(Number(lu?.streakDays || 0));
                 setCoins(lu?.coins ?? "—");
                 setMessagesCount((Array.isArray(lu?.messages) ? lu.messages.length : (lu?.unreadMessages ?? 0)) || 0);
@@ -92,7 +109,6 @@ export default function Greeting() {
         }
 
         try {
-          // ✅ FIXED: Changed from /api/auth/me to /auth/me
           const res = await apiFetch('/auth/me', { 
             method: 'GET', 
             suppressErrorLog: true 
@@ -100,13 +116,13 @@ export default function Greeting() {
           
           if (!mounted) return;
           
-          // Handle different response structures
           const u = res?.user || res?.data || res;
           
           if (u) {
             try { localStorage.setItem("unimart:user", JSON.stringify(u)); } catch (e) {}
             const name = u?.firstName || (u?.name ? String(u.name).split(" ")[0] : null);
             if (name) setFirstName(name as string);
+            if (u?.gender) setUserGender(u.gender);
             setStreakDays(Number(u?.streakDays || u?.currentStreak || 0));
             setCoins(u?.coins ?? u?.balance ?? "—");
             setMessagesCount((Array.isArray(u?.messages) ? u.messages.length : (u?.unreadMessages ?? 0)) || 0);
@@ -128,11 +144,10 @@ export default function Greeting() {
               return;
             }
             if (mounted) {
-              setError('Unable to connect to server. Using cached data.');
+              setError('Unable to connect to server.');
             }
           }
           
-          // Fallback to cached data
           if (mounted) {
             try {
               const raw = localStorage.getItem("unimart:user");
@@ -140,6 +155,7 @@ export default function Greeting() {
                 const lu = JSON.parse(raw);
                 const name = lu?.firstName || (lu?.name ? String(lu.name).split(" ")[0] : null);
                 if (name) setFirstName(name as string);
+                if (lu?.gender) setUserGender(lu.gender);
                 setStreakDays(Number(lu?.streakDays || 0));
                 setCoins(lu?.coins ?? "—");
                 setMessagesCount((Array.isArray(lu?.messages) ? lu.messages.length : (lu?.unreadMessages ?? 0)) || 0);
@@ -179,7 +195,7 @@ export default function Greeting() {
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-2">
-        <div className="h-[100px] w-full bg-slate-100 animate-pulse rounded-[28px] border border-black/5 shadow-sm"></div>
+        <div className="h-[80px] w-full bg-white rounded-2xl animate-pulse border border-gray-100"></div>
       </div>
     );
   }
@@ -187,12 +203,13 @@ export default function Greeting() {
   if (error) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-2">
-        <div className="bg-red-50 border border-red-100 rounded-[28px] p-6 text-center space-y-3">
-          <AlertTriangle size={24} className="mx-auto text-red-500" />
-          <h3 className="font-bold text-red-900">Connection Interrupted</h3>
-          <p className="text-xs text-red-700">{error}</p>
-          <button onClick={handleRetry} className="bg-red-500 text-white px-5 py-2 rounded-full text-xs font-bold transition-transform active:scale-95 shadow-lg">
-            Reactivate
+        <div className="bg-red-50 border border-red-100 rounded-2xl p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <AlertTriangle size={16} className="text-red-500" />
+            <span className="text-xs font-bold text-red-700">Connection Error</span>
+          </div>
+          <button onClick={handleRetry} className="text-xs font-bold text-red-600 hover:bg-red-100 px-3 py-1 rounded-full transition-colors">
+            Retry
           </button>
         </div>
       </div>
@@ -200,124 +217,149 @@ export default function Greeting() {
   }
 
   const nameText = firstName || "User";
+  const avatarUrl = getAvatarUrl(userGender, nameText);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-2 relative overflow-hidden font-sans selection:bg-teal-500 selection:text-white">
-      {/* Teal/Blue Ambient Mesh Background */}
-      <div className="absolute inset-0 pointer-events-none rounded-[36px] overflow-hidden -z-10 bg-slate-50">
-        <motion.div 
-          animate={{ x: [0, 30, -20, 0], y: [0, -20, 40, 0], scale: [1, 1.1, 0.9, 1] }}
-          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute -top-1/2 -left-1/4 w-full h-full bg-teal-400/20 blur-[100px] rounded-full"
-        />
-        <motion.div 
-          animate={{ x: [0, -40, 30, 0], y: [0, 40, -20, 0], scale: [1, 0.8, 1.2, 1] }}
-          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-          className="absolute -bottom-1/2 -right-1/4 w-full h-full bg-blue-500/20 blur-[120px] rounded-full"
-        />
-      </div>
-
+    <div className="max-w-7xl mx-auto px-4 py-2 relative overflow-hidden font-sans">
+      {/* Main Card Container */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.98, y: 10, filter: "blur(8px)" }}
-        animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
-        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-        className="relative backdrop-blur-xl bg-white/60 border border-white/40 rounded-[28px] p-4 sm:p-6 shadow-[0_8px_32px_rgba(13,148,136,0.08)] overflow-hidden"
+        initial={{ opacity: 0, y: 20, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.5, type: "spring", stiffness: 100 }}
+        whileHover={{ y: -2, boxShadow: "0 10px 25px -5px rgba(20, 184, 166, 0.1)" }}
+        className="relative bg-white rounded-2xl p-4 shadow-sm border border-teal-100/50 overflow-hidden group"
       >
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-row items-center gap-4">
-            {/* Teal/Blue Circular Avatar */}
-            <div className="relative shrink-0">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full p-0.5 bg-gradient-to-tr from-teal-400 to-blue-500 shadow-[0_4px_16px_rgba(20,184,166,0.35)]">
-                <div className="w-full h-full rounded-full bg-white p-[3px]">
-                  <div className="w-full h-full rounded-full bg-gradient-to-tr from-teal-500 to-blue-600 flex items-center justify-center text-xl font-bold text-white font-display">
-                    {nameText.charAt(0).toUpperCase()}
-                  </div>
+        {/* Background Decorative Blob with Animation */}
+        <motion.div 
+          animate={{ 
+            scale: [1, 1.1, 1],
+            rotate: [0, 5, -5, 0]
+          }}
+          transition={{ 
+            duration: 10, 
+            repeat: Infinity, 
+            ease: "easeInOut" 
+          }}
+          className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-teal-400/10 to-blue-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/3 pointer-events-none" 
+        />
+
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          
+          {/* Left Side: Profile & Greeting */}
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            {/* Avatar with Ring Animation */}
+            <motion.div 
+              whileHover={{ scale: 1.05, rotate: 5 }}
+              className="relative shrink-0"
+            >
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-blue-600 p-0.5 shadow-md shadow-teal-500/20">
+                <div className="w-full h-full rounded-[10px] bg-white overflow-hidden relative">
+                  <img 
+                    src={avatarUrl} 
+                    alt={nameText} 
+                    className="w-full h-full object-cover"
+                  />
                 </div>
               </div>
               {streakDays > 0 && (
-                <div className="absolute -bottom-0.5 -right-0.5 bg-white p-1 rounded-full border border-teal-500/10 shadow-md">
-                  <Flame size={10} className="text-orange-500 fill-orange-500/10" />
-                </div>
+                <motion.div 
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.5, type: "spring" }}
+                  className="absolute -top-1 -right-1 bg-white border border-orange-100 shadow-sm rounded-full px-1.5 py-0.5 flex items-center gap-0.5"
+                >
+                  <Flame size={10} className="text-orange-500 fill-orange-500" />
+                  <span className="text-[9px] font-black text-orange-600">{streakDays}</span>
+                </motion.div>
               )}
-            </div>
+            </motion.div>
 
-            {/* Typography Greeting */}
+            {/* Text Content */}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5 opacity-50 mb-0.5">
-                {timeIcon}
-                <span className="text-[9px] font-bold uppercase tracking-widest text-teal-700">{greeting}</span>
-              </div>
-              <h1 className="text-xl sm:text-3xl font-extrabold text-black tracking-tight truncate font-display">
-                Hello, {nameText}
-              </h1>
-            </div>
-
-            {/* Desktop Stats (Static Row) */}
-            <div className="hidden md:flex gap-2">
-              <StatPill icon={<Coins size={14} />} value={coins} label="Coins" />
-              <StatPill icon={<ShoppingBag size={14} />} value={cartCount} label="Cart" />
-            </div>
-          </div>
-
-          {/* Horizontal Stat Rail (Always scrolling for mobile density) */}
-          <div className="flex md:hidden overflow-x-auto no-scrollbar gap-2 -mx-1 px-1 snap-x pb-0.5">
-            <StatPill icon={<Coins size={12} />} value={coins} label="Coins" className="snap-start" />
-            <StatPill icon={<ShoppingBag size={12} />} value={cartCount} label="Cart" className="snap-start" />
-            <StatPill icon={<MessageCircle size={12} />} value={messagesCount} label="Chats" className="snap-start" />
-            <StatPill icon={<Gift size={12} />} value={offersCount} label="Gifts" className="snap-start" />
-          </div>
-
-          {/* Precision XP Progression */}
-          <div className="flex flex-col gap-2 pt-1 border-t border-teal-900/5">
-            <div className="flex justify-between items-center px-0.5">
-              <div className="flex items-center gap-1.5">
-                <Trophy size={12} className="text-amber-500" />
-                <span className="text-[9px] font-bold text-black/50 uppercase tracking-tighter">Campus Legend</span>
-              </div>
-              <span className="text-[9px] font-mono font-bold text-black/30 tracking-tight">
-                <span className="text-black/80">{xp}</span> / {xpToNext} XP
-              </span>
-            </div>
-            
-            <div className="h-1.5 w-full bg-teal-900/5 rounded-full overflow-hidden relative border border-teal-900/[0.02]">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${xpPercent}%` }}
-                transition={{ duration: 1.2, ease: "circOut" }}
-                className="h-full bg-gradient-to-r from-teal-400 to-blue-500 relative shadow-[0_0_8px_rgba(20,184,166,0.4)]"
+              <motion.div 
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2 }}
+                className="flex items-center gap-1.5 mb-0.5"
               >
-                <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                {timeIcon}
+                <span className="text-[10px] font-bold text-teal-600 uppercase tracking-wide">{greeting}</span>
               </motion.div>
+              <motion.h1 
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3 }}
+                className="text-lg font-black text-gray-900 tracking-tight truncate"
+              >
+                {nameText}
+              </motion.h1>
             </div>
+          </div>
+
+          {/* Right Side: Compact Stats Row */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
+            <MiniStat icon={<Coins size={14} />} value={coins} color="text-amber-500" bg="bg-amber-50" delay={0.4} />
+            <MiniStat icon={<ShoppingBag size={14} />} value={cartCount} color="text-teal-600" bg="bg-teal-50" delay={0.5} />
+            <MiniStat icon={<MessageCircle size={14} />} value={messagesCount} color="text-blue-500" bg="bg-blue-50" delay={0.6} />
+            <MiniStat icon={<Gift size={14} />} value={offersCount} color="text-pink-500" bg="bg-pink-50" delay={0.7} />
           </div>
         </div>
-      </motion.div>
 
-      <style jsx global>{`
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      `}</style>
+        {/* Bottom Section: XP Progress */}
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8 }}
+          className="mt-3 pt-3 border-t border-gray-50 relative z-10"
+        >
+          <div className="flex justify-between items-center mb-1.5">
+            <div className="flex items-center gap-1.5">
+              <Trophy size={10} className="text-teal-600" />
+              <span className="text-[10px] font-bold text-gray-500 uppercase">Campus Legend</span>
+            </div>
+            <span className="text-[10px] font-mono font-bold text-teal-600">
+              {xp} / {xpToNext} XP
+            </span>
+          </div>
+          
+          <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${xpPercent}%` }}
+              transition={{ duration: 1.5, ease: "circOut", delay: 1 }}
+              className="h-full bg-gradient-to-r from-teal-400 to-blue-500 relative"
+            >
+              <motion.div 
+                animate={{ x: ["-100%", "100%"] }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                className="absolute inset-0 bg-white/30 skew-x-12"
+              />
+            </motion.div>
+          </div>
+        </motion.div>
+
+      </motion.div>
     </div>
   );
 }
 
-function StatPill({ icon, value, label, className = "" }: { 
+function MiniStat({ icon, value, color, bg, delay }: { 
   icon: React.ReactNode, 
   value: string | number, 
-  label: string,
-  className?: string
+  color: string,
+  bg: string,
+  delay: number
 }) {
   return (
     <motion.div
-      whileHover={{ y: -1, backgroundColor: "rgba(255, 255, 255, 0.85)" }}
-      whileTap={{ scale: 0.98 }}
-      className={`shrink-0 flex items-center gap-2.5 bg-white/40 backdrop-blur-sm border border-teal-500/10 px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-sm ${className}`}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay }}
+      whileHover={{ y: -2, scale: 1.05 }}
+      className={`${bg} rounded-lg px-2.5 py-1.5 flex flex-col items-center justify-center min-w-[50px] cursor-pointer`}
     >
-      <div className="text-teal-600/70">{icon}</div>
-      <div className="flex flex-col leading-none">
-        <span className="text-[11px] font-extrabold text-black tracking-tighter">{value}</span>
-        <span className="text-[7px] font-bold text-black/30 uppercase tracking-tighter">{label}</span>
-      </div>
+      <div className={color}>{icon}</div>
+      <span className="text-[11px] font-black text-gray-900 leading-none mt-0.5">{value}</span>
     </motion.div>
   );
 }

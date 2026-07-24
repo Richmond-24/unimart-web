@@ -87,7 +87,7 @@ export default function ReactionSection({ subjectType = "listings", subjectId, f
       const headers: any = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
       const serverVote = prev === 'up' ? 'remove' : 'up';
       const res = await apiFetch(`${base}/vote`, {
-        method: 'POST', body: JSON.stringify({ vote: serverVote }), headers,
+        method: 'POST', body: { vote: serverVote }, headers,
       });
       if (res?.data) {
         setUps(res.data.up || 0);
@@ -118,7 +118,7 @@ export default function ReactionSection({ subjectType = "listings", subjectId, f
 
       const headers: any = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
       const res = await apiFetch(`${base}/emoji`, {
-        method: 'POST', body: JSON.stringify({ emojiIndex: i }), headers,
+        method: 'POST', body: { emojiIndex: i }, headers,
       });
       if (res?.data) {
         if (res.data.emojis) setEmojis(normalizeEmojis(res.data.emojis));
