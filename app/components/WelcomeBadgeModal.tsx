@@ -3,24 +3,17 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Award, ShoppingBag, Sparkles, X, Gift } from "lucide-react";
+import { Award, ShoppingBag, Sparkles, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 
-// Only shown once, right after the first successful login / signup
-const SHOWN_KEY = "unimart:earlyBirdShown";
-
-function isEarlyBird(createdAt?: string | null): boolean {
-  if (!createdAt) return true; // assume early-bird when no date available
-  try {
-    return new Date(createdAt) < new Date("2026-07-01");
-  } catch {
-    return false;
-  }
-}
+const SHOWN_KEY = "unimart:verifiedWelcomeShown";
 
 export default function WelcomeBadgeModal() {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [firstName, setFirstName] = useState<string | null>(null);
+  const [isVerified, setIsVerified] = useState<boolean>(true);
+  const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
@@ -30,50 +23,38 @@ export default function WelcomeBadgeModal() {
     if (typeof window === "undefined") return;
 
     function tryOpen() {
-      // Only show if not already shown and we're in the "ready" stage
       if (localStorage.getItem(SHOWN_KEY)) return;
-
       const stage = document.documentElement.getAttribute("data-app-stage");
       if (stage !== "ready") return;
 
       const token = localStorage.getItem("unimart:token");
-      if (!token) return; // guests don't get the early-bird popup
+      if (!token) return;
 
-      // Check if this is the very first login (flag set by AuthFlow on success)
       const justLoggedIn = sessionStorage.getItem("unimart:justLoggedIn");
       if (!justLoggedIn) return;
 
-      // Read user info
-      let createdAt: string | null = null;
-      let name: string | null = null;
       try {
         const raw = localStorage.getItem("unimart:user");
-        if (raw) {
-          const u = JSON.parse(raw);
-          name = u?.firstName || (u?.name ? String(u.name).split(" ")[0] : null);
-          createdAt = u?.createdAt ?? null;
-        }
+        if (!raw) return;
+        const u = JSON.parse(raw);
+        const name = u?.firstName || (u?.name ? String(u.name).split(" ")[0] : null);
+        setFirstName(name || null);
+        setIsVerified(Boolean(u?.isVerified ?? true));
       } catch {
-        /* ignore */
+        setFirstName(null);
+        setIsVerified(true);
       }
 
-      if (!isEarlyBird(createdAt)) return;
-
-      if (name) setFirstName(name);
-      // Mark as shown so it never re-appears
       localStorage.setItem(SHOWN_KEY, "1");
       sessionStorage.removeItem("unimart:justLoggedIn");
       setOpen(true);
     }
 
-    // Try immediately and also after AuthFlow fires the authChanged event
-    const timer = setTimeout(tryOpen, 600);
-
-    const onAuth = () => setTimeout(tryOpen, 700);
+    const timer = window.setTimeout(tryOpen, 600);
+    const onAuth = () => window.setTimeout(tryOpen, 700);
     window.addEventListener("unimart:authChanged", onAuth);
 
-    // Also observe data-app-stage attribute changes
-    const observer = new MutationObserver(() => setTimeout(tryOpen, 500));
+    const observer = new MutationObserver(() => window.setTimeout(tryOpen, 500));
     observer.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ["data-app-stage"],
@@ -86,9 +67,11 @@ export default function WelcomeBadgeModal() {
     };
   }, []);
 
-  function dismiss() {
+  const dismiss = () => setOpen(false);
+  const goToProfile = () => {
     setOpen(false);
-  }
+    router.push("/profile");
+  };
 
   if (!mounted) return null;
 
@@ -98,13 +81,12 @@ export default function WelcomeBadgeModal() {
         <motion.div
           role="dialog"
           aria-modal="true"
-          aria-labelledby="early-bird-title"
+          aria-labelledby="verified-welcome-title"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-[10000] flex items-end sm:items-center justify-center p-0 sm:p-4"
         >
-          {/* Backdrop */}
           <motion.button
             type="button"
             aria-label="Close"
@@ -115,7 +97,6 @@ export default function WelcomeBadgeModal() {
             className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
           />
 
-          {/* Card */}
           <motion.div
             initial={{ opacity: 0, y: 56, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -124,10 +105,8 @@ export default function WelcomeBadgeModal() {
             className="relative w-full sm:max-w-md bg-white rounded-t-[28px] sm:rounded-[28px] shadow-2xl overflow-hidden"
             style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
           >
-            {/* Teal gradient header */}
-            <div className="absolute inset-x-0 top-0 h-36 bg-gradient-to-br from-[#0d9488] via-[#0f766e] to-[#134e4a]" />
+            <div className="absolute inset-x-0 top-0 h-36 bg-gradient-to-br from-orange-500 via-orange-600 to-orange-700" />
 
-            {/* Floating sparkle dots */}
             <div className="absolute inset-x-0 top-0 h-36 overflow-hidden pointer-events-none">
               {Array.from({ length: 14 }).map((_, i) => (
                 <motion.span
@@ -140,7 +119,6 @@ export default function WelcomeBadgeModal() {
               ))}
             </div>
 
-            {/* Close button */}
             <button
               type="button"
               onClick={dismiss}
@@ -150,66 +128,56 @@ export default function WelcomeBadgeModal() {
               <X size={18} />
             </button>
 
-            <div className="relative z-10 px-6 pt-8 pb-2 text-center">
-              {/* Badge icon */}
+            <div className="relative z-10 px-6 pt-8 pb-6 text-center">
               <motion.div
-                initial={{ scale: 0.5, rotate: -12 }}
+                initial={{ scale: 0.6, rotate: -18 }}
                 animate={{ scale: 1, rotate: 0 }}
-                transition={{ type: "spring", delay: 0.18, stiffness: 280 }}
-                className="mx-auto mb-4 w-24 h-24 rounded-[22px] bg-white shadow-xl flex items-center justify-center border-4 border-teal-200"
+                transition={{ type: "spring", delay: 0.16, stiffness: 260 }}
+                className="mx-auto mb-4 w-24 h-24 rounded-[22px] bg-white shadow-xl flex items-center justify-center border-4 border-orange-200"
               >
-                <span className="text-5xl" role="img" aria-label="Early Bird">🌅</span>
+                <span className="text-5xl">✅</span>
               </motion.div>
 
-              {/* Teal pill badge */}
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 text-teal-700 text-xs font-bold mb-3 border border-teal-200">
-                <Award size={13} />
-                Early Bird Badge Unlocked
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-50 text-orange-700 text-xs font-bold mb-3 border border-orange-100">
+                <Award size={13} /> Verified account unlocked
               </div>
 
-              <h2 id="early-bird-title" className="text-2xl font-black text-slate-900 tracking-tight">
-                Thank you for signing up{firstName ? `, ${firstName}` : ""}! 🎉
+              <h2 id="verified-welcome-title" className="text-2xl font-black text-slate-900 tracking-tight">
+                Welcome to Uni-Mart{firstName ? `, ${firstName}` : ""}!
               </h2>
               <p className="mt-2 text-sm text-slate-500 leading-relaxed max-w-xs mx-auto">
-                Welcome to Uni-Mart! You&apos;re one of our first campus shoppers — your&nbsp;
-                <span className="text-teal-700 font-semibold">Early Bird</span> badge
-                is now on your profile.
+                Your account is now {isVerified ? "verified" : "ready"}. Visit your profile to claim your badges and gifts.
               </p>
 
-              {/* Perk list */}
-              <div className="mt-5 grid grid-cols-1 gap-2 text-left">
+              <div className="mt-5 grid gap-3 text-left">
                 {[
-                  { icon: Gift, text: "Exclusive first-month perks on campus deals" },
-                  { icon: ShoppingBag, text: "Priority access to flash sales & trending items" },
-                  { icon: Sparkles, text: "Badge visible on your Uni-Mart profile forever" },
+                  { icon: ShoppingBag, text: "Exclusive verified shopper perks" },
+                  { icon: Sparkles, text: "Badges appear on your Profile page" },
+                  { icon: Award, text: "Claim rewards and gifts from Uni-Mart" },
                 ].map(({ icon: Icon, text }) => (
-                  <div
-                    key={text}
-                    className="flex items-center gap-3 rounded-xl bg-teal-50 border border-teal-100 px-3 py-2.5"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-teal-100 text-teal-600 flex items-center justify-center shrink-0">
+                  <div key={text} className="flex items-center gap-3 rounded-xl bg-orange-50 border border-orange-100 px-3 py-3">
+                    <div className="w-9 h-9 rounded-xl bg-orange-100 text-orange-700 flex items-center justify-center shrink-0">
                       <Icon size={16} />
                     </div>
-                    <span className="text-xs sm:text-sm text-slate-700">{text}</span>
+                    <span className="text-sm text-slate-700">{text}</span>
                   </div>
                 ))}
               </div>
 
-              {/* CTA buttons */}
               <div className="mt-6 flex flex-col sm:flex-row gap-2.5">
                 <button
                   type="button"
                   onClick={dismiss}
-                  className="order-2 sm:order-1 flex-1 py-3 rounded-xl border border-slate-200 text-slate-500 font-semibold text-sm hover:bg-slate-50 transition"
+                  className="order-2 sm:order-1 flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition"
                 >
                   Maybe later
                 </button>
                 <button
                   type="button"
-                  onClick={dismiss}
-                  className="order-1 sm:order-2 flex-1 py-3 rounded-xl bg-gradient-to-r from-[#0d9488] to-[#0f766e] text-white font-bold text-sm shadow-lg shadow-teal-600/25 hover:brightness-105 active:scale-[0.98] transition"
+                  onClick={goToProfile}
+                  className="order-1 sm:order-2 flex-1 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-orange-500/20 hover:brightness-105 transition"
                 >
-                  Start exploring 🚀
+                  Open profile
                 </button>
               </div>
             </div>

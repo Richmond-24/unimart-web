@@ -210,6 +210,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(res.user);
         localStorage.setItem('unimart:token', res.token);
         localStorage.setItem('unimart:user', JSON.stringify(res.user));
+        try { sessionStorage.setItem('unimart:justLoggedIn', '1'); } catch (e) {}
         return { success: true, token: res.token, user: res.user };
       }
 
@@ -234,6 +235,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(res.user);
         localStorage.setItem('unimart:token', res.token);
         localStorage.setItem('unimart:user', JSON.stringify(res.user));
+        try { sessionStorage.setItem('unimart:justLoggedIn', '1'); } catch (e) {}
         return { success: true, token: res.token, user: res.user };
       }
 
