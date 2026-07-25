@@ -258,9 +258,13 @@ export default function Header() {
           
           if (response.ok) {
             const data = await response.json();
-            let total = 0;
             const convs = Array.isArray(data?.conversations ? data.conversations : data) ? (data?.conversations || data) : [];
-            total = convs.reduce((sum: number, conv: any) => sum + Number(conv.unreadForUser || 0), 0);
+            const total = convs.reduce((sum: number, conv: any) => {
+              return (
+                sum +
+                Number(conv.unreadForBuyer || conv.unreadForUser || conv.unreadCount || 0)
+              );
+            }, 0);
             setMessageCount(total);
           } else {
             // Silently fail - don't log
@@ -288,10 +292,14 @@ export default function Header() {
 
     // Listen for auth changes
     const onMessageUpdate = (e: any) => {
-      if (mounted) {
-        setMessageCount(Number(e?.detail?.count || 0));
-        setIsLoadingMessages(false);
+      if (!mounted) return;
+      const detail = e?.detail || {};
+      if (typeof detail.count === 'number') {
+        setMessageCount(Number(detail.count));
+      } else if (typeof detail.increment === 'number') {
+        setMessageCount((prev) => prev + Number(detail.increment));
       }
+      setIsLoadingMessages(false);
     };
     
     const onAuthChange = () => {
@@ -326,7 +334,18 @@ export default function Header() {
       }
     };
 
+    const onMessageNotification = (e: any) => {
+      if (!mounted) return;
+      const detail = e?.detail || {};
+      if (typeof detail.increment === 'number') {
+        setMessageCount((prev) => prev + Number(detail.increment));
+      } else if (typeof detail.count === 'number') {
+        setMessageCount(Number(detail.count || 0));
+      }
+    };
+
     window.addEventListener("unimart:notificationCount", onNotification as EventListener);
+    window.addEventListener("unimart:messageCount", onMessageNotification as EventListener);
 
     async function loadNotificationCount() {
       try {

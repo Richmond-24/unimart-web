@@ -24,6 +24,7 @@ export default function ChatPage() {
   const [error, setError] = useState<string | null>(null);
 
   const currentUserId = user?._id || user?.id;
+  const TEMU_ORANGE = '#F6480B';
 
   // Load conversations list
   useEffect(() => {
@@ -64,7 +65,7 @@ export default function ChatPage() {
         <p className="text-gray-600 mb-4">Please sign in to view your messages</p>
         <Link
           href="/login"
-          className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+          className="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
         >
           Sign In
         </Link>
@@ -92,7 +93,7 @@ export default function ChatPage() {
             </p>
             <Link
               href="/"
-              className="px-5 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm"
+              className="px-5 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm"
             >
               Browse Products
             </Link>
@@ -106,7 +107,7 @@ export default function ChatPage() {
                 className="flex items-center gap-3 px-4 py-3.5 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50 transition-colors"
               >
                 {/* Avatar */}
-                <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold text-sm flex-shrink-0">
+                <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-700 font-bold text-sm flex-shrink-0">
                   {(c.listingTitle || c.title || 'C').charAt(0).toUpperCase()}
                 </div>
 
@@ -121,13 +122,13 @@ export default function ChatPage() {
                       : c.lastMessage || 'No messages yet'}
                   </p>
                   {c.sellerName && (
-                    <p className="text-xs text-gray-400 mt-0.5">{c.sellerName}</p>
+                    <p className="text-xs text-orange-500 mt-0.5">{c.sellerName}</p>
                   )}
                 </div>
 
                 {/* Unread badge */}
                 {(c.unreadCount || c.unreadForBuyer || 0) > 0 && (
-                  <span className="w-5 h-5 bg-teal-600 text-white text-xs font-bold rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="w-5 h-5 bg-orange-600 text-white text-xs font-bold rounded-full flex items-center justify-center flex-shrink-0">
                     {c.unreadCount || c.unreadForBuyer}
                   </span>
                 )}

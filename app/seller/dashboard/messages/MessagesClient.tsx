@@ -295,7 +295,7 @@ function MessagesContent() {
             <button
               key={conv._id}
               onClick={() => handleSelectConversation(conv)}
-              className={`w-full text-left p-3 border-b hover:bg-gray-50 transition-colors ${selectedConv?._id === conv._id ? "bg-teal-50 border-l-4 border-l-teal-600" : ""
+              className={`w-full text-left p-3 border-b hover:bg-gray-50 transition-colors ${selectedConv?._id === conv._id ? "bg-orange-50 border-l-4 border-l-orange-600" : ""
                 }`}
             >
               <div className="flex items-start justify-between gap-2">
@@ -311,7 +311,7 @@ function MessagesContent() {
                   </p>
                 </div>
                 {(conv.unreadForSeller || 0) > 0 && (
-                  <div className="flex-shrink-0 px-2 py-1 bg-teal-600 text-white text-xs font-semibold rounded-full">
+                  <div className="flex-shrink-0 px-2 py-1 bg-orange-600 text-white text-xs font-semibold rounded-full">
                     {conv.unreadForSeller}
                   </div>
                 )}
@@ -359,13 +359,13 @@ function MessagesContent() {
                   >
                     <div
                       className={`max-w-xs px-4 py-2.5 rounded-lg ${isMine
-                        ? "bg-teal-600 text-white rounded-br-none"
+                        ? "bg-orange-600 text-white rounded-br-none"
                         : "bg-white border border-gray-200 text-gray-900 rounded-bl-none"
                         }`}
                     >
                       <p className="break-words text-sm">{msg.text}</p>
                       <p
-                        className={`text-xs mt-1 ${isMine ? "text-teal-100" : "text-gray-500"
+                        className={`text-xs mt-1 ${isMine ? "text-orange-100" : "text-gray-500"
                           }`}
                       >
                         {msg.timestamp
@@ -398,13 +398,13 @@ function MessagesContent() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Type your reply..."
-              className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none text-sm"
+              className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none text-sm"
               disabled={sending}
             />
             <button
               onClick={sendMessage}
               disabled={!input.trim() || sending}
-              className="px-4 py-2.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              className="px-4 py-2.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
             >
               {sending ? (
                 <Loader2 className="w-4 h-4 animate-spin" />

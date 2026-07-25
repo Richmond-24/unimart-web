@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from 'next/link';
 import { 
   Users, Eye,
-  Star, ChevronRight, Zap 
+  Star, ChevronRight, Zap, Award, TrendingUp
 } from "lucide-react";
 import { apiFetch } from '@/lib/apiClient';
 
@@ -22,16 +22,6 @@ type Trend = {
   rating?: number;
   hashtag?: string;
   salesCount?: number;
-};
-
-type Seller = {
-  id: string;
-  name: string;
-  avatar?: string;
-  rating?: number;
-  salesCount?: number;
-  bio?: string;
-  shopUrl?: string;
 };
 
 export default function CampusTrending() {
@@ -94,203 +84,131 @@ export default function CampusTrending() {
   };
 
   return (
-    <section className="py-6 md:py-8 lg:py-10 bg-gradient-to-b from-teal-50/30 via-white to-white">
+    <section className="py-8 md:py-12 bg-gray-50/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-5 md:mb-6">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div>
-              <h2 className="text-lg md:text-xl lg:text-2xl font-bold text-gray-900">
-                Top Sellers
-              </h2>
-              <p className="text-xs md:text-sm text-gray-500">
-                Sellers with the most views and activity on the marketplace
-              </p>
-            </div>
-            <Link 
-              href="/seller" 
-              className="text-xs md:text-sm text-teal-600 hover:text-teal-700 font-medium flex items-center gap-1 bg-teal-50 px-3 py-1.5 rounded-full transition-colors"
-            >
-              See all sellers <ChevronRight className="w-3 h-3" />
-            </Link>
+        <div className="mb-8 flex items-end justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              Top Sellers <Award className="w-6 h-6 text-teal-600" />
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Verified sellers with the highest activity and trust scores
+            </p>
           </div>
+          <Link 
+            href="/seller" 
+            className="hidden sm:flex items-center gap-1.5 text-sm font-semibold text-teal-600 hover:text-teal-700 bg-white border border-teal-100 px-4 py-2 rounded-full shadow-sm hover:shadow-md transition-all"
+          >
+            View All <ChevronRight className="w-4 h-4" />
+          </Link>
         </div>
 
-        {/* Trending items */}
-        <div className="space-y-3 md:space-y-4">
+        {/* Grid Layout for Modern Rounded Design */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {loading && [1, 2, 3].map((s) => (
-            <div key={s} className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm animate-pulse">
-              <div className="flex gap-4">
-                <div className="w-24 h-24 md:w-28 md:h-28 bg-gray-100 rounded-xl" />
-                <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-gray-200 rounded w-1/4" />
-                  <div className="h-5 bg-gray-200 rounded w-3/4" />
-                  <div className="h-3 bg-gray-200 rounded w-1/2" />
-                </div>
+            <div key={s} className="bg-white rounded-[2rem] p-4 shadow-sm animate-pulse h-[320px]">
+              <div className="w-full h-48 bg-gray-100 rounded-[1.5rem] mb-4" />
+              <div className="space-y-3 px-2">
+                <div className="h-4 bg-gray-200 rounded w-1/3" />
+                <div className="h-6 bg-gray-200 rounded w-3/4" />
+                <div className="h-3 bg-gray-200 rounded w-1/2" />
               </div>
             </div>
           ))}
 
           {!loading && items.length === 0 && (
-            <div className="bg-white rounded-xl border border-gray-100 p-8 text-center">
-              <p className="text-gray-500">No trending topics right now.</p>
+            <div className="col-span-full bg-white rounded-[2rem] p-12 text-center border border-dashed border-gray-200">
+              <p className="text-gray-500 font-medium">No top sellers found right now.</p>
             </div>
           )}
 
           {items.map((trend, idx) => (
-            <div
+            <Link
               key={trend.id}
+              href={`/seller/${trend.id}`}
               onMouseEnter={() => setHoveredIndex(idx)}
               onMouseLeave={() => setHoveredIndex(null)}
+              className="group relative bg-white rounded-[2rem] overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-gray-100/50"
             >
-              <Link
-                href={`/seller/${trend.id}`}
-                className={[
-                  "block bg-white rounded-xl border transition-all duration-300 overflow-hidden",
-                  hoveredIndex === idx
-                    ? "border-teal-300 shadow-lg shadow-teal-100/50 -translate-y-0.5"
-                    : "border-gray-100 shadow-sm hover:shadow-md",
-                ].join(" ")}
-              >
-                <div className="p-3 md:p-4">
-                  <div className="flex gap-3 md:gap-5">
-                    {/* Left side - LARGER IMAGE */}
-                    <div className="flex-shrink-0">
-                      {trend.image ? (
-                        <div className="relative w-24 h-24 md:w-28 md:h-28 lg:w-32 lg:h-32 rounded-xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 shadow-sm">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img 
-                            src={trend.image} 
-                            alt={trend.title}
-                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                            style={{ transform: hoveredIndex === idx ? 'scale(1.05)' : 'scale(1)' }}
-                          />
-                        </div>
-                      ) : (
-                        <div className="w-24 h-24 md:w-28 md:h-28 lg:w-32 lg:h-32 rounded-xl bg-gradient-to-br from-teal-100 to-teal-200 flex items-center justify-center shadow-sm">
-                          <span className="text-3xl md:text-4xl font-bold text-teal-600">
-                            #{idx + 1}
-                          </span>
-                        </div>
-                      )}
+              {/* Image Section - Large & Rounded */}
+              <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
+                {trend.image ? (
+                  <img 
+                    src={trend.image} 
+                    alt={trend.title}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-teal-50 to-teal-100">
+                    <span className="text-5xl font-black text-teal-200">#{idx + 1}</span>
+                  </div>
+                )}
+                
+                {/* Floating Badge */}
+                {(trend.badge || trend.category) && (
+                  <div className="absolute top-4 left-4 flex flex-wrap gap-2">
+                    {trend.category && (
+                      <span className="px-3 py-1 bg-white/90 backdrop-blur-sm text-xs font-bold text-teal-700 rounded-full shadow-sm">
+                        {trend.category}
+                      </span>
+                    )}
+                    {trend.badge && (
+                      <span className="px-3 py-1 bg-orange-500 text-white text-xs font-bold rounded-full shadow-sm">
+                        {trend.badge}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Rank Badge */}
+                <div className="absolute bottom-4 right-4 w-10 h-10 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center shadow-lg">
+                  <span className="font-bold text-gray-900">#{idx + 1}</span>
+                </div>
+              </div>
+
+              {/* Content Section */}
+              <div className="p-5">
+                <h3 className="font-bold text-lg text-gray-900 line-clamp-1 mb-1 group-hover:text-teal-600 transition-colors">
+                  {trend.title}
+                </h3>
+                
+                {trend.subtitle && (
+                  <p className="text-sm text-gray-500 line-clamp-2 mb-4 min-h-[2.5rem]">
+                    {trend.subtitle}
+                  </p>
+                )}
+
+                {/* Stats Row */}
+                <div className="flex items-center justify-between pt-4 border-t border-gray-50">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1.5 text-gray-600">
+                      <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                      <span className="text-sm font-semibold">{(trend.rating || 0).toFixed(1)}</span>
                     </div>
-
-                    {/* Middle - Trend Content */}
-                    <div className="flex-1 min-w-0">
-                      {/* Category + Badge */}
-                      <div className="flex items-center gap-2 flex-wrap mb-1">
-                        {trend.category && (
-                          <span className="text-[9px] md:text-[10px] font-medium text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full">
-                            {trend.category}
-                          </span>
-                        )}
-                        <span className="text-[9px] md:text-[10px] font-medium text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
-                          {trend.badge}
-                        </span>
-                        {trend.hashtag && (
-                          <span className="text-[9px] md:text-[10px] font-mono text-gray-500">
-                            {trend.hashtag}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Title */}
-                      <h3 className="font-bold text-gray-900 text-sm md:text-base lg:text-lg leading-tight">
-                        {trend.title}
-                      </h3>
-
-                      {/* Description */}
-                      {trend.subtitle && (
-                        <p className="text-gray-500 text-xs md:text-sm mt-1 line-clamp-1">
-                          {trend.subtitle}
-                        </p>
-                      )}
-
-                      {/* Seller metrics: views, sales, rating */}
-                      <div className="flex items-center gap-3 md:gap-4 mt-2 flex-wrap">
-                        <div className="flex items-center gap-1">
-                          <Eye className="w-3 h-3 md:w-3.5 md:h-3.5 text-gray-500" />
-                          <span className="text-[10px] md:text-xs text-gray-600">
-                            {formatNumber((trend as any).viewCount || 0)} views
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Users className="w-3 h-3 md:w-3.5 md:h-3.5 text-teal-500" />
-                          <span className="text-[10px] md:text-xs text-gray-500">
-                            {formatNumber(trend.salesCount || 0)} sales
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Star className="w-3 h-3 md:w-3.5 md:h-3.5 text-yellow-400" />
-                          <span className="text-[10px] md:text-xs text-gray-500">
-                            {(trend.rating || 0).toFixed(1)}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Rating */}
-                      {trend.rating && (
-                        <div className="flex items-center gap-2 mt-2">
-                          <div className="flex items-center gap-0.5">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <Star
-                                key={star}
-                                className={[
-                                  "w-3 h-3 md:w-3.5 md:h-3.5",
-                                  star <= Math.floor(trend.rating || 0)
-                                    ? "text-yellow-400 fill-yellow-400"
-                                    : star - 0.5 <= (trend.rating || 0)
-                                    ? "text-yellow-400 fill-yellow-400 half-filled"
-                                    : "text-gray-300"
-                                ].join(" ")}
-                              />
-                            ))}
-                          </div>
-                          <span className="text-[10px] md:text-xs text-gray-500">
-                            {trend.rating.toFixed(1)} · {formatNumber(trend.commentCount || 0)} reviews
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Right side - Arrow */}
-                    <div className="flex-shrink-0 flex items-center">
-                      <div
-                        className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center transition-transform duration-200"
-                        style={{ transform: hoveredIndex === idx ? "translateX(5px)" : "translateX(0)" }}
-                      >
-                        <ChevronRight className="w-4 h-4 text-gray-400" />
-                      </div>
+                    <div className="flex items-center gap-1.5 text-gray-500">
+                      <Users className="w-4 h-4" />
+                      <span className="text-sm">{formatNumber(trend.salesCount || 0)}</span>
                     </div>
                   </div>
-
-                  {/* Trending progress bar */}
-                  <div className="mt-3">
-                    <div className="w-full h-1 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-teal-400 to-teal-600 rounded-full"
-                        style={{ width: `${Math.min(100, ((trend.viewCount || 0) / 50000) * 100)}%` }}
-                      />
-                    </div>
-                    <div className="flex justify-between mt-1">
-                      <span className="text-[8px] md:text-[9px] text-gray-400">Trending volume</span>
-                      <span className="text-[8px] md:text-[9px] text-teal-600 font-medium">
-                        +{Math.max(0, Math.min(100, Math.floor((trend as any).deltaPercent || 5)))}% this week
-                      </span>
-                    </div>
+                  
+                  <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-teal-50 transition-colors">
+                    <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-teal-600 group-hover:translate-x-0.5 transition-all" />
                   </div>
                 </div>
-              </Link>
-            </div>
+              </div>
+            </Link>
           ))}
         </div>
 
-        {/* Footer */}
-        <div className="mt-6 text-center">
-          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-teal-50 to-white border border-teal-100 rounded-full px-4 py-2">
-            <Zap className="w-4 h-4 text-teal-500" />
-            <span className="text-xs text-gray-600">
-              Join <strong className="text-teal-600">50,000+ students</strong> discovering campus trends
+        {/* Footer CTA */}
+        <div className="mt-10 flex justify-center">
+          <div className="inline-flex items-center gap-3 bg-white border border-teal-100 rounded-full px-6 py-3 shadow-sm">
+            <div className="w-8 h-8 rounded-full bg-teal-50 flex items-center justify-center">
+              <Zap className="w-4 h-4 text-teal-600" />
+            </div>
+            <span className="text-sm text-gray-600">
+              Join <strong className="text-teal-700">50,000+ students</strong> discovering campus trends
             </span>
           </div>
         </div>

@@ -52,7 +52,7 @@ export default function ChatDrawer({ isOpen, onClose }: ChatDrawerProps) {
                     >
                         {/* Header */}
                         {!activeChat && (
-                            <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-teal-600 to-teal-800 text-white shrink-0 shadow-sm z-10">
+                            <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-orange-500 to-orange-700 text-white shrink-0 shadow-sm z-10">
                                 <div className="flex items-center gap-3">
                                     <h2 className="font-bold text-lg leading-tight">Messages</h2>
                                 </div>
@@ -79,16 +79,16 @@ export default function ChatDrawer({ isOpen, onClose }: ChatDrawerProps) {
                                 <div className="h-full overflow-y-auto pb-[calc(1rem+env(safe-area-inset-bottom))]">
                                     {!user ? (
                                         <div className="flex flex-col items-center justify-center p-8 text-gray-500 h-full">
-                                            <MessageCircle className="w-16 h-16 mb-4 text-teal-200" />
+                                            <MessageCircle className="w-16 h-16 mb-4 text-orange-200" />
                                             <p className="font-medium text-slate-600">Sign in to see your messages</p>
                                         </div>
                                     ) : loading ? (
                                         <div className="flex justify-center p-12">
-                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
+                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600"></div>
                                         </div>
                                     ) : conversations.length === 0 ? (
                                         <div className="flex flex-col items-center justify-center p-8 text-gray-500 h-full">
-                                            <MessageCircle className="w-16 h-16 mb-4 text-teal-100" />
+                                            <MessageCircle className="w-16 h-16 mb-4 text-orange-100" />
                                             <p className="font-medium text-slate-500">No conversations yet</p>
                                         </div>
                                     ) : (
@@ -106,22 +106,22 @@ export default function ChatDrawer({ isOpen, onClose }: ChatDrawerProps) {
                                                         transition={{ delay: i * 0.04 }}
                                                         key={c._id}
                                                         onClick={() => setActiveChat(c)}
-                                                        className="flex items-center gap-4 px-4 py-3.5 hover:bg-teal-50/50 active:bg-teal-100/50 cursor-pointer transition relative"
+                                                        className="flex items-center gap-4 px-4 py-3.5 hover:bg-orange-50/50 active:bg-orange-100/50 cursor-pointer transition relative"
                                                     >
-                                                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-100 to-teal-200 flex items-center justify-center text-teal-700 font-bold shrink-0 shadow-inner text-lg">
+                                                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center text-orange-700 font-bold shrink-0 shadow-inner text-lg">
                                                             {title.charAt(0).toUpperCase()}
                                                         </div>
                                                         <div className="flex-1 min-w-0 pr-6">
                                                             <h3 className="font-semibold text-slate-800 truncate leading-snug">{title}</h3>
                                                             {sellerName && (
-                                                                <p className="text-xs font-medium text-teal-700 truncate">{sellerName}</p>
+                                                                <p className="text-xs font-medium text-orange-700 truncate">{sellerName}</p>
                                                             )}
                                                             <p className={`text-sm truncate mt-0.5 ${unread > 0 ? "text-slate-800 font-medium" : "text-slate-500"}`}>
                                                                 {lastMsg || 'Tap to chat'}
                                                             </p>
                                                         </div>
                                                         {unread > 0 && (
-                                                            <div className="absolute right-4 w-5 h-5 rounded-full bg-teal-500 text-white text-[11px] font-bold flex items-center justify-center shrink-0 shadow-md transform scale-110">
+                                                            <div className="absolute right-4 w-5 h-5 rounded-full bg-orange-500 text-white text-[11px] font-bold flex items-center justify-center shrink-0 shadow-md transform scale-110">
                                                                 {unread}
                                                             </div>
                                                         )}

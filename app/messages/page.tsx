@@ -118,7 +118,7 @@ export default function MessagesPage() {
           <p className="text-gray-600">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
+            className="mt-4 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
           >
             Try Again
           </button>
@@ -214,7 +214,7 @@ export default function MessagesPage() {
                     </p>
 
                     {conv.price && (
-                      <p className="text-xs font-medium text-teal-600 mb-1">
+                      <p className="text-xs font-medium text-orange-600 mb-1">
                         ₵{conv.price.toFixed(2)}
                       </p>
                     )}
@@ -226,7 +226,7 @@ export default function MessagesPage() {
 
                   {/* Unread Badge */}
                   {unreadCount > 0 && (
-                    <div className="flex-shrink-0 w-6 h-6 bg-teal-600 text-white text-xs font-semibold rounded-full flex items-center justify-center">
+                    <div className="flex-shrink-0 w-6 h-6 bg-orange-600 text-white text-xs font-semibold rounded-full flex items-center justify-center">
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </div>
                   )}

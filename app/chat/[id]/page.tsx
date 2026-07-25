@@ -227,7 +227,7 @@ export default function ChatConversationPage() {
             <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-white">
                 <MessageCircle className="w-12 h-12 text-gray-300 mb-4" />
                 <p className="text-gray-600 mb-4">Please sign in to view your messages</p>
-                <Link href="/login" className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors">
+                <Link href="/login" className="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
                     Sign In
                 </Link>
             </div>
@@ -265,7 +265,7 @@ export default function ChatConversationPage() {
                                     key={c._id}
                                     onClick={() => router.push(`/chat/${c._id}`)}
                                     className={`px-4 py-3 cursor-pointer border-b border-gray-100 transition-colors ${c._id === conversationId
-                                            ? 'bg-teal-50 border-l-4 border-l-teal-500'
+                                            ? 'bg-orange-50 border-l-4 border-l-orange-500'
                                             : 'hover:bg-gray-50 border-l-4 border-l-transparent'
                                         }`}
                                 >
@@ -281,7 +281,7 @@ export default function ChatConversationPage() {
                                             </p>
                                         </div>
                                         {(c.unreadCount || c.unreadForBuyer || 0) > 0 && (
-                                            <span className="flex-shrink-0 mt-0.5 w-5 h-5 bg-teal-600 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                                            <span className="flex-shrink-0 mt-0.5 w-5 h-5 bg-orange-600 text-white text-xs font-bold rounded-full flex items-center justify-center">
                                                 {c.unreadCount || c.unreadForBuyer}
                                             </span>
                                         )}
@@ -308,7 +308,7 @@ export default function ChatConversationPage() {
                             {/* Chat Header */}
                             <div className="bg-white border-b border-gray-200 px-5 py-3 flex items-center justify-between shadow-sm">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-9 h-9 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold text-sm flex-shrink-0">
+                                    <div className="w-9 h-9 rounded-full bg-orange-100 flex items-center justify-center text-orange-700 font-bold text-sm flex-shrink-0">
                                         {(activeConv?.listingTitle || activeConv?.title || 'C').charAt(0).toUpperCase()}
                                     </div>
                                     <div>
@@ -333,7 +333,7 @@ export default function ChatConversationPage() {
                             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
                                 {loadingMessages ? (
                                     <div className="flex items-center justify-center h-full">
-                                        <Loader2 className="w-6 h-6 animate-spin text-teal-600" />
+                                        <Loader2 className="w-6 h-6 animate-spin text-orange-600" />
                                     </div>
                                 ) : messages.length === 0 ? (
                                     <div className="flex flex-col items-center justify-center h-full text-gray-400">
@@ -375,12 +375,12 @@ export default function ChatConversationPage() {
                                                             {msg.text || msg.content || ''}
                                                         </p>
                                                         <div className={`flex items-center gap-1.5 mt-1 ${isMine ? 'justify-end' : 'justify-start'}`}>
-                                                            <span className={`text-[10px] ${isMine ? 'text-teal-100' : 'text-gray-400'}`}>
+                                                            <span className={`text-[10px] ${isMine ? 'text-orange-100' : 'text-gray-400'}`}>
                                                                 {formatTime(msg.createdAt || msg.timestamp)}
                                                             </span>
                                                             {isMine && (
                                                                 <CheckCheck
-                                                                    className={`w-3.5 h-3.5 ${msg.read ? 'text-blue-300' : 'text-teal-200'}`}
+                                                                    className={`w-3.5 h-3.5 ${msg.read ? 'text-blue-300' : 'text-orange-200'}`}
                                                                 />
                                                             )}
                                                         </div>
@@ -418,7 +418,7 @@ export default function ChatConversationPage() {
                                         id="chat-send-btn"
                                         onClick={handleSend}
                                         disabled={!text.trim() || sending}
-                                        className="w-9 h-9 rounded-full bg-teal-600 text-white flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed hover:bg-teal-700 transition-colors flex-shrink-0"
+                                        className="w-9 h-9 rounded-full bg-orange-600 text-white flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed hover:bg-orange-700 transition-colors flex-shrink-0"
                                         aria-label="Send message"
                                     >
                                         {sending ? (

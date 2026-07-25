@@ -302,23 +302,35 @@ export default function ListingPage() {
 
       {/* Live Chat Overlay */}
       {showChat && (
-        <div className="fixed bottom-32 left-4 right-4 sm:right-auto sm:w-80 bg-black/80 backdrop-blur-xl rounded-2xl p-4 z-30 border border-white/10 shadow-2xl animate-in slide-in-from-bottom-10 fade-in duration-300">
-          <div className="flex items-center justify-between mb-3 pb-2 border-b border-white/10">
+        <div className="fixed bottom-32 left-4 right-4 sm:right-auto sm:w-80 bg-white/95 backdrop-blur-xl rounded-3xl p-4 z-30 border border-orange-100 shadow-2xl animate-in slide-in-from-bottom-10 fade-in duration-300">
+          <div className="flex items-center justify-between mb-3 pb-2 border-b border-orange-100">
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-              <span className="text-white text-xs font-bold">Live Chat</span>
+              <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
+              <span className="text-orange-900 text-xs font-bold">Live Chat</span>
             </div>
-            <button onClick={() => setShowChat(false)}><X size={14} className="text-white/50" /></button>
+            <button onClick={() => setShowChat(false)}><X size={14} className="text-orange-500/70 hover:text-orange-700" /></button>
           </div>
-          
-          <div className="h-48 overflow-y-auto space-y-3 mb-3 scrollbar-hide">
+
+          <div className="h-48 overflow-y-auto space-y-3 mb-3">
             {chatMessages.map((msg) => (
-              <div key={msg.id} className="flex items-start gap-2">
-                <img src={msg.avatar} className="w-6 h-6 rounded-full flex-shrink-0" />
-                <div>
-                  <span className="text-white/70 text-[10px] font-bold mr-2">{msg.user}</span>
-                  <p className="text-white text-xs inline">{msg.text}</p>
+              <div key={msg.id} className={`flex items-start gap-3 ${msg.user === 'You' ? 'justify-end' : 'justify-start'}`}>
+                {msg.user !== 'You' && (
+                  <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-700 text-xs font-semibold">
+                    {msg.user.slice(0, 1)}
+                  </div>
+                )}
+                <div className={`max-w-[78%] rounded-3xl px-3 py-2 text-xs leading-snug ${msg.user === 'You' ? 'bg-orange-600 text-white rounded-br-none rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl' : 'bg-gray-100 text-gray-900 rounded-bl-none rounded-tr-3xl rounded-tl-3xl rounded-br-3xl'}`}>
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="font-semibold text-[10px] uppercase tracking-[0.12em] text-gray-500">{msg.user}</span>
+                    <span className="text-[9px] text-gray-400">{msg.time}</span>
+                  </div>
+                  <p className="whitespace-pre-wrap">{msg.text}</p>
                 </div>
+                {msg.user === 'You' && (
+                  <div className="w-8 h-8 rounded-full bg-orange-600 flex items-center justify-center text-white text-xs font-semibold">
+                    Y
+                  </div>
+                )}
               </div>
             ))}
             <div ref={chatEndRef} />
@@ -330,10 +342,10 @@ export default function ListingPage() {
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               placeholder="Ask a question..."
-              className="flex-1 bg-white/10 rounded-full px-3 py-2 text-xs text-white placeholder:text-white/40 outline-none focus:bg-white/20 transition border border-white/5"
+              className="flex-1 bg-gray-50 rounded-full px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-orange-200 transition border border-gray-200"
             />
-            <button type="submit" className="w-9 h-9 rounded-full bg-[#6C5CE7] flex items-center justify-center text-white hover:bg-[#5a4bd6] transition">
-              <Send size={14} />
+            <button type="submit" className="w-10 h-10 rounded-full bg-orange-600 flex items-center justify-center text-white hover:bg-orange-700 transition">
+              <Send size={16} />
             </button>
           </form>
         </div>

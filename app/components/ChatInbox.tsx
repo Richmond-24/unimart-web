@@ -46,7 +46,7 @@ export default function ChatInbox() {
                   <div className="text-sm font-medium truncate">{c.title || (c.participants && c.participants.map((p:any)=>p.name).join(', ')) || 'Conversation'}</div>
                   <div className="text-xs text-gray-500 truncate">{c.lastMessage || ''}</div>
                 </div>
-                {c.unreadCount ? <div className="ml-2 text-xs bg-teal-500 text-white rounded-full px-2 py-0.5">{c.unreadCount}</div> : null}
+                {c.unreadCount ? <div className="ml-2 text-xs bg-orange-500 text-white rounded-full px-2 py-0.5">{c.unreadCount}</div> : null}
               </div>
             </li>
           ))}
