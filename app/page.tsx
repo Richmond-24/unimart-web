@@ -3,7 +3,7 @@ import ClientOnly from "./components/ClientOnly";
 import HeroCarousel from "./components/HeroCarousel";
 import BigBanner from "./components/BigBanner";
 import CategoryFilter from "./components/CategoryFilter";
-import CampusTrending from "./components/CampusTrending";
+import CampaignBannerMarquee from "./components/CampaignBannerMarquee";
 import StudentDeals from "./components/StudentDeals";
 import FashionDeals from "./components/FashionDeals";
 import ProductGrid from "./components/ProductGrid";
@@ -21,14 +21,14 @@ export default function Home() {
         <Greeting />
       </ClientOnly>
       <HeroCarousel />
-        <CategoryFilter />
-        <BigBanner />
+      <CategoryFilter />
+      <BigBanner />
+      <CampaignBannerMarquee />
       <StudentDeals />
       <FashionDeals />
       <ProductGrid horizontal />
       <FlashDeals />
       <SecondHandDeals />
-      <CampusTrending />
       <SocialCommerceBanner />
       
     </div>

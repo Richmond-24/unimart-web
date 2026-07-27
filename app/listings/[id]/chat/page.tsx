@@ -44,6 +44,28 @@ interface ListingData {
   sellerEmail?: string;
 }
 
+function isSameConversationContext(conversation: any, sellerId: string | null, listingId: string | null) {
+  if (!sellerId) return false;
+
+  const sellerMatches = (conversation?.participants || []).some((participant: any) => {
+    const id = participant?._id || participant;
+    return String(id) === String(sellerId);
+  });
+
+  if (!sellerMatches) return false;
+  if (!listingId) return true;
+
+  const productCandidates = [
+    conversation?.product,
+    conversation?.productId,
+    conversation?.listingId,
+    conversation?.listing?._id,
+    conversation?.product?._id,
+  ];
+
+  return productCandidates.some((candidate) => candidate && String(candidate) === String(listingId));
+}
+
 export default function ChatPage() {
   const router = useRouter();
   const params = useParams();
@@ -103,13 +125,7 @@ export default function ChatPage() {
     }
 
     const convs = await loadBuyerConversations();
-    const existing = convs.find((c: any) => {
-      const productMatch = listingId && c.product && String(c.product) === String(listingId);
-      const sellerInParts = (c.participants || []).some(
-        (p: any) => String(p._id || p) === String(sellerId)
-      );
-      return productMatch || sellerInParts;
-    });
+    const existing = convs.find((c: any) => isSameConversationContext(c, sellerId, listingId));
 
     if (existing?._id) {
       setConversationId(existing._id);
@@ -202,13 +218,7 @@ export default function ChatPage() {
         }
 
         const convs = await loadBuyerConversations();
-        const existing = convs.find((c: any) => {
-          const productMatch = listingId && c.product && String(c.product) === String(listingId);
-          const sellerInParts = (c.participants || []).some(
-            (p: any) => String(p._id || p) === String(sellerId)
-          );
-          return productMatch || sellerInParts;
-        });
+        const existing = convs.find((c: any) => isSameConversationContext(c, sellerId, listingId));
 
         if (existing && m) {
           setConversationId(existing._id);

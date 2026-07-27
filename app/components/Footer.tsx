@@ -33,7 +33,7 @@ const tabs = [
     label: "",
     href: "/explore",
     match: (p: string) => p.startsWith("/explore") || p.startsWith("/category"),
-    // Explore now takes the raised middle button, showing the app logo.
+    // Explore now takes the raised middle button, showing the Swoop icon mark.
     raised: true,
     icon: (_active: boolean) => (
       <div
@@ -44,13 +44,13 @@ const tabs = [
         }}
       >
         <div className="absolute inset-0 rounded-[20px]" style={{ border: "1.5px solid rgba(255,255,255,0.25)" }} />
-        <div className="relative w-6 h-6 rounded-md overflow-hidden">
+        <div className="relative w-9 h-9 flex items-center justify-center">
           <Image
             src="/logo.png"
-            alt=""
+            alt="Swoop"
             fill
-            sizes="24px"
-            className="object-cover select-none pointer-events-none"
+            sizes="36px"
+            className="object-contain select-none pointer-events-none drop-shadow-[0_1px_3px_rgba(0,0,0,0.25)]"
             draggable={false}
             priority
           />

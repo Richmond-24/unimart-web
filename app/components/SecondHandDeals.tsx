@@ -14,10 +14,13 @@ interface SecondHandItem {
   sellerName?: string;
   seller?: string;
   imageUrls?: string[];
+  images?: string[];
   videoUrl?: string;
+  video?: string;
   rating?: number;
   reviewCount?: number;
   condition?: string;
+  category?: string;
 }
 
 // Fallback second-hand items with video content
@@ -138,7 +141,7 @@ function VideoSecondHandCard({ item }: VideoSecondHandCardProps) {
   }, [isHovered]);
 
   const lid = item._id || item.id;
-  const priceDisplay = typeof item.price === 'number' ? `GH₵${item.price}` : item.price;
+  const priceDisplay = typeof item.price === 'number' ? `GH₵${item.price}` : (item.price || 'Price on request');
   const originalPriceDisplay = item.originalPrice ? (typeof item.originalPrice === 'number' ? `GH₵${item.originalPrice}` : item.originalPrice) : null;
 
   return (
@@ -151,8 +154,8 @@ function VideoSecondHandCard({ item }: VideoSecondHandCardProps) {
       {/* Video Background */}
       <video
         ref={videoRef}
-        src={item.videoUrl}
-        poster={item.imageUrls?.[0]}
+        src={item.videoUrl || item.video}
+        poster={(item.imageUrls?.[0] || item.images?.[0] || "")}
         className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
         loop
         muted={isMuted}
@@ -256,7 +259,13 @@ export default function SecondHandDealsVideo() {
           // Map to include video fields
           const mapped = data.map((p: any) => ({
             ...p,
-            videoUrl: p.videoUrl || p.video || undefined
+            _id: p._id || p.id,
+            title: p.title || p.name || 'Great second-hand find',
+            price: p.price || p.amount || 0,
+            sellerName: p.sellerName || p.seller?.name || p.seller?.username || 'verified seller',
+            imageUrls: p.imageUrls || p.images || (p.image ? [p.image] : []),
+            videoUrl: p.videoUrl || p.video || undefined,
+            condition: p.condition || p.itemCondition || 'Pre-loved'
           }));
           
           setItems(mapped.length > 0 ? mapped : FALLBACK_SECOND_HAND);

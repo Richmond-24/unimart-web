@@ -14,10 +14,15 @@ interface FashionItem {
   sellerName?: string;
   seller?: string;
   imageUrls?: string[];
+  images?: string[];
   videoUrl?: string;
+  video?: string;
   rating?: number;
   reviewCount?: number;
   isNewArrival?: boolean;
+  newArrival?: boolean;
+  category?: string;
+  discountPercent?: number;
 }
 
 // Fallback fashion items with video content
@@ -138,7 +143,7 @@ function VideoFashionCard({ item }: VideoFashionCardProps) {
   }, [isHovered]);
 
   const lid = item._id || item.id;
-  const priceDisplay = typeof item.price === 'number' ? `GH₵${item.price}` : item.price;
+  const priceDisplay = typeof item.price === 'number' ? `GH₵${item.price}` : (item.price || 'Price on request');
   const originalPriceDisplay = item.originalPrice ? (typeof item.originalPrice === 'number' ? `GH₵${item.originalPrice}` : item.originalPrice) : null;
 
   return (
@@ -151,8 +156,8 @@ function VideoFashionCard({ item }: VideoFashionCardProps) {
       {/* Video Background */}
       <video
         ref={videoRef}
-        src={item.videoUrl}
-        poster={item.imageUrls?.[0]}
+        src={item.videoUrl || item.video}
+        poster={(item.imageUrls?.[0] || item.images?.[0] || "")}
         className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
         loop
         muted={isMuted}
@@ -210,7 +215,7 @@ function VideoFashionCard({ item }: VideoFashionCardProps) {
       {/* Bottom Content */}
       <div className="absolute bottom-0 left-0 right-0 p-3 z-10">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-white text-xs font-semibold truncate">@{item.sellerName || item.seller}</span>
+          <span className="text-white text-xs font-semibold truncate">@{item.sellerName || item.seller || 'verified seller'}</span>
           {item.rating && (
             <div className="flex items-center gap-0.5 bg-black/40 backdrop-blur-md px-1.5 py-0.5 rounded-full">
               <span className="text-white text-[10px] font-medium">★ {item.rating.toFixed(1)}</span>
@@ -218,7 +223,7 @@ function VideoFashionCard({ item }: VideoFashionCardProps) {
           )}
         </div>
         
-        <h3 className="text-white text-sm font-bold leading-tight line-clamp-2 mb-2 drop-shadow-md">
+        <h3 className="text-white text-sm font-bold leading-tight line-clamp-2 mb-2 drop-shadow-md min-h-[2.5em]">
           {item.title}
         </h3>
 
@@ -256,8 +261,14 @@ export default function FashionDealsVideo() {
           // Map API data to include video fields if available
           const mapped = res.data.map((p: any) => ({
             ...p,
+            _id: p._id || p.id,
+            title: p.title || p.name || 'Fresh fashion find',
+            price: p.price || p.amount || 0,
+            sellerName: p.sellerName || p.seller?.name || p.seller?.username || 'verified seller',
+            imageUrls: p.imageUrls || p.images || (p.image ? [p.image] : []),
             videoUrl: p.videoUrl || p.video || undefined,
-            isNewArrival: p.isNewArrival || p.newArrival || false
+            isNewArrival: p.isNewArrival || p.newArrival || false,
+            discountPercent: p.discountPercent || (p.originalPrice && p.price ? Math.round((1 - Number(p.price)/Number(p.originalPrice)) * 100) : 0)
           }));
           setItems(mapped);
         } else if (mounted && Array.isArray(res)) {

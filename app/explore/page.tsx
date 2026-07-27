@@ -115,6 +115,7 @@ function Toast({ toasts, remove }: { toasts: ToastItem[]; remove: (id: number) =
           background: t.type === "success" ? "#0d9488" : t.type === "error" ? "#dc2626" : "#0f172a",
           color: "#fff", padding: "12px 18px", borderRadius: 14, display: "flex", alignItems: "center",
           gap: 10, cursor: "pointer", fontSize: 13, fontWeight: 600, boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
+          animation: "fadeUp 0.3s ease forwards",
         }}>
           {t.type === "success" && <IconCheck size={15} color="#fff" />}
           {t.type === "error" && <IconX size={15} color="#fff" />}
@@ -129,13 +130,20 @@ function Toast({ toasts, remove }: { toasts: ToastItem[]; remove: (id: number) =
 function FeatureCard({ icon, title, desc, accent }: { icon: React.ReactNode; title: string; desc: string; accent: string }) {
   const [hovered, setHovered] = useState(false);
   return (
-    <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={{
-      background: "#fff", borderRadius: 18, padding: "20px 18px",
-      border: `1.5px solid ${hovered ? accent + "44" : "#e2e8f0"}`,
-      boxShadow: hovered ? `0 8px 28px ${accent}18` : "0 2px 6px rgba(0,0,0,0.04)",
-      transition: "all 0.22s ease", transform: hovered ? "translateY(-2px)" : "none",
-    }}>
-      <div style={{ width: 44, height: 44, borderRadius: 12, background: accent + "18", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
+    <div 
+      onMouseEnter={() => setHovered(true)} 
+      onMouseLeave={() => setHovered(false)} 
+      className="feature-card fade-up"
+      style={{
+        background: "#fff", borderRadius: 18, padding: "20px 18px",
+        border: `1.5px solid ${hovered ? accent + "44" : "#e2e8f0"}`,
+        boxShadow: hovered ? `0 8px 28px ${accent}18` : "0 2px 6px rgba(0,0,0,0.04)",
+        transition: "all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)", 
+        transform: hovered ? "translateY(-5px) scale(1.02)" : "translateY(0) scale(1)",
+        opacity: 0 // Handled by animation class
+      }}
+    >
+      <div style={{ width: 44, height: 44, borderRadius: 12, background: accent + "18", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14, transition: "transform 0.3s ease", transform: hovered ? "rotate(5deg)" : "none" }}>
         {icon}
       </div>
       <h4 style={{ margin: "0 0 6px", fontSize: 14, fontWeight: 700, color: "#0f172a", fontFamily: "inherit" }}>{title}</h4>
@@ -163,20 +171,48 @@ export default function JoinPage() {
         *, *::before, *::after { box-sizing: border-box; }
         html, body { margin: 0; padding: 0; overflow-x: hidden; background: #f8fafc; }
 
-        .join-btn { transition: all 0.2s cubic-bezier(.4,0,.2,1); cursor: pointer; }
-        .join-btn:hover { transform: translateY(-2px); }
+        .join-btn { transition: all 0.2s cubic-bezier(.4,0,.2,1); cursor: pointer; position: relative; overflow: hidden; }
+        .join-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         .join-btn:active { transform: scale(0.97); }
+        
+        /* Ripple effect for buttons */
+        .join-btn::after {
+          content: "";
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          width: 5px;
+          height: 5px;
+          background: rgba(255, 255, 255, 0.5);
+          opacity: 0;
+          border-radius: 100%;
+          transform: scale(1, 1) translate(-50%);
+          transform-origin: 50% 50%;
+        }
+        .join-btn:focus:not(:active)::after {
+          animation: ripple 1s ease-out;
+        }
+
+        @keyframes ripple {
+          0% { transform: scale(0, 0); opacity: 0.5; }
+          100% { transform: scale(40, 40); opacity: 0; }
+        }
 
         @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(18px); }
+          from { opacity: 0; transform: translateY(20px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        .fade-up { opacity: 0; animation: fadeUp 0.5s ease forwards; }
-        .d1 { animation-delay: 0.05s; }
-        .d2 { animation-delay: 0.15s; }
-        .d3 { animation-delay: 0.25s; }
-        .d4 { animation-delay: 0.35s; }
-        .d5 { animation-delay: 0.45s; }
+        
+        .fade-up { 
+          opacity: 0; 
+          animation: fadeUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; 
+        }
+        
+        .d1 { animation-delay: 0.1s; }
+        .d2 { animation-delay: 0.2s; }
+        .d3 { animation-delay: 0.3s; }
+        .d4 { animation-delay: 0.4s; }
+        .d5 { animation-delay: 0.5s; }
 
         /* ── Responsive CTA grid ── */
         .cta-grid {
@@ -231,6 +267,20 @@ export default function JoinPage() {
       <div style={{ minHeight: "100vh", background: "#f8fafc", fontFamily: "system-ui, -apple-system, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" }}>
 
         <main style={{ maxWidth: 1060, margin: "0 auto", padding: "32px 16px 80px" }}>
+
+          {/* Header / Logo Area */}
+          <div className="fade-up d1" style={{ textAlign: "center", marginBottom: 40 }}>
+             <div style={{ display: "inline-flex", alignItems: "center", gap: 10, background: "#fff", padding: "8px 16px", borderRadius: 50, border: "1px solid #e2e8f0", boxShadow: "0 2px 10px rgba(0,0,0,0.03)" }}>
+                <div style={{ width: 24, height: 24, borderRadius: 6, background: "linear-gradient(135deg, #0d9488, #0f766e)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                   <span style={{ color: "white", fontWeight: 800, fontSize: 14 }}>S</span>
+                </div>
+                <span style={{ fontWeight: 700, color: "#0f172a", fontSize: 14 }}>Swoop App</span>
+             </div>
+             <h1 style={{ marginTop: 24, fontSize: "clamp(28px, 5vw, 36px)", fontWeight: 900, color: "#0f172a", letterSpacing: "-0.02em" }}>
+               The Social Commerce Hub for Students
+             </h1>
+             <p style={{ color: "#64748b", marginTop: 8, fontSize: 16 }}>Buy, sell, and connect on campus.</p>
+          </div>
 
           {/* CTA Cards */}
           <div className="cta-grid fade-up d2" style={{ marginBottom: 48 }}>
@@ -293,12 +343,12 @@ export default function JoinPage() {
           <div className="fade-up d3" style={{ marginBottom: 44 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
               <div style={{ width: 4, height: 24, borderRadius: 4, background: "#0d9488" }} />
-              <h2 style={{ margin: 0, fontSize: "clamp(17px, 4vw, 21px)", fontWeight: 800, color: "#0f172a", fontFamily: "inherit", letterSpacing: "-0.01em" }}>What makes Uni-Mart different?</h2>
+              <h2 style={{ margin: 0, fontSize: "clamp(17px, 4vw, 21px)", fontWeight: 800, color: "#0f172a", fontFamily: "inherit", letterSpacing: "-0.01em" }}>What makes Swoop different?</h2>
             </div>
             <div className="about-grid">
               <div style={{ background: "#fff", borderRadius: 18, padding: "20px 22px", border: "1.5px solid #e2e8f0" }}>
                 <p style={{ margin: 0, fontSize: 13, color: "#475569", lineHeight: 1.85 }}>
-                  <strong style={{ color: "#0f172a" }}>Most marketplaces look away when prices inflate.</strong> We don't. Uni-Mart monitors price changes, flags suspicious hikes, and ensures no bait-and-switch or fake discounts.
+                  <strong style={{ color: "#0f172a" }}>Most marketplaces look away when prices inflate.</strong> We don't. Swoop monitors price changes, flags suspicious hikes, and ensures no bait-and-switch or fake discounts.
                 </p>
               </div>
               <div style={{ background: "#fff", borderRadius: 18, padding: "20px 22px", border: "1.5px solid #e2e8f0" }}>
@@ -313,7 +363,7 @@ export default function JoinPage() {
           <div className="fade-up d4" style={{ marginBottom: 44 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
               <div style={{ width: 4, height: 24, borderRadius: 4, background: "#0d9488" }} />
-              <h2 style={{ margin: 0, fontSize: "clamp(17px, 4vw, 21px)", fontWeight: 800, color: "#0f172a", fontFamily: "inherit", letterSpacing: "-0.01em" }}>Why choose Uni-Mart?</h2>
+              <h2 style={{ margin: 0, fontSize: "clamp(17px, 4vw, 21px)", fontWeight: 800, color: "#0f172a", fontFamily: "inherit", letterSpacing: "-0.01em" }}>Why choose Swoop?</h2>
             </div>
             <div className="feature-grid">
               <FeatureCard icon={<IconTag size={20} color="#0d9488" />} title="Fair Price Guarantee" desc="We track price history and flag unfair increases so you never overpay." accent="#0d9488" />

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from 'next/navigation';
 import { useAuth } from "../context/AuthContext";
 import SplashScreen from "./SplashScreen";
+import Onboarding from "./Onboarding";
 import AuthFlow from "../AuthFlow";
 
 const AuthFlowComponent = AuthFlow as React.ComponentType<{ onDone: () => void }>;
@@ -11,7 +12,7 @@ const AuthFlowComponent = AuthFlow as React.ComponentType<{ onDone: () => void }
 export default function AppInitializer() {
   const router = useRouter();
   const { isLoading, isAuthenticated, token } = useAuth();
-  const [stage, setStage] = useState<'splash' | 'auth' | 'ready'>('splash');
+  const [stage, setStage] = useState<'splash' | 'onboard' | 'auth' | 'ready'>('splash');
   const [splashFinished, setSplashFinished] = useState(false);
 
   // Decide app stage based on auth state and splash finished state
@@ -19,10 +20,14 @@ export default function AppInitializer() {
     if (typeof window === 'undefined') return;
 
     if (!isLoading && splashFinished) {
+      const hasSeenOnboarding = localStorage.getItem('unimart:onboarded') === '1';
+
       if (isAuthenticated && token) {
         setStage('ready');
-      } else {
+      } else if (hasSeenOnboarding) {
         setStage('auth');
+      } else {
+        setStage('onboard');
       }
     }
   }, [isLoading, splashFinished, isAuthenticated, token]);
@@ -41,11 +46,14 @@ export default function AppInitializer() {
         // Check actual auth state from localStorage to determine correct stage
         const hasToken = !!localStorage.getItem('unimart:token');
         const hasGuest = !!localStorage.getItem('unimart:guest');
+        const hasSeenOnboarding = localStorage.getItem('unimart:onboarded') === '1';
+
         if (hasToken || hasGuest) {
           setStage('ready');
-        } else {
-          // Logged out — go back to auth screen
+        } else if (hasSeenOnboarding) {
           setStage('auth');
+        } else {
+          setStage('onboard');
         }
       } catch (e) {
         console.warn('AppInitializer authChanged handler error', e);
@@ -112,6 +120,17 @@ export default function AppInitializer() {
       >
         {stage === 'splash' && (
           <SplashScreen onFinish={() => setSplashFinished(true)} />
+        )}
+
+        {stage === 'onboard' && (
+          <div className="w-full h-full flex items-center justify-center bg-[#0f172a]">
+            <Onboarding onDone={() => {
+              try {
+                localStorage.setItem('unimart:onboarded', '1');
+              } catch (e) {}
+              setStage('auth');
+            }} />
+          </div>
         )}
 
         {stage === 'auth' && (

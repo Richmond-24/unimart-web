@@ -51,9 +51,9 @@ const DEFAULT_SLIDES: Slide[] = [
   }
 ];
 
-export default function HeroCarousel({ 
-  autoPlay = true, 
-  interval = 5000 
+export default function HeroCarousel({
+  autoPlay = true,
+  interval = 5000
 }: HeroCarouselProps) {
   const [slides, setSlides] = useState<Slide[]>(DEFAULT_SLIDES);
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -65,14 +65,14 @@ export default function HeroCarousel({
         // ✅ FIXED: Use "/hero-slides" NOT "/hero-slides"
         const endpoint = "/hero-slides";
         console.log(`📡 [HeroCarousel] Fetching from: ${endpoint}`);
-        
+
         const response = await apiFetch(endpoint, { suppressErrorLog: true });
-        
+
         console.log('✅ [HeroCarousel] Response received:', response);
-        
+
         // Check if we got valid slides
         let newSlides: Slide[] | null = null;
-        
+
         if (response?.data && Array.isArray(response.data) && response.data.length > 0) {
           newSlides = response.data.map((item: any) => ({
             id: item._id || item.id || String(Math.random()),
@@ -94,7 +94,7 @@ export default function HeroCarousel({
             backgroundColor: item.backgroundColor || '#f0f0f0'
           }));
         }
-        
+
         if (newSlides && newSlides.length > 0) {
           console.log(`✅ [HeroCarousel] Loaded ${newSlides.length} slides from API`);
           setSlides(newSlides);
@@ -139,9 +139,11 @@ export default function HeroCarousel({
   // Loading state
   if (loading) {
     return (
-      <div className="relative w-full h-[400px] bg-slate-100 animate-pulse rounded-xl overflow-hidden">
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-slate-400">Loading...</div>
+      <div className="w-full">
+        <div className="relative w-full h-[180px] sm:h-[220px] md:h-[280px] lg:h-[320px] bg-slate-100 animate-pulse rounded-2xl overflow-hidden">
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-slate-400 text-sm">Loading...</div>
+          </div>
         </div>
       </div>
     );
@@ -155,98 +157,149 @@ export default function HeroCarousel({
   const current = slides[currentSlide] || slides[0];
 
   return (
-    <div className="relative w-full h-[400px] rounded-xl overflow-hidden group">
-      {/* Slide Background */}
-      <div 
-        className="absolute inset-0 transition-all duration-700"
-        style={{ 
-          backgroundColor: current.backgroundColor || '#f0f0f0',
-        }}
-      >
-        {/* Image */}
-        {current.imageUrl && (
-          <div className="relative w-full h-full">
-            <Image
-              src={current.imageUrl}
-              alt={current.title || 'Hero slide'}
-              fill
-              className="object-cover"
-              priority
-              onError={(e) => {
-                // Fallback if image fails to load
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-              }}
-            />
-            {/* Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-r from-black/50 to-transparent" />
+    <div className="w-full">
+      {/* Main slide */}
+      <div className="relative w-full h-[180px] sm:h-[220px] md:h-[280px] lg:h-[320px] rounded-2xl overflow-hidden group shadow-sm">
+        {/* Slide Background */}
+        <div
+          className="absolute inset-0 transition-all duration-700"
+          style={{
+            backgroundColor: current.backgroundColor || '#f0f0f0',
+          }}
+        >
+          {/* Image */}
+          {current.imageUrl && (
+            <div className="relative w-full h-full">
+              <Image
+                src={current.imageUrl}
+                alt={current.title || 'Hero slide'}
+                fill
+                className="object-cover"
+                priority
+                onError={(e) => {
+                  // Fallback if image fails to load
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                }}
+              />
+              {/* Gradient Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-r from-black/55 via-black/10 to-transparent" />
+            </div>
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="absolute inset-0 flex items-center justify-start p-4 sm:p-6 md:p-8">
+          <div className="max-w-md text-white">
+            {current.title && (
+              <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-1.5 leading-tight drop-shadow-md">
+                {current.title}
+              </h1>
+            )}
+            {current.description && (
+              <p className="text-xs sm:text-sm md:text-base mb-3 md:mb-4 drop-shadow-md text-white/90 line-clamp-2">
+                {current.description}
+              </p>
+            )}
+            {current.buttonText && current.link && (
+              <a
+                href={current.link}
+                className="inline-block px-4 py-2 md:px-5 md:py-2.5 bg-white text-slate-900 text-xs sm:text-sm font-semibold rounded-full hover:bg-slate-100 transition shadow-md"
+              >
+                {current.buttonText}
+              </a>
+            )}
           </div>
+        </div>
+
+        {/* Navigation Arrows */}
+        {slides.length > 1 && (
+          <>
+            <button
+              onClick={prevSlide}
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white p-1.5 rounded-full backdrop-blur-sm transition-opacity opacity-0 group-hover:opacity-100"
+              aria-label="Previous slide"
+            >
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <button
+              onClick={nextSlide}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white p-1.5 rounded-full backdrop-blur-sm transition-opacity opacity-0 group-hover:opacity-100"
+              aria-label="Next slide"
+            >
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+
+            {/* Dot Indicators — mobile only, the grid strip below takes over on sm+ */}
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 sm:hidden">
+              {slides.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => goToSlide(index)}
+                  className={`h-1.5 rounded-full transition-all ${
+                    index === currentSlide
+                      ? 'bg-white w-5'
+                      : 'bg-white/50 w-1.5 hover:bg-white/80'
+                  }`}
+                  aria-label={`Go to slide ${index + 1}`}
+                />
+              ))}
+            </div>
+          </>
         )}
       </div>
 
-      {/* Content */}
-      <div className="absolute inset-0 flex items-center justify-start p-8 md:p-12">
-        <div className="max-w-xl text-white">
-          {current.title && (
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 drop-shadow-lg">
-              {current.title}
-            </h1>
-          )}
-          {current.description && (
-            <p className="text-base md:text-lg lg:text-xl mb-6 drop-shadow-lg text-white/90">
-              {current.description}
-            </p>
-          )}
-          {current.buttonText && current.link && (
-            <a
-              href={current.link}
-              className="inline-block px-6 py-3 bg-white text-slate-900 font-semibold rounded-lg hover:bg-slate-100 transition shadow-lg"
-            >
-              {current.buttonText}
-            </a>
-          )}
-        </div>
-      </div>
-
-      {/* Navigation Arrows */}
+      {/* Thumbnail grid strip — a compact, Figma-style nav for the same slides */}
       {slides.length > 1 && (
-        <>
-          <button
-            onClick={prevSlide}
-            className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white p-2 rounded-full backdrop-blur-sm transition-opacity opacity-0 group-hover:opacity-100"
-            aria-label="Previous slide"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <button
-            onClick={nextSlide}
-            className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white p-2 rounded-full backdrop-blur-sm transition-opacity opacity-0 group-hover:opacity-100"
-            aria-label="Next slide"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-
-          {/* Dot Indicators */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-            {slides.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => goToSlide(index)}
-                className={`w-2.5 h-2.5 rounded-full transition-all ${
-                  index === currentSlide
-                    ? 'bg-white w-8'
-                    : 'bg-white/50 hover:bg-white/80'
-                }`}
-                aria-label={`Go to slide ${index + 1}`}
-              />
-            ))}
-          </div>
-        </>
+        <div className="hidden sm:grid gap-2 mt-2.5" style={{ gridTemplateColumns: `repeat(${Math.min(slides.length, 6)}, minmax(0, 1fr))` }}>
+          {slides.map((slide, index) => (
+            <button
+              key={slide.id || slide._id || index}
+              onClick={() => goToSlide(index)}
+              className={`relative h-14 md:h-16 rounded-xl overflow-hidden transition-all ${
+                index === currentSlide
+                  ? 'ring-2 ring-offset-2 ring-teal-600'
+                  : 'ring-1 ring-black/5 opacity-70 hover:opacity-100'
+              }`}
+              aria-label={`Go to slide ${index + 1}`}
+            >
+              {slide.imageUrl && (
+                <Image
+                  src={slide.imageUrl}
+                  alt=""
+                  fill
+                  className="object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                  }}
+                />
+              )}
+              <div className={`absolute inset-0 transition-colors ${index === currentSlide ? 'bg-black/10' : 'bg-black/25'}`} />
+              {index === currentSlide && (
+                <span className="absolute bottom-1 left-1 right-1 h-0.5 bg-white/40 rounded-full overflow-hidden">
+                  <span
+                    key={currentSlide}
+                    className="block h-full bg-white rounded-full"
+                    style={{ animation: autoPlay ? `heroProgress ${interval}ms linear forwards` : undefined, width: autoPlay ? undefined : '100%' }}
+                  />
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
       )}
+
+      <style jsx>{`
+        @keyframes heroProgress {
+          from { width: 0%; }
+          to { width: 100%; }
+        }
+      `}</style>
     </div>
   );
 }
