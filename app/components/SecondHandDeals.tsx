@@ -23,79 +23,6 @@ interface SecondHandItem {
   category?: string;
 }
 
-// Fallback second-hand items with video content
-const FALLBACK_SECOND_HAND: SecondHandItem[] = [
-  {
-    _id: '1',
-    title: 'Used MacBook Pro 2019',
-    price: 3500,
-    originalPrice: 8000,
-    sellerName: 'tech_recycle',
-    videoUrl: '/videos/secondhand1.mp4',
-    imageUrls: ['https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&h=400&fit=crop'],
-    rating: 4.5,
-    reviewCount: 12,
-    condition: 'Good'
-  },
-  {
-    _id: '2',
-    title: 'Vintage Leather Sofa',
-    price: 450,
-    sellerName: 'home_finds',
-    videoUrl: '/videos/secondhand2.mp4',
-    imageUrls: ['https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400&h=400&fit=crop'],
-    rating: 4.8,
-    reviewCount: 8,
-    condition: 'Like New'
-  },
-  {
-    _id: '3',
-    title: 'Canon DSLR Camera',
-    price: 1200,
-    originalPrice: 3000,
-    sellerName: 'photo_geek',
-    videoUrl: '/videos/secondhand3.mp4',
-    imageUrls: ['https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=400&h=400&fit=crop'],
-    rating: 4.6,
-    reviewCount: 15,
-    condition: 'Fair'
-  },
-  {
-    _id: '4',
-    title: 'Mountain Bike',
-    price: 600,
-    sellerName: 'cycle_hub',
-    videoUrl: '/videos/secondhand4.mp4',
-    imageUrls: ['https://images.unsplash.com/photo-1532298229144-0ec0c57515c7?w=400&h=400&fit=crop'],
-    rating: 4.7,
-    reviewCount: 22,
-    condition: 'Good'
-  },
-  {
-    _id: '5',
-    title: 'Electric Guitar',
-    price: 850,
-    originalPrice: 1500,
-    sellerName: 'music_man',
-    videoUrl: '/videos/secondhand5.mp4',
-    imageUrls: ['https://images.unsplash.com/photo-1550985616-10810253b84d?w=400&h=400&fit=crop'],
-    rating: 4.9,
-    reviewCount: 5,
-    condition: 'Like New'
-  },
-  {
-    _id: '6',
-    title: 'Study Desk & Chair',
-    price: 150,
-    sellerName: 'dorm_clearance',
-    videoUrl: '/videos/secondhand6.mp4',
-    imageUrls: ['https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?w=400&h=400&fit=crop'],
-    rating: 4.3,
-    reviewCount: 30,
-    condition: 'Fair'
-  }
-];
-
 interface VideoSecondHandCardProps {
   item: SecondHandItem;
 }
@@ -239,24 +166,23 @@ export default function SecondHandDealsVideo() {
       setLoading(true);
       setError(null);
       try {
-        const endpoint = '/public/second-hand';
+        const endpoint = '/public/second-hand?limit=6';
         console.log(`📡 [SecondHandDeals] Fetching from: ${endpoint}`);
         
         const res = await apiFetch(endpoint, { suppressErrorLog: false });
         
-        if (mounted && res) {
-          let data = [];
-          if (res.success && Array.isArray(res.data)) {
+        if (mounted) {
+          let data: any[] = [];
+          if (res?.success && Array.isArray(res.data)) {
             data = res.data;
           } else if (Array.isArray(res)) {
             data = res;
-          } else if (res.data && Array.isArray(res.data)) {
+          } else if (res?.data && Array.isArray(res.data)) {
             data = res.data;
-          } else if (res.items && Array.isArray(res.items)) {
+          } else if (res?.items && Array.isArray(res.items)) {
             data = res.items;
           }
           
-          // Map to include video fields
           const mapped = data.map((p: any) => ({
             ...p,
             _id: p._id || p.id,
@@ -268,15 +194,13 @@ export default function SecondHandDealsVideo() {
             condition: p.condition || p.itemCondition || 'Pre-loved'
           }));
           
-          setItems(mapped.length > 0 ? mapped : FALLBACK_SECOND_HAND);
+          setItems(mapped);
           console.log(`✅ [SecondHandDeals] Loaded ${mapped.length} items`);
-        } else {
-          setItems(FALLBACK_SECOND_HAND);
         }
       } catch (err: any) {
         console.error('❌ [SecondHandDeals] Error:', err);
         setError(err.message || 'Failed to load second-hand items');
-        setItems(FALLBACK_SECOND_HAND); // Use fallback instead of empty
+        setItems([]);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -314,6 +238,12 @@ export default function SecondHandDealsVideo() {
               >
                 Retry
               </button>
+            </div>
+          )}
+
+          {!loading && !error && items.length === 0 && (
+            <div className="col-span-full text-center py-8 text-gray-500 text-sm">
+              No second-hand items are available right now.
             </div>
           )}
 

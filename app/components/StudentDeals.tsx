@@ -21,85 +21,6 @@ interface DealItem {
   discountPercent?: number;
 }
 
-// Fallback data with video content
-const FALLBACK_DEALS: DealItem[] = [
-  {
-    _id: '1',
-    title: 'Photography Workshop',
-    price: 50,
-    originalPrice: 100,
-    sellerName: 'Creative Studio',
-    videoUrl: '/videos/service1.mp4',
-    imageUrls: ['https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=400&h=400&fit=crop'],
-    rating: 4.8,
-    reviewCount: 124,
-    isVerified: true,
-    discountPercent: 50
-  },
-  {
-    _id: '2',
-    title: 'Resume Review Pro',
-    price: 25,
-    sellerName: 'Career Hub',
-    videoUrl: '/videos/service2.mp4',
-    imageUrls: ['https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=400&h=400&fit=crop'],
-    rating: 4.9,
-    reviewCount: 89,
-    isVerified: true,
-    discountPercent: 0
-  },
-  {
-    _id: '3',
-    title: 'Gym Pass Monthly',
-    price: 40,
-    originalPrice: 60,
-    sellerName: 'FitCampus',
-    videoUrl: '/videos/service3.mp4',
-    imageUrls: ['https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&h=400&fit=crop'],
-    rating: 4.7,
-    reviewCount: 210,
-    isVerified: true,
-    discountPercent: 33
-  },
-  {
-    _id: '4',
-    title: 'Coding Tutor 1-on-1',
-    price: 30,
-    sellerName: 'CodeMentor',
-    videoUrl: '/videos/service4.mp4',
-    imageUrls: ['https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=400&h=400&fit=crop'],
-    rating: 5.0,
-    reviewCount: 56,
-    isVerified: true,
-    discountPercent: 0
-  },
-  {
-    _id: '5',
-    title: 'Laundry Service',
-    price: 15,
-    sellerName: 'CleanQuick',
-    videoUrl: '/videos/service5.mp4',
-    imageUrls: ['https://images.unsplash.com/photo-1545173168-9f1947eebb8f?w=400&h=400&fit=crop'],
-    rating: 4.6,
-    reviewCount: 340,
-    isVerified: true,
-    discountPercent: 0
-  },
-  {
-    _id: '6',
-    title: 'Meal Prep Weekly',
-    price: 80,
-    originalPrice: 120,
-    sellerName: 'HealthyEats',
-    videoUrl: '/videos/service6.mp4',
-    imageUrls: ['https://images.unsplash.com/photo-1543339308-43e59d6b73a6?w=400&h=400&fit=crop'],
-    rating: 4.8,
-    reviewCount: 175,
-    isVerified: true,
-    discountPercent: 33
-  }
-];
-
 interface VideoCardProps {
   item: DealItem;
 }
@@ -237,32 +158,41 @@ export default function StudentDealsVideo() {
       setLoading(true);
       setLoadError(null);
       try {
-        const endpoint = "/public/services";
+        const endpoint = "/public/services?limit=6";
         console.log(`📡 [StudentDeals] Fetching from: ${endpoint}`);
-        
+
         const res = await apiFetch(endpoint, { suppressErrorLog: true });
-        
-        if (mounted && res && res.data) {
-          // Map API data to include video fields if available
-          const mapped = res.data.map((p: any) => ({
+        let data: any[] = [];
+
+        if (mounted) {
+          if (res?.success && Array.isArray(res.data)) {
+            data = res.data;
+          } else if (Array.isArray(res?.data)) {
+            data = res.data;
+          } else if (Array.isArray(res)) {
+            data = res;
+          }
+
+          const mapped = data.map((p: any) => ({
             ...p,
+            _id: p._id || p.id,
+            title: p.title || p.name || 'Campus service',
+            price: p.price || p.amount || 0,
+            originalPrice: p.originalPrice || p.listPrice || undefined,
+            sellerName: p.sellerName || p.seller?.name || p.seller?.username || 'verified seller',
+            imageUrls: p.imageUrls || p.images || (p.image ? [p.image] : []),
             videoUrl: p.videoUrl || p.video || undefined,
             isVerified: p.isVerified || p.verified || true,
             discountPercent: p.discountPercent || (p.originalPrice && p.price ? Math.round((1 - Number(p.price)/Number(p.originalPrice)) * 100) : 0)
           }));
+
           setItems(mapped);
           console.log(`✅ [StudentDeals] Loaded ${mapped.length} items`);
-        } else if (mounted && res && Array.isArray(res)) {
-          setItems(res);
-          console.log(`✅ [StudentDeals] Loaded ${res.length} items`);
-        } else {
-          console.log('ℹ️ [StudentDeals] No data received, using fallback');
-          setItems(FALLBACK_DEALS);
         }
       } catch (err) {
         console.error('Error loading student services', err);
         setLoadError('Failed to load student deals');
-        setItems(FALLBACK_DEALS); // Use fallback on error instead of empty
+        setItems([]);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -302,6 +232,12 @@ export default function StudentDealsVideo() {
               >
                 Retry
               </button>
+            </div>
+          )}
+
+          {!loading && !loadError && items.length === 0 && (
+            <div className="col-span-full text-center py-12 text-gray-500">
+              No student deals are available right now.
             </div>
           )}
 

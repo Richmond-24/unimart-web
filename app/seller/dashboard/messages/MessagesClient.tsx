@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { ChevronLeft, Send, Loader2, MessageCircle, AlertCircle } from "lucide-react";
+import { ChevronLeft, Send, Loader2, MessageCircle, AlertCircle, Store } from "lucide-react";
 import apiFetch from "../../../../lib/apiClient";
 import { connectSocket } from "../../../../lib/socket";
 
@@ -114,22 +114,23 @@ function MessagesContent() {
           const convs = res?.conversations || [];
           setConversations(convs);
 
-          if (selectedConv && data.conversationId === selectedConv._id) {
-            const incomingMessage = data.message || {
-              _id: `msg-${Date.now()}`,
-              sender: data.from === "buyer" ? selectedConv.buyer?._id || selectedConv.buyer?.id : currentUserId,
-              text: data.message?.text || "New message",
-              timestamp: new Date().toISOString(),
-            };
+          const incomingMessage = data?.message || {
+            _id: `msg-${Date.now()}`,
+            sender: data?.senderId || (data?.from === "buyer" ? selectedConv?.buyer?._id || selectedConv?.buyer?.id : currentUserId),
+            text: data?.message?.text || data?.text || "New message",
+            timestamp: data?.timestamp || new Date().toISOString(),
+          };
 
+          if (selectedConv && data.conversationId === selectedConv._id) {
             setMessages((prev) => {
-              const senderId = String((incomingMessage.sender as any)?._id || incomingMessage.sender || incomingMessage.senderId || "");
+              const senderId = String((incomingMessage.sender as any)?._id || incomingMessage.sender || incomingMessage.senderId || data?.senderId || "");
               const text = incomingMessage.text || "";
+              const existingId = incomingMessage._id || incomingMessage.id || "";
               const exists = prev.some((p) => {
-                const existingId = p._id || p.id || "";
+                const existingIdValue = p._id || p.id || "";
                 const existingSender = String((p.sender as any)?._id || p.sender || p.senderId || "");
                 const existingText = p.text || "";
-                return existingId === incomingMessage._id || existingId === incomingMessage.id || (
+                return existingIdValue === existingId || (
                   Boolean(existingSender) && existingSender === senderId && existingText === text
                 );
               });
@@ -169,6 +170,7 @@ function MessagesContent() {
       socket.on("connect", handleConnect);
       socket.on("disconnect", handleDisconnect);
       socket.on("seller:new_message", handleSellerNewMessage);
+      socket.on("conversation_message", handleSellerNewMessage);
       socket.on('messages_read', handleMessagesRead);
     }
 
@@ -177,6 +179,7 @@ function MessagesContent() {
         socket.off("connect", handleConnect);
         socket.off("disconnect", handleDisconnect);
         socket.off("seller:new_message", handleSellerNewMessage);
+        socket.off("conversation_message", handleSellerNewMessage);
         socket.off('messages_read', handleMessagesRead);
       }
     };
@@ -272,20 +275,20 @@ function MessagesContent() {
 
   if (conversations.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-96">
+      <div className="flex flex-col items-center justify-center h-96 rounded-xl border border-dashed border-gray-200 bg-white">
         <MessageCircle className="w-12 h-12 text-gray-300 mb-4" />
-        <p className="text-gray-500">No messages yet</p>
-        <p className="text-sm text-gray-400">Buyers will message you here</p>
+        <p className="text-gray-600 font-medium">No messages yet</p>
+        <p className="text-sm text-gray-400">Buyers will message you here in real time</p>
       </div>
     );
   }
 
   return (
-    <div className="flex h-[calc(100vh-200px)] gap-4 bg-white rounded-lg shadow">
-      <div className="w-80 border-r overflow-y-auto flex flex-col">
-        <div className="p-4 border-b">
-          <h2 className="font-semibold text-lg">Messages ({conversations.length})</h2>
-          <p className="text-xs text-gray-500 mt-1">
+    <div className="flex h-[calc(100vh-220px)] gap-4 bg-[#FFF7F2] rounded-2xl shadow-sm border border-orange-100 overflow-hidden">
+      <div className="w-80 border-r border-orange-100 overflow-y-auto flex flex-col bg-white">
+        <div className="p-4 border-b border-orange-100 bg-orange-50/60">
+          <h2 className="font-semibold text-lg text-gray-900">Messages ({conversations.length})</h2>
+          <p className="text-xs text-orange-600 mt-1">
             {conversations.reduce((sum, c) => sum + (c.unreadForSeller || 0), 0)} unread
           </p>
         </div>
@@ -300,13 +303,20 @@ function MessagesContent() {
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 line-clamp-1">
-                    {conv.buyer?.name || conv.participants?.find((p) => String(p._id || p.id) !== String(currentUserId))?.name || "Unknown Buyer"}
-                  </p>
-                  <p className="text-xs text-gray-600 line-clamp-1">
-                    {conv.productName || "No product"}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-orange-100 text-orange-700 flex items-center justify-center">
+                      <Store className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900 line-clamp-1">
+                        {conv.buyer?.name || conv.participants?.find((p) => String(p._id || p.id) !== String(currentUserId))?.name || "Unknown Buyer"}
+                      </p>
+                      <p className="text-xs text-gray-600 line-clamp-1">
+                        {conv.productName || "No product"}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2 line-clamp-2">
                     {conv.lastMessage?.text || "No messages yet"}
                   </p>
                 </div>
@@ -322,25 +332,26 @@ function MessagesContent() {
       </div>
 
       {selectedConv ? (
-        <div className="flex-1 flex flex-col">
-          <div className="border-b p-4 flex items-center justify-between">
+        <div className="flex-1 flex flex-col bg-[#FFFDFB]">
+          <div className="border-b border-orange-100 p-4 flex items-center justify-between bg-white">
             <div>
               <h3 className="font-semibold text-gray-900">
                 {selectedConv.buyer?.name || selectedConv.participants?.find((p) => String(p._id || p.id) !== String(currentUserId))?.name || "Buyer"}
               </h3>
               <p className="text-xs text-gray-500">{selectedConv.productName}</p>
               {selectedConv.price && (
-                <p className="text-xs font-medium text-teal-600 mt-1">
+                <p className="text-xs font-medium text-orange-600 mt-1">
                   ₵{selectedConv.price.toFixed(2)}
                 </p>
               )}
             </div>
-            <p className="text-xs text-gray-500">
-              {connected ? "🟢 Online" : "⚪ Offline"}
-            </p>
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <span className={`h-2.5 w-2.5 rounded-full ${connected ? "bg-green-500" : "bg-gray-300"}`} />
+              {connected ? "Online" : "Offline"}
+            </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
+          <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#FFF7F2]">
             {messagesLoading ? (
               <div className="flex justify-center items-center h-full"></div>
             ) : messages.length === 0 ? (
@@ -358,9 +369,9 @@ function MessagesContent() {
                     className={`flex ${isMine ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`max-w-xs px-4 py-2.5 rounded-lg ${isMine
-                        ? "bg-orange-600 text-white rounded-br-none"
-                        : "bg-white border border-gray-200 text-gray-900 rounded-bl-none"
+                      className={`max-w-xs px-4 py-2.5 rounded-2xl shadow-sm ${isMine
+                        ? "bg-orange-600 text-white rounded-br-md"
+                        : "bg-white border border-orange-100 text-gray-900 rounded-bl-md"
                         }`}
                     >
                       <p className="break-words text-sm">{msg.text}</p>
@@ -392,19 +403,19 @@ function MessagesContent() {
             </div>
           )}
 
-          <div className="border-t bg-white p-4 flex gap-2">
+          <div className="border-t border-orange-100 bg-white p-4 flex gap-2">
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Type your reply..."
-              className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none text-sm"
+              className="flex-1 px-4 py-2.5 rounded-full border border-gray-200 bg-gray-50 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none text-sm"
               disabled={sending}
             />
             <button
               onClick={sendMessage}
               disabled={!input.trim() || sending}
-              className="px-4 py-2.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              className="px-4 py-2.5 bg-orange-600 text-white rounded-full hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
             >
               {sending ? (
                 <Loader2 className="w-4 h-4 animate-spin" />

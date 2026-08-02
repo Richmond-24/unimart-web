@@ -19,46 +19,6 @@ type Deal = {
   views?: number;
 };
 
-// Fallback deals with video content
-const FALLBACK_DEALS: Deal[] = [
-  {
-    id: '1',
-    title: 'Student Discount Pack',
-    price: 'GH₵29.99',
-    originalPrice: 'GH₵59.99',
-    img: '/images/placeholder.png',
-    videoUrl: '/videos/deal1.mp4',
-    sellerName: 'campus_store',
-    sellerAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=40&h=40&fit=crop',
-    views: 1200,
-    endsAt: Date.now() + 1000 * 60 * 60 * 2, // 2 hours
-  },
-  {
-    id: '2',
-    title: 'Tech Gadget Flash Sale',
-    price: 'GH₵49.99',
-    originalPrice: 'GH₵99.99',
-    img: '/images/placeholder.png',
-    videoUrl: '/videos/deal2.mp4',
-    sellerName: 'tech_deals_gh',
-    sellerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop',
-    views: 890,
-    endsAt: Date.now() + 1000 * 60 * 60 * 5, // 5 hours
-  },
-  {
-    id: '3',
-    title: 'Book Bundle Deal',
-    price: 'GH₵19.99',
-    originalPrice: 'GH₵39.99',
-    img: '/images/placeholder.png',
-    videoUrl: '/videos/deal3.mp4',
-    sellerName: 'books_by_kojo',
-    sellerAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=40&h=40&fit=crop',
-    views: 450,
-    endsAt: Date.now() + 1000 * 60 * 30, // 30 minutes
-  },
-];
-
 function formatRemaining(ms: number) {
   if (ms <= 0) return "Ended";
   const s = Math.floor(ms / 1000) % 60;
@@ -224,7 +184,6 @@ export default function FlashDealsVideo() {
   const [now, setNow] = useState(Date.now());
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [usingFallback, setUsingFallback] = useState<boolean>(false);
 
   // Timer for countdown
   useEffect(() => {
@@ -237,7 +196,6 @@ export default function FlashDealsVideo() {
     let mounted = true;
     const load = async () => {
       setLoading(true);
-      setUsingFallback(false);
       
       try {
         let flashRes: any = null;
@@ -327,16 +285,13 @@ export default function FlashDealsVideo() {
           });
 
           setDeals(mapped);
-          setUsingFallback(false);
         } else {
-          setUsingFallback(true);
-          setDeals(FALLBACK_DEALS);
+          setDeals([]);
         }
         
       } catch (err) {
         if (mounted) {
-          setUsingFallback(true);
-          setDeals(FALLBACK_DEALS);
+          setDeals([]);
         }
       } finally {
         if (mounted) setLoading(false);

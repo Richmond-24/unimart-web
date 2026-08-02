@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ShoppingBag, Users, ArrowRight, Sparkles, Zap, TrendingUp } from "lucide-react";
+import { ShoppingBag, ArrowRight, Zap, TrendingUp } from "lucide-react";
 
 export default function BigBanner() {
   const bannerRef = useRef<HTMLDivElement | null>(null);
@@ -54,7 +54,7 @@ export default function BigBanner() {
         isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-12"
       }`}
       style={{
-        background: "linear-gradient(135deg, #6C5CE7 0%, #FF6B9D 50%, #FFB88C 100%)",
+        background: "#6C5CE7",
         boxShadow: "0 20px 40px -10px rgba(108, 92, 231, 0.3)"
       }}
     >
@@ -68,14 +68,14 @@ export default function BigBanner() {
         style={{ transform: `translate(${mousePos.x * -20}px, ${mousePos.y * -20}px)` }}
       />
       <div 
-        className="absolute bottom-0 left-0 w-48 h-48 bg-[#FFB88C]/20 rounded-full blur-3xl transition-transform duration-500 ease-out"
+        className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full blur-3xl transition-transform duration-500 ease-out"
         style={{ transform: `translate(${mousePos.x * 20}px, ${mousePos.y * 20}px)` }}
       />
       
       {/* Floating Geometric Shapes */}
       <div className="absolute top-4 left-1/4 w-8 h-8 border-2 border-white/20 rounded-lg rotate-12 animate-float-slow" />
       <div className="absolute bottom-8 right-1/3 w-4 h-4 bg-white/20 rounded-full animate-float-fast" />
-      <div className="absolute top-1/2 right-10 w-6 h-6 bg-[#FFB88C]/30 rounded-md rotate-45 animate-float-med" />
+      <div className="absolute top-1/2 right-10 w-6 h-6 bg-white/20 rounded-md rotate-45 animate-float-med" />
 
       {/* Shimmer Sweep */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 translate-x-[-200%] animate-shimmer" />
@@ -87,7 +87,7 @@ export default function BigBanner() {
           <div className="flex items-center gap-2 mb-3">
             <span className="relative flex h-3 w-3">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-[#00D9A3]" />
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-white" />
             </span>
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/20 backdrop-blur-md text-[10px] font-bold uppercase tracking-wider text-white border border-white/10">
               <Zap size={10} fill="white" />
@@ -97,7 +97,7 @@ export default function BigBanner() {
 
           <h2 className="text-2xl md:text-3xl lg:text-4xl font-black text-white leading-[1.1] mb-2 drop-shadow-sm">
             Dorm Essentials, <br/>
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-orange-100">picked by your community.</span>
+            <span className="text-white/80">picked by your community.</span>
           </h2>
 
           <div className="flex items-center gap-4 mt-4">
@@ -107,7 +107,7 @@ export default function BigBanner() {
                   {String.fromCharCode(64+i)}
                 </div>
               ))}
-              <div className="w-8 h-8 rounded-full bg-[#00D9A3] border-2 border-white flex items-center justify-center text-[10px] font-bold text-white">
+              <div className="w-8 h-8 rounded-full bg-white/20 border-2 border-white flex items-center justify-center text-[10px] font-bold text-white">
                 +128
               </div>
             </div>

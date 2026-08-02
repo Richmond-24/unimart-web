@@ -65,7 +65,9 @@ export default function Header() {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [messageCount, setMessageCount] = useState<number>(0);
   const [notificationCount, setNotificationCount] = useState<number>(0);
+  const [showSignupNotificationPrompt, setShowSignupNotificationPrompt] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(true);
+  const [isMobileView, setIsMobileView] = useState(false);
 
   // Hamburger menu state (desktop dropdown panel)
   const [menuOpen, setMenuOpen] = useState(false);
@@ -74,10 +76,19 @@ export default function Header() {
 
   const router = useRouter();
   const pathname = usePathname();
+  const isListingDetailRoute = typeof pathname === "string" && /^\/listings\/[^/]+(?:\/.*)?$/.test(pathname);
   const hideHeader =
     (typeof pathname === "string" && pathname.startsWith("/seller")) ||
     (typeof pathname === "string" && /^\/listings\/[^/]+\/chat$/.test(pathname)) ||
-    (typeof pathname === "string" && /^\/listings\/[^/]+$/.test(pathname));
+    (isListingDetailRoute && isMobileView);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const updateViewport = () => setIsMobileView(window.innerWidth < 768);
+    updateViewport();
+    window.addEventListener("resize", updateViewport);
+    return () => window.removeEventListener("resize", updateViewport);
+  }, []);
 
   // Close dropdown/menu on outside click
   useEffect(() => {
@@ -282,6 +293,30 @@ export default function Header() {
   useEffect(() => {
     let mounted = true;
 
+    const checkSignupPrompt = () => {
+      if (!mounted || typeof window === 'undefined') return;
+      try {
+        const promptFlag = sessionStorage.getItem('unimart:notificationPrompt');
+        if (promptFlag) {
+          setShowSignupNotificationPrompt(true);
+          sessionStorage.removeItem('unimart:notificationPrompt');
+          window.setTimeout(() => {
+            if (mounted) setShowSignupNotificationPrompt(false);
+          }, 8000);
+        }
+      } catch (e) {
+        console.warn('Failed to read signup notification prompt flag', e);
+      }
+    };
+
+      const clearSignupNotificationPrompt = () => {
+      if (!mounted) return;
+      try {
+        sessionStorage.removeItem('unimart:notificationPrompt');
+      } catch (e) {}
+      setShowSignupNotificationPrompt(false);
+    };
+
     const onNotification = (e: any) => {
       if (!mounted) return;
       const detail = e?.detail || {};
@@ -290,6 +325,15 @@ export default function Header() {
       } else {
         setNotificationCount(Number(detail.count || 0));
       }
+    };
+
+    const onNotificationOpened = () => {
+      if (!mounted) return;
+      setNotificationCount(0);
+      setShowSignupNotificationPrompt(false);
+      try {
+        sessionStorage.removeItem('unimart:notificationPrompt');
+      } catch (e) {}
     };
 
     const onMessageNotification = (e: any) => {
@@ -303,7 +347,14 @@ export default function Header() {
     };
 
     window.addEventListener("unimart:notificationCount", onNotification as EventListener);
+    window.addEventListener("unimart:notificationOpened", onNotificationOpened as EventListener);
     window.addEventListener("unimart:messageCount", onMessageNotification as EventListener);
+    window.addEventListener('unimart:authChanged', checkSignupPrompt);
+
+    checkSignupPrompt();
+    if (pathname === '/notifications') {
+      onNotificationOpened();
+    }
 
     async function loadNotificationCount() {
       try {
@@ -368,8 +419,10 @@ export default function Header() {
     return () => {
       mounted = false;
       window.removeEventListener("unimart:notificationCount", onNotification as EventListener);
+      window.removeEventListener("unimart:notificationOpened", onNotificationOpened as EventListener);
+      window.removeEventListener('unimart:authChanged', checkSignupPrompt);
     };
-  }, []);
+  }, [pathname]);
 
   const submitSearch = (q: string) => {
     router.push(q ? `/search?q=${encodeURIComponent(q)}` : "/search");
@@ -502,11 +555,27 @@ export default function Header() {
                 </button>
 
                 <button
-                  onClick={() => router.push("/notifications")}
+                  onClick={() => {
+                    try {
+                      sessionStorage.removeItem('unimart:notificationPrompt');
+                    } catch (e) {}
+                    setShowSignupNotificationPrompt(false);
+                    setNotificationCount(0);
+                    if (typeof window !== 'undefined') {
+                      window.dispatchEvent(new CustomEvent('unimart:notificationCount', { detail: { count: 0 } }));
+                      window.dispatchEvent(new CustomEvent('unimart:notificationOpened', { detail: { count: 0 } }));
+                    }
+                    router.push("/notifications");
+                  }}
                   className="relative p-2 rounded-full active:bg-white/15 transition shrink-0"
                   aria-label="Notifications"
                 >
                   <Bell className="w-5 h-5 text-white" strokeWidth={2} />
+                  {showSignupNotificationPrompt && (
+                    <span className="badge-pop absolute -top-1 -right-1 bg-white text-[#0B4F5C] text-[9px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 border border-orange-500">
+                      +1
+                    </span>
+                  )}
                   {notificationCount > 0 && (
                     <span className="badge-pop absolute top-0.5 right-0.5 bg-[#F97316] text-white text-[9px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1 ring-2 ring-[#0B4F5C]">
                       {notificationCount > 99 ? '99+' : notificationCount}
@@ -516,7 +585,21 @@ export default function Header() {
               </div>
             </div>
 
-            {/* Search row — an elevated card, the focal element of the bar */}
+          {showSignupNotificationPrompt && (
+            <div className="fixed inset-x-4 top-[calc(var(--header-height)+1rem)] z-[1000] rounded-2xl border border-orange-200 bg-white/95 px-4 py-3 shadow-2xl backdrop-blur-md text-sm font-semibold text-slate-900 ring-1 ring-orange-100 animate-popIn">
+              <div className="flex items-center gap-3">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-orange-500 text-white text-sm font-bold">
+                  +1
+                </span>
+                <div>
+                  <div className="font-semibold text-slate-900">Verified badge unlocked</div>
+                  <div className="text-xs text-slate-500">Tap the bell to open your new notification.</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Search row — an elevated card, the focal element of the bar */}
             <button
               onClick={() => setMobileSearchOpen(true)}
               className="w-full flex items-center gap-2.5 bg-white rounded-2xl py-3 pl-3.5 pr-4 text-left shadow-[0_2px_10px_rgba(0,0,0,0.10)] active:scale-[0.99] transition-transform"
@@ -746,7 +829,21 @@ export default function Header() {
               {/* RIGHT: Actions */}
               <div className="flex items-center gap-2">
                 {/* Notifications */}
-                <button onClick={() => router.push("/notifications")} className="relative p-2 rounded-full hover:bg-white/10 transition">
+                <button
+                  onClick={() => {
+                    try {
+                      sessionStorage.removeItem('unimart:notificationPrompt');
+                    } catch (e) {}
+                    setShowSignupNotificationPrompt(false);
+                    setNotificationCount(0);
+                    if (typeof window !== 'undefined') {
+                      window.dispatchEvent(new CustomEvent('unimart:notificationCount', { detail: { count: 0 } }));
+                      window.dispatchEvent(new CustomEvent('unimart:notificationOpened', { detail: { count: 0 } }));
+                    }
+                    router.push("/notifications");
+                  }}
+                  className="relative p-2 rounded-full hover:bg-white/10 transition"
+                >
                   <Bell className="w-5 h-5 text-white" strokeWidth={2} />
                   {notificationCount > 0 && (
                     <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">

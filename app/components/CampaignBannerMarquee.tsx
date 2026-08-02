@@ -1,130 +1,158 @@
 "use client";
 
-import Link from "next/link";
+import * as React from "react";
 import Image from "next/image";
-import { ArrowRight, Gift, Sparkles, Store, TrendingUp } from "lucide-react";
+import { Gift, Store, Sparkles, TrendingUp, ArrowUpRight } from "lucide-react";
 
 // Images are served from /public/images/promos/ — drop a file with the exact
 // name below into that folder (or change the path to match your own file).
+//
+// These are promotional flyers, not links — nothing navigates on click.
 const promos = [
   {
     title: "Campus style drops",
     subtitle: "Fresh fashion finds and creator picks landing every Friday.",
-    badge: "Coming soon",
-    href: "/search?category=fashion",
-    accent: "from-[#6C5CE7] via-[#8B5CF6]/80 to-transparent",
+    status: "Coming soon",
+    accent: "#7C3AED",
     image: "/images/promos/campus-style.jpg",
     icon: Sparkles,
   },
   {
     title: "Smart student savings",
     subtitle: "Budget-friendly essentials, gadgets, and pre-loved deals nearby.",
-    badge: "Live now",
-    href: "/search?category=second-hand",
-    accent: "from-[#0F766E] via-[#22C55E]/70 to-transparent",
+    status: "Live now",
+    accent: "#059669",
     image: "/images/promos/student-savings.jpg",
     icon: Gift,
   },
   {
     title: "Seller spotlight",
     subtitle: "Meet verified campus sellers with trending products and fast replies.",
-    badge: "Trending",
-    href: "/seller",
-    accent: "from-[#9A3412] via-[#FF8A65]/70 to-transparent",
+    status: "Trending",
+    accent: "#EA580C",
     image: "/images/promos/seller-spotlight.jpg",
     icon: Store,
   },
   {
     title: "Quick checkout, joyful finds",
-    subtitle: "Discover must-have items with a smoother shopping flow designed for students.",
-    badge: "Updated",
-    href: "/search",
-    accent: "from-[#1D4ED8] via-[#2563EB]/70 to-transparent",
+    subtitle: "A smoother shopping flow designed around how students actually browse.",
+    status: "Updated",
+    accent: "#2563EB",
     image: "/images/promos/quick-checkout.jpg",
     icon: TrendingUp,
   },
 ];
 
-export default function CampaignBannerMarquee() {
+export default function CampaignBannerGrid() {
+  const scrollerRef = React.useRef<HTMLDivElement>(null);
+
+  const scrollByAmount = (direction: "left" | "right") => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const cardWidth = el.querySelector("article")?.clientWidth ?? 280;
+    const gap = 24; // matches gap-6
+    el.scrollBy({
+      left: direction === "left" ? -(cardWidth + gap) : cardWidth + gap,
+      behavior: "smooth",
+    });
+  };
+
   return (
-    <section className="py-8 md:py-10 bg-gradient-to-b from-[#f8f7ff] to-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+    <section aria-label="Campus campaign highlights" className="bg-[#FAF9F6] py-12 md:py-16">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-10 flex flex-col gap-3 border-b border-gray-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#6C5CE7]">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#4F46E5]">
               Campus campaigns
             </p>
-            <h2 className="text-2xl font-bold text-gray-900">
-              A moving feed of fresh drops and community favorites
+            <h2 className="mt-2 text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">
+              What's happening on campus right now
             </h2>
           </div>
-          <p className="text-sm text-gray-500">
-            Auto-playing highlights for fashion, second-hand finds, and seller buzz.
-          </p>
+          <div className="flex items-center justify-between gap-4 sm:justify-end">
+            <p className="max-w-xs text-sm text-gray-500 sm:text-right">
+              Four things worth knowing before you shop this week.
+            </p>
+            {/* Nav arrows */}
+            <div className="hidden shrink-0 gap-2 sm:flex">
+              <button
+                type="button"
+                onClick={() => scrollByAmount("left")}
+                aria-label="Scroll left"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 transition hover:border-gray-300 hover:text-gray-900"
+              >
+                <ArrowUpRight className="h-4 w-4 -rotate-135" />
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollByAmount("right")}
+                aria-label="Scroll right"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 transition hover:border-gray-300 hover:text-gray-900"
+              >
+                <ArrowUpRight className="h-4 w-4 rotate-45" />
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div className="overflow-hidden rounded-[2rem] border border-gray-200/80 bg-white/80 shadow-[0_20px_50px_-24px_rgba(15,23,42,0.35)] backdrop-blur">
-          <div className="flex w-max animate-marquee">
-            {[...promos, ...promos].map((promo, index) => {
-              const Icon = promo.icon;
-              return (
-                <Link
-                  key={`${promo.title}-${index}`}
-                  href={promo.href}
-                  className="group relative mx-3 my-3 flex h-48 w-[320px] flex-col justify-between overflow-hidden rounded-[1.5rem] p-5 text-white shadow-sm transition-transform duration-300 hover:-translate-y-1"
-                >
-                  {/* Background photo — served from /public/images/promos */}
+        {/* Horizontal scroller */}
+        <div
+          ref={scrollerRef}
+          className="flex snap-x snap-mandatory gap-6 overflow-x-auto scroll-smooth pb-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {promos.map((promo) => {
+            const Icon = promo.icon;
+            return (
+              <article
+                key={promo.title}
+                className="flex w-[78%] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white sm:w-[46%] lg:w-[23%]"
+              >
+                {/* Image */}
+                <div className="relative h-36 w-full">
                   <Image
                     src={promo.image}
                     alt=""
                     fill
-                    sizes="320px"
-                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 78vw"
+                    className="object-cover"
                   />
-                  {/* Color-tinted scrim so the copy stays legible and the brand accent survives */}
-                  <div className={`absolute inset-0 bg-gradient-to-t ${promo.accent} opacity-90`} />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-black/40" />
+                  <span
+                    className="absolute left-3 top-3 rounded-md px-2 py-1 text-[11px] font-semibold text-white"
+                    style={{ backgroundColor: promo.accent }}
+                  >
+                    {promo.status}
+                  </span>
+                </div>
 
-                  <div className="relative z-10 flex items-center justify-between">
-                    <span className="rounded-full border border-white/30 bg-white/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] backdrop-blur">
-                      {promo.badge}
-                    </span>
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 backdrop-blur">
-                      <Icon className="h-4 w-4" />
-                    </div>
+                {/* Content */}
+                <div className="flex flex-1 flex-col gap-3 p-5">
+                  <div
+                    className="flex h-8 w-8 items-center justify-center rounded-lg"
+                    style={{ backgroundColor: `${promo.accent}1A`, color: promo.accent }}
+                  >
+                    <Icon className="h-4 w-4" />
                   </div>
 
-                  <div className="relative z-10">
-                    <h3 className="text-lg font-semibold leading-tight drop-shadow-sm">{promo.title}</h3>
-                    <p className="mt-2 text-sm text-white/90 drop-shadow-sm">{promo.subtitle}</p>
+                  <div>
+                    <h3 className="text-base font-semibold leading-snug text-gray-900">
+                      {promo.title}
+                    </h3>
+                    <p className="mt-1.5 text-sm leading-relaxed text-gray-600">
+                      {promo.subtitle}
+                    </p>
                   </div>
 
-                  <div className="relative z-10 flex items-center justify-between text-sm font-semibold">
-                    <span>Explore now</span>
-                    <span className="flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 backdrop-blur transition group-hover:bg-white/25">
-                      Open
-                      <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
-                    </span>
+                  <div className="mt-auto flex items-center gap-1.5 pt-2 text-xs font-medium text-gray-400">
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                    On the campus board
                   </div>
-                </Link>
-              );
-            })}
-          </div>
+                </div>
+              </article>
+            );
+          })}
         </div>
       </div>
-
-      <style jsx>{`
-        @keyframes marquee {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        .animate-marquee {
-          animation: marquee 24s linear infinite;
-        }
-        .animate-marquee:hover {
-          animation-play-state: paused;
-        }
-      `}</style>
     </section>
   );
 }

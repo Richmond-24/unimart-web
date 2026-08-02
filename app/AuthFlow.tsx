@@ -1,15 +1,17 @@
-
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "./context/AuthContext";
 
 const LOGO_SRC = "/swoop-logo-teal.png";
 
-// Available emojis for username
-const EMOJIS = [
+// Available emojis for avatar
+const AVATAR_EMOJIS = [
   "😊", "🌟", "🔥", "💪", "🚀", "🎯", "✨", "🌈", 
   "🦊", "🐼", "🐨", "🦄", "🐲", "🐉", "🦋", "🐝",
-  "🍕", "🎮", "⚡", "💎", "🎨", "🏆", "👑", "🌺"
+  "🍕", "🎮", "⚡", "💎", "🎨", "🏆", "👑", "🌺",
+  "🎭", "🎪", "🎨", "🎵", "🎶", "🎸", "🎺", "🎻",
+  "🦁", "🐯", "🐻", "🐮", "🐷", "🐸", "🐵", "🐔",
+  "🐧", "🐦", "🐤", "🐣", "🐥", "🦆", "🦅", "🦉"
 ];
 
 const STEPS = [
@@ -18,7 +20,7 @@ const STEPS = [
     number: "01",
     label: "Username",
     question: "Create a username",
-    hint: "Choose a unique name with an emoji!",
+    hint: "Choose a unique name and pick an emoji avatar!",
     placeholder: "CoolGamer",
     type: "text",
     autoComplete: "username",
@@ -145,14 +147,6 @@ function IconMail({ size = 16 }) {
   );
 }
 
-function IconChevronDown({ size = 16 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 /* ---------- Enhanced RIRI Mascot with Sentiment States ---------- */
 function RiriMascot({ 
   state = "idle", 
@@ -160,7 +154,8 @@ function RiriMascot({
   sentiment = "", 
   showTag = true,
   typingSentiment = "",
-  showTypingSentiment = false
+  showTypingSentiment = false,
+  avatarEmoji = "😊"
 }) {
   const scale = 1 + flexLevel * 0.045;
   const showSentiment = sentiment.length > 0;
@@ -241,6 +236,11 @@ function RiriMascot({
             </g>
           </svg>
           
+          {/* Display selected avatar emoji on RIRI */}
+          <div className="riri-avatar-emoji">
+            {avatarEmoji}
+          </div>
+          
           {/* RIRI AI Tag */}
           {showTag && (
             <div className="riri-ai-tag">
@@ -296,6 +296,7 @@ export default function AuthFlow({ onDone }) {
   const [showSentiment, setShowSentiment] = useState(false);
   const [typingSentiment, setTypingSentiment] = useState("");
   const [showTypingSentiment, setShowTypingSentiment] = useState(false);
+  const [showAvatarPrompt, setShowAvatarPrompt] = useState(false);
   const inputRefs = useRef([]);
   const sentimentTimeout = useRef(null);
   const typingTimeout = useRef(null);
@@ -305,6 +306,15 @@ export default function AuthFlow({ onDone }) {
     const el = inputRefs.current[step];
     if (el) setTimeout(() => el.focus(), 420);
   }, [step, mode]);
+
+  // Show avatar prompt when username has at least 2 characters
+  useEffect(() => {
+    if (values.username.trim().length >= 2 && step === 0) {
+      setShowAvatarPrompt(true);
+    } else {
+      setShowAvatarPrompt(false);
+    }
+  }, [values.username, step]);
 
   // Close emoji picker on outside click
   useEffect(() => {
@@ -329,6 +339,7 @@ export default function AuthFlow({ onDone }) {
     setTypingSentiment("");
     setShowTypingSentiment(false);
     setShowEmojiPicker(false);
+    setShowAvatarPrompt(false);
   };
 
   const switchMode = (next) => {
@@ -341,6 +352,7 @@ export default function AuthFlow({ onDone }) {
     setTypingSentiment("");
     setShowTypingSentiment(false);
     setShowEmojiPicker(false);
+    setShowAvatarPrompt(false);
   };
 
   const validateStep = (i) => {
@@ -400,12 +412,15 @@ export default function AuthFlow({ onDone }) {
     
     setLoading(true);
     try {
+      // Combine emoji with username for display
       const fullUsername = `${selectedEmoji} ${values.username.trim()}`;
       
       const result = await signup({
         name: fullUsername,
+        displayName: fullUsername,
         email: values.email.trim(),
         password: values.password,
+        avatar: selectedEmoji, // Store the emoji as avatar
       });
 
       if (!result.success) {
@@ -521,7 +536,7 @@ export default function AuthFlow({ onDone }) {
 
   const getProgressMessage = () => {
     if (loading) return "RIRI AI is creating your account...";
-    if (step === 0) return "Pick a cool username";
+    if (step === 0) return "Pick a cool username and emoji avatar";
     if (step === 1) return "We'll send updates here";
     if (step === 2) return "Make it a strong one";
     if (step === 3) return "Almost done!";
@@ -659,6 +674,33 @@ export default function AuthFlow({ onDone }) {
           position: relative;
           display: inline-flex;
           align-items: flex-end;
+        }
+
+        /* --- RIRI Avatar Emoji Display --- */
+        .riri-avatar-emoji {
+          position: absolute;
+          bottom: -4px;
+          right: -6px;
+          font-size: 28px;
+          filter: drop-shadow(0 2px 8px rgba(0,0,0,0.15));
+          animation: emojiFloat 2.5s ease-in-out infinite;
+          z-index: 15;
+          background: white;
+          border-radius: 50%;
+          padding: 2px;
+          border: 2px solid white;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+        }
+        @keyframes emojiFloat {
+          0%, 100% { transform: translateY(0) scale(1); }
+          50% { transform: translateY(-3px) scale(1.05); }
+        }
+
+        @media (max-width: 420px) {
+          .riri-avatar-emoji { font-size: 22px; bottom: -2px; right: -4px; }
+        }
+        @media (max-width: 360px) {
+          .riri-avatar-emoji { font-size: 18px; bottom: 0px; right: -2px; }
         }
 
         /* --- RIRI Typing Sentiment Text --- */
@@ -929,6 +971,7 @@ export default function AuthFlow({ onDone }) {
           align-items: center;
           margin-top: 8px;
           gap: 8px;
+          flex-wrap: wrap;
         }
 
         .emoji-trigger {
@@ -991,8 +1034,8 @@ export default function AuthFlow({ onDone }) {
           position: absolute;
           top: calc(100% + 8px);
           left: 0;
-          width: 280px;
-          max-width: calc(100vw - 40px);
+          width: 100%;
+          max-width: 320px;
           background: white;
           border-radius: 16px;
           border: 1px solid var(--line);
@@ -1000,9 +1043,11 @@ export default function AuthFlow({ onDone }) {
           padding: 12px;
           z-index: 100;
           display: grid;
-          grid-template-columns: repeat(6, 1fr);
+          grid-template-columns: repeat(7, 1fr);
           gap: 4px;
           animation: dropdownIn 0.2s ease-out;
+          max-height: 280px;
+          overflow-y: auto;
         }
         @keyframes dropdownIn {
           from { opacity: 0; transform: translateY(-8px) scale(0.96); }
@@ -1029,6 +1074,28 @@ export default function AuthFlow({ onDone }) {
         .emoji-option.selected {
           background: var(--accent-soft);
           box-shadow: inset 0 0 0 2px var(--accent);
+        }
+
+        .avatar-prompt {
+          width: 100%;
+          margin-top: 8px;
+          padding: 10px 14px;
+          background: var(--accent-soft);
+          border-radius: 12px;
+          font-size: 13px;
+          color: var(--accent-deep);
+          font-weight: 500;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          animation: slideDown 0.3s ease-out;
+        }
+        @keyframes slideDown {
+          from { opacity: 0; transform: translateY(-8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .avatar-prompt .prompt-emoji {
+          font-size: 20px;
         }
 
         /* Regular field input for non-username steps */
@@ -1270,9 +1337,9 @@ export default function AuthFlow({ onDone }) {
             max-width: 160px;
           }
           .emoji-picker-dropdown {
-            width: 240px;
             padding: 8px;
             gap: 2px;
+            max-width: 280px;
           }
           .emoji-option { font-size: 20px; }
           .riri-typing-sentiment { font-size: 10px; }
@@ -1292,9 +1359,9 @@ export default function AuthFlow({ onDone }) {
             max-width: 130px;
           }
           .emoji-picker-dropdown {
-            width: 200px;
             padding: 6px;
             gap: 2px;
+            max-width: 240px;
           }
           .emoji-option { font-size: 18px; }
           .riri-typing-sentiment { font-size: 9px; }
@@ -1328,6 +1395,7 @@ export default function AuthFlow({ onDone }) {
                 showTag={true}
                 typingSentiment="I'm RIRI, your AI assistant"
                 showTypingSentiment={true}
+                avatarEmoji={selectedEmoji}
               />
             </div>
             <div className="login-sub">Sign in to continue shopping</div>
@@ -1371,7 +1439,7 @@ export default function AuthFlow({ onDone }) {
         ) : success ? (
           /* --- SUCCESS STATE --- */
           <div className="success-wrap">
-            <RiriMascot state="celebrate" showTag={true} />
+            <RiriMascot state="celebrate" showTag={true} avatarEmoji={selectedEmoji} />
             <div className="success-title">
               Welcome{username ? `, ${selectedEmoji} ${username}` : ""}! 🎉
             </div>
@@ -1397,6 +1465,7 @@ export default function AuthFlow({ onDone }) {
                 showTag={true}
                 typingSentiment={currentTypingSentiment}
                 showTypingSentiment={showTypingSentiment}
+                avatarEmoji={selectedEmoji}
               />
             </div>
 
@@ -1414,6 +1483,7 @@ export default function AuthFlow({ onDone }) {
                     type="button"
                     className={`emoji-trigger ${showEmojiPicker ? "open" : ""}`}
                     onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                    title="Click to choose your avatar emoji"
                   >
                     {selectedEmoji}
                     <span className="chevron">▾</span>
@@ -1434,7 +1504,7 @@ export default function AuthFlow({ onDone }) {
                   
                   {showEmojiPicker && (
                     <div className="emoji-picker-dropdown">
-                      {EMOJIS.map((emoji) => (
+                      {AVATAR_EMOJIS.map((emoji) => (
                         <button
                           key={emoji}
                           type="button"
@@ -1443,6 +1513,7 @@ export default function AuthFlow({ onDone }) {
                             setSelectedEmoji(emoji);
                             setShowEmojiPicker(false);
                           }}
+                          title={`Select ${emoji} as your avatar`}
                         >
                           {emoji}
                         </button>
@@ -1450,6 +1521,17 @@ export default function AuthFlow({ onDone }) {
                     </div>
                   )}
                 </div>
+
+                {/* Avatar prompt - shows when username has at least 2 characters */}
+                {showAvatarPrompt && (
+                  <div className="avatar-prompt">
+                    <span className="prompt-emoji">👆</span>
+                    <span>
+                      <strong>Tap the emoji</strong> to choose your avatar! 
+                      You can always change it later.
+                    </span>
+                  </div>
+                )}
 
                 {username.length >= 2 && (
                   <div className="field-validation valid">

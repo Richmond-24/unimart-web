@@ -77,7 +77,6 @@ export default function ProductGrid({
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [usingFallback, setUsingFallback] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -85,7 +84,6 @@ export default function ProductGrid({
     const loadProducts = async () => {
       setLoading(true);
       setLoadError(null);
-      setUsingFallback(false);
       
       try {
         console.log(`📡 [ProductGrid] Fetching from: ${endpoint}`);
@@ -114,24 +112,20 @@ export default function ProductGrid({
         }
         
         if (productData.length > 0) {
-          // Apply limit
           if (limit && productData.length > limit) {
             productData = productData.slice(0, limit);
           }
           setProducts(productData);
           setLoadError(null);
         } else {
-          // No products found - use fallback
-          console.log('ℹ️ [ProductGrid] No products from API, using fallback');
-          setUsingFallback(true);
-          setProducts(FALLBACK_PRODUCTS.slice(0, limit));
+          setProducts([]);
         }
         
       } catch (error: any) {
-        console.log('ℹ️ [ProductGrid] API error, using fallback products');
+        console.log('ℹ️ [ProductGrid] API error while loading products');
         if (mounted) {
-          setUsingFallback(true);
-          setProducts(FALLBACK_PRODUCTS.slice(0, limit));
+          setProducts([]);
+          setLoadError(error?.message || 'Failed to load products');
         }
       } finally {
         if (mounted) {
@@ -167,7 +161,7 @@ export default function ProductGrid({
   }
 
   // Error state
-  if (loadError && !usingFallback) {
+  if (loadError) {
     return (
       <section className="py-8">
         <h2 className="text-xl font-semibold mb-4">{title}</h2>
@@ -203,7 +197,7 @@ export default function ProductGrid({
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold">{title}</h2>
         <span className="text-sm text-slate-400">
-          {usingFallback ? 'Sample products' : `${products.length} items`}
+          {`${products.length} items`}
         </span>
       </div>
 

@@ -25,79 +25,6 @@ interface FashionItem {
   discountPercent?: number;
 }
 
-// Fallback fashion items with video content
-const FALLBACK_FASHION: FashionItem[] = [
-  {
-    _id: '1',
-    title: 'Vintage Denim Jacket',
-    price: 150,
-    originalPrice: 250,
-    sellerName: 'ama_thrifts',
-    videoUrl: '/videos/fashion1.mp4',
-    imageUrls: ['https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=400&h=600&fit=crop'],
-    rating: 4.8,
-    reviewCount: 45,
-    isNewArrival: true
-  },
-  {
-    _id: '2',
-    title: 'Nike Air Force 1',
-    price: 320,
-    originalPrice: 450,
-    sellerName: 'sneaker_head_gh',
-    videoUrl: '/videos/fashion2.mp4',
-    imageUrls: ['https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&h=600&fit=crop'],
-    rating: 4.9,
-    reviewCount: 120,
-    isNewArrival: false
-  },
-  {
-    _id: '3',
-    title: 'Summer Floral Dress',
-    price: 85,
-    sellerName: 'style_by_efua',
-    videoUrl: '/videos/fashion3.mp4',
-    imageUrls: ['https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=400&h=600&fit=crop'],
-    rating: 4.7,
-    reviewCount: 32,
-    isNewArrival: true
-  },
-  {
-    _id: '4',
-    title: 'Leather Crossbody Bag',
-    price: 120,
-    sellerName: 'lux_finds',
-    videoUrl: '/videos/fashion4.mp4',
-    imageUrls: ['https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=400&h=600&fit=crop'],
-    rating: 4.6,
-    reviewCount: 28,
-    isNewArrival: false
-  },
-  {
-    _id: '5',
-    title: 'Oversized Hoodie',
-    price: 95,
-    originalPrice: 140,
-    sellerName: 'cozy_threads',
-    videoUrl: '/videos/fashion5.mp4',
-    imageUrls: ['https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=400&h=600&fit=crop'],
-    rating: 4.8,
-    reviewCount: 67,
-    isNewArrival: true
-  },
-  {
-    _id: '6',
-    title: 'Gold Chain Necklace',
-    price: 45,
-    sellerName: 'jewelry_box',
-    videoUrl: '/videos/fashion6.mp4',
-    imageUrls: ['https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400&h=600&fit=crop'],
-    rating: 4.5,
-    reviewCount: 19,
-    isNewArrival: false
-  }
-];
-
 interface VideoFashionCardProps {
   item: FashionItem;
 }
@@ -256,10 +183,19 @@ export default function FashionDealsVideo() {
     const load = async () => {
       setLoading(true);
       try {
-        const res = await apiFetch('/listings?category=Fashion');
-        if (mounted && res && res.data) {
-          // Map API data to include video fields if available
-          const mapped = res.data.map((p: any) => ({
+        const res = await apiFetch('/public/listings?category=Fashion&limit=6');
+        let data: any[] = [];
+
+        if (mounted) {
+          if (res?.success && Array.isArray(res.data)) {
+            data = res.data;
+          } else if (Array.isArray(res?.data)) {
+            data = res.data;
+          } else if (Array.isArray(res)) {
+            data = res;
+          }
+
+          const mapped = data.map((p: any) => ({
             ...p,
             _id: p._id || p.id,
             title: p.title || p.name || 'Fresh fashion find',
@@ -271,14 +207,10 @@ export default function FashionDealsVideo() {
             discountPercent: p.discountPercent || (p.originalPrice && p.price ? Math.round((1 - Number(p.price)/Number(p.originalPrice)) * 100) : 0)
           }));
           setItems(mapped);
-        } else if (mounted && Array.isArray(res)) {
-          setItems(res);
-        } else {
-          setItems(FALLBACK_FASHION);
         }
       } catch (err) {
         console.error('Error loading fashion listings', err);
-        setItems(FALLBACK_FASHION);
+        setItems([]);
       } finally {
         if (mounted) setLoading(false);
       }

@@ -53,6 +53,15 @@ function BadgeTooltip({ badge, children }: { badge: any; children: React.ReactNo
   );
 }
 
+function getDisplayName(user: any): string {
+  const raw = user?.displayName || user?.fullName || user?.name || user?.username || '';
+  if (typeof raw === 'string' && raw.trim()) return raw.trim();
+  const first = user?.firstName || '';
+  const last = user?.lastName || '';
+  const fallback = [first, last].filter(Boolean).join(' ').trim();
+  return fallback || 'Guest User';
+}
+
 export default function ProfilePage() {
   const router = useRouter();
   const { logout } = useAuth();
@@ -78,7 +87,7 @@ export default function ProfilePage() {
         const u = res?.user || res?.data || null;
         if (u) {
           setUser(u);
-          setName(u.name || "");
+          setName(getDisplayName(u));
           setEmail(u.email || "");
           setPhone(u.phone || "");
           const earned = calculateBadges(u);
@@ -169,7 +178,7 @@ export default function ProfilePage() {
             <div className="flex-1 min-w-0">
               {!editing ? (
                 <>
-                  <h2 className="font-black text-xl truncate">{user?.name || "Guest User"}</h2>
+                  <h2 className="font-black text-xl truncate">{getDisplayName(user)}</h2>
                   <p className="text-slate-500 text-sm truncate">{user?.email || "No email"}</p>
                   <div className="flex items-center gap-2 mt-2">
                     <span className="px-2 py-0.5 rounded-md bg-[#6C5CE7]/10 text-[#6C5CE7] text-[10px] font-bold uppercase tracking-wide">

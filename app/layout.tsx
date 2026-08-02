@@ -11,8 +11,6 @@ import AppGate from "./components/AppGate";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import MessageListener from "./components/MessageListener";
-import RiriHost from "./components/RiriHost";
-import ChatButton from "./components/ChatButton";
 import SocketProvider from "./components/SocketProvider";
 import WelcomeBadgeModal from "./components/WelcomeBadgeModal";
 
@@ -45,7 +43,7 @@ const figtree = Figtree({
 });
 
 export const metadata: Metadata = {
-  title: "Uni-Mart",
+  title: "Swoop",
   description: "AI-powered commerce platform",
 };
 
@@ -102,8 +100,6 @@ export default function RootLayout({
               </main>
             </div>
             <Footer />
-            <ChatButton />
-            <RiriHost />
             <MessageListener />
             <WelcomeBadgeModal />
           </SocketProvider>

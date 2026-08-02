@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Sun, Cloud, Moon, Flame, Coins,
   ShoppingBag, MessageCircle, Gift,
-  Trophy, AlertTriangle, Sparkles, Zap
+  AlertTriangle
 } from "lucide-react";
 import { apiFetch } from "@/lib/apiClient";
 
@@ -23,32 +23,38 @@ const getAvatarUrl = (gender?: string, name?: string) => {
   return `https://ui-avatars.com/api/?name=${initial}&background=${bgColor}&color=fff&size=128&font-size=0.4`;
 };
 
-// Friendly emojis that cycle in the greeting wave
-const FRIENDLY_EMOJIS = ["👋", "😊", "🤗"];
+function getDisplayName(user: any): string | null {
+  const raw = user?.displayName || user?.fullName || user?.name || user?.username || '';
+  if (typeof raw === 'string' && raw.trim()) return raw.trim();
+  const first = user?.firstName || '';
+  const last = user?.lastName || '';
+  const fallback = [first, last].filter(Boolean).join(' ').trim();
+  return fallback || null;
+}
 
 // Time-of-day config: icon, label, a gen-z one-liner, and a signature gradient per vibe
 const TIME_VIBES: Record<string, { label: string; sub: string; icon: React.ReactNode; gradient: string }> = {
   morning: {
     label: "Good morning",
-    sub: "rise & grind ✨",
+    sub: "shop smarter, spend less",
     icon: <Sun size={13} />,
     gradient: "from-amber-400 via-orange-400 to-pink-500",
   },
   afternoon: {
     label: "Good afternoon",
-    sub: "keep that energy 🔥",
+    sub: "shop smarter, spend less",
     icon: <Cloud size={13} />,
     gradient: "from-teal-400 via-cyan-400 to-blue-500",
   },
   evening: {
     label: "Good evening",
-    sub: "main character hour 🌇",
+    sub: "shop smarter, spend less",
     icon: <Moon size={13} />,
     gradient: "from-fuchsia-500 via-purple-500 to-indigo-500",
   },
   night: {
     label: "Good night",
-    sub: "night owl energy 🦉",
+    sub: "shop smarter, spend less",
     icon: <Moon size={13} />,
     gradient: "from-indigo-500 via-violet-600 to-purple-700",
   },
@@ -70,40 +76,9 @@ export default function Greeting() {
   const [messagesCount, setMessagesCount] = useState<number | string>("—");
   const [offersCount, setOffersCount] = useState<number | string>("—");
   const [cartCount, setCartCount] = useState<number | string>("—");
-  const [xp, setXp] = useState<number>(0);
-  const [xpToNext, setXpToNext] = useState<number>(500);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [justLeveled, setJustLeveled] = useState(false);
-  const [emojiIndex, setEmojiIndex] = useState(0);
-  const xpPercent = xpToNext > 0 ? Math.min(100, Math.round((xp / xpToNext) * 100)) : 0;
   const vibe = TIME_VIBES[vibeKey];
-
-  // Cycle through friendly emojis every 3 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setEmojiIndex((prev) => (prev + 1) % FRIENDLY_EMOJIS.length);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // XP Persistence logic
-  useEffect(() => {
-    const stored = localStorage.getItem("unimart:xp");
-    const lastDate = localStorage.getItem("unimart:xp-date");
-    const today = new Date().toDateString();
-    let currentXp = 0;
-    if (stored) currentXp = parseInt(stored, 10) || 0;
-    if (lastDate !== today) {
-      currentXp += 50;
-      localStorage.setItem("unimart:xp-date", today);
-      setJustLeveled(true);
-      setTimeout(() => setJustLeveled(false), 2600);
-    }
-    localStorage.setItem("unimart:xp", String(currentXp));
-    setXp(currentXp);
-    setXpToNext(500);
-  }, []);
 
   // Time-of-day logic
   useEffect(() => {
@@ -111,7 +86,7 @@ export default function Greeting() {
       const raw = localStorage.getItem("unimart:user");
       if (raw) {
         const u = JSON.parse(raw);
-        const name = u?.firstName || (u?.name ? String(u.name).split(" ")[0] : null);
+        const name = getDisplayName(u);
         if (name) setFirstName(name);
         if (u?.gender) setUserGender(u.gender);
       }
@@ -138,7 +113,7 @@ export default function Greeting() {
               const raw = localStorage.getItem("unimart:user");
               if (raw) {
                 const lu = JSON.parse(raw);
-                const name = lu?.firstName || (lu?.name ? String(lu.name).split(" ")[0] : null);
+                const name = getDisplayName(lu);
                 if (name) setFirstName(name as string);
                 if (lu?.gender) setUserGender(lu.gender);
                 setStreakDays(Number(lu?.streakDays || 0));
@@ -146,8 +121,6 @@ export default function Greeting() {
                 setMessagesCount((Array.isArray(lu?.messages) ? lu.messages.length : (lu?.unreadMessages ?? 0)) || 0);
                 setOffersCount(lu?.offersCount ?? 0);
                 setCartCount((Array.isArray(lu?.cart) ? lu.cart.length : (lu?.cartCount ?? 0)) || 0);
-                const storedXp = parseInt(localStorage.getItem("unimart:xp") || "0", 10);
-                setXp(storedXp || Number(lu?.xp || 0));
               }
             } catch (e) {}
           }
@@ -166,7 +139,7 @@ export default function Greeting() {
 
           if (u) {
             try { localStorage.setItem("unimart:user", JSON.stringify(u)); } catch (e) {}
-            const name = u?.firstName || (u?.name ? String(u.name).split(" ")[0] : null);
+            const name = getDisplayName(u);
             if (name) setFirstName(name as string);
             if (u?.gender) setUserGender(u.gender);
             setStreakDays(Number(u?.streakDays || u?.currentStreak || 0));
@@ -174,9 +147,6 @@ export default function Greeting() {
             setMessagesCount((Array.isArray(u?.messages) ? u.messages.length : (u?.unreadMessages ?? 0)) || 0);
             setOffersCount(u?.offersCount ?? 0);
             setCartCount((Array.isArray(u?.cart) ? u.cart.length : (u?.cartCount ?? 0)) || 0);
-            const storedXp = parseInt(localStorage.getItem("unimart:xp") || "0", 10);
-            const serverXp = Number(u?.xp || 0);
-            setXp(storedXp > 0 ? storedXp : serverXp);
           }
         } catch (err: any) {
           console.error('API Error in Greeting:', err);
@@ -199,7 +169,7 @@ export default function Greeting() {
               const raw = localStorage.getItem("unimart:user");
               if (raw) {
                 const lu = JSON.parse(raw);
-                const name = lu?.firstName || (lu?.name ? String(lu.name).split(" ")[0] : null);
+                const name = getDisplayName(lu);
                 if (name) setFirstName(name as string);
                 if (lu?.gender) setUserGender(lu.gender);
                 setStreakDays(Number(lu?.streakDays || 0));
@@ -294,21 +264,6 @@ export default function Greeting() {
           className="absolute -bottom-14 -left-10 w-36 h-36 bg-gradient-to-tr from-teal-400/20 to-fuchsia-400/20 rounded-full blur-3xl pointer-events-none"
         />
 
-        {/* Level-up sparkle burst — fires once when the daily XP bump lands */}
-        <AnimatePresence>
-          {justLeveled && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.6, y: 6 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.8, y: -8 }}
-              className="absolute top-3 right-3 z-20 flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 to-pink-500 px-2.5 py-1 shadow-lg shadow-pink-500/20"
-            >
-              <Sparkles size={11} className="text-white" />
-              <span className="text-[10px] font-black text-white tracking-tight">+50 XP today!</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
 
           {/* Left Side: Profile & Greeting */}
@@ -369,22 +324,6 @@ export default function Greeting() {
                 <span className="text-gray-900">
                   {nameText}
                 </span>
-                <AnimatePresence mode="wait">
-                  <motion.span
-                    key={emojiIndex}
-                    initial={{ opacity: 0, scale: 0.5, rotate: -20 }}
-                    animate={{ opacity: 1, scale: 1, rotate: [0, 18, -8, 18, 0] }}
-                    exit={{ opacity: 0, scale: 0.5, rotate: 20 }}
-                    transition={{
-                      opacity: { duration: 0.25 },
-                      scale: { duration: 0.25 },
-                      rotate: { duration: 1.2, ease: "easeInOut" },
-                    }}
-                    className="inline-block origin-[70%_70%]"
-                  >
-                    {FRIENDLY_EMOJIS[emojiIndex]}
-                  </motion.span>
-                </AnimatePresence>
               </motion.h1>
 
               <motion.p
@@ -406,48 +345,6 @@ export default function Greeting() {
             <MiniStat icon={<Gift size={14} />} value={offersCount} color="text-pink-500" bg="bg-pink-50" delay={0.64} />
           </div>
         </div>
-
-        {/* Bottom Section: XP Progress */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.75 }}
-          className="mt-3 pt-3 border-t border-gray-50 relative z-10"
-        >
-          <div className="flex justify-between items-center mb-1.5">
-            <div className="flex items-center gap-1.5">
-              <Trophy size={11} className="text-amber-500" />
-              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Campus Legend</span>
-              {xpPercent >= 100 && (
-                <motion.span
-                  animate={{ scale: [1, 1.15, 1] }}
-                  transition={{ duration: 1, repeat: Infinity }}
-                  className="flex items-center gap-0.5 text-[9px] font-black text-white bg-orange-500 px-1.5 py-0.5 rounded-full"
-                >
-                  <Zap size={8} /> MAXED
-                </motion.span>
-              )}
-            </div>
-            <span className="text-[10px] font-mono font-bold text-gray-400">
-              {xp} / {xpToNext} XP
-            </span>
-          </div>
-
-          <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${xpPercent}%` }}
-              transition={{ duration: 1.4, ease: "circOut", delay: 0.9 }}
-              className={`h-full bg-gradient-to-r ${vibe.gradient} relative rounded-full`}
-            >
-              <motion.div
-                animate={{ x: ["-100%", "150%"] }}
-                transition={{ duration: 1.6, repeat: Infinity, ease: "linear" }}
-                className="absolute inset-0 w-1/3 bg-white/40 skew-x-12"
-              />
-            </motion.div>
-          </div>
-        </motion.div>
 
       </motion.div>
     </div>

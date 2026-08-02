@@ -8,6 +8,9 @@ export interface User {
   _id?: string;
   id?: string;
   name?: string;
+  displayName?: string;
+  firstName?: string;
+  lastName?: string;
   email?: string;
   phone?: string;
   avatar?: string;
@@ -31,6 +34,21 @@ export interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+function normalizeUserPayload(user: any, fallbackData?: any): User | null {
+  if (!user || typeof user !== 'object') return null;
+
+  const fallbackName = [fallbackData?.firstName, fallbackData?.lastName].filter(Boolean).join(' ').trim();
+  const rawName = user?.displayName || user?.fullName || user?.name || fallbackData?.displayName || fallbackData?.fullName || fallbackName || user?.username || '';
+  const resolvedName = String(rawName || '').trim();
+
+  return {
+    ...user,
+    ...(resolvedName ? { name: resolvedName, displayName: resolvedName } : {}),
+    ...(user?.firstName || fallbackData?.firstName ? { firstName: user?.firstName || fallbackData?.firstName } : {}),
+    ...(user?.lastName || fallbackData?.lastName ? { lastName: user?.lastName || fallbackData?.lastName } : {}),
+  } as User;
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -92,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (storedUser) {
           try {
             const parsedUser = JSON.parse(storedUser);
-            setUser(parsedUser);
+            setUser(normalizeUserPayload(parsedUser));
           } catch (e) {
             console.warn('Failed to parse stored user:', e);
           }
@@ -108,10 +126,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           });
           
           if (res && (res.user || res.data)) {
-            const userData = res.user || res.data;
-            setUser(userData);
-            // Update stored user with fresh data
-            localStorage.setItem('unimart:user', JSON.stringify(userData));
+            const userData = normalizeUserPayload(res.user || res.data);
+            if (userData) {
+              setUser(userData);
+              // Update stored user with fresh data
+              localStorage.setItem('unimart:user', JSON.stringify(userData));
+            }
           }
           // If validation fails, we keep the stored user data anyway
           // This prevents redirect on refresh
@@ -123,8 +143,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else if (storedGuest && storedUser) {
         try {
           const parsedUser = JSON.parse(storedUser);
-          if (parsedUser && parsedUser.role === 'guest') {
-            setUser(parsedUser);
+          const normalizedGuestUser = normalizeUserPayload(parsedUser);
+          if (normalizedGuestUser && normalizedGuestUser.role === 'guest') {
+            setUser(normalizedGuestUser);
           } else {
             localStorage.removeItem('unimart:guest');
             localStorage.removeItem('unimart:user');
@@ -163,10 +184,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             suppressErrorLog: true
           });
           if (res && (res.user || res.data)) {
-            const userData = res.user || res.data;
-            setUser(userData);
-            localStorage.setItem('unimart:user', JSON.stringify(userData));
-            return true;
+            const userData = normalizeUserPayload(res.user || res.data);
+            if (userData) {
+              setUser(userData);
+              localStorage.setItem('unimart:user', JSON.stringify(userData));
+              return true;
+            }
           }
         } catch (e) {
           console.debug('Auth check failed:', e);
@@ -206,10 +229,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (res && res.success && res.token) {
         // ✅ FIXED: Persist both token and user immediately
+        const normalizedUser = normalizeUserPayload(res.user, { firstName: '' });
         setToken(res.token);
-        setUser(res.user);
+        setUser(normalizedUser);
         localStorage.setItem('unimart:token', res.token);
-        localStorage.setItem('unimart:user', JSON.stringify(res.user));
+        localStorage.setItem('unimart:user', JSON.stringify(normalizedUser));
         try { sessionStorage.setItem('unimart:justLoggedIn', '1'); } catch (e) {}
         return { success: true, token: res.token, user: res.user };
       }
@@ -231,11 +255,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (res && res.success && res.token) {
+        const normalizedUser = normalizeUserPayload(res.user, data);
         setToken(res.token);
-        setUser(res.user);
+        setUser(normalizedUser);
         localStorage.setItem('unimart:token', res.token);
-        localStorage.setItem('unimart:user', JSON.stringify(res.user));
+        localStorage.setItem('unimart:user', JSON.stringify(normalizedUser));
         try { sessionStorage.setItem('unimart:justLoggedIn', '1'); } catch (e) {}
+        try { sessionStorage.setItem('unimart:notificationPrompt', '1'); } catch (e) {}
+        if (typeof window !== 'undefined') {
+          try {
+            window.dispatchEvent(new CustomEvent('unimart:notificationCount', { detail: { increment: 1 } }));
+          } catch (e) {
+            console.warn('Failed to dispatch notification increment event', e);
+          }
+        }
         return { success: true, token: res.token, user: res.user };
       }
 

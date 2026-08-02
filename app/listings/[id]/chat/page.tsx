@@ -21,6 +21,7 @@ const QUICK_REPLIES = [
 
 interface ChatMessage {
   _id: string;
+  id?: string;
   sender?: string | { _id?: string; name?: string; photoURL?: string };
   senderId?: string;
   text?: string;
@@ -28,7 +29,7 @@ interface ChatMessage {
   createdAt?: string;
   timestamp?: string;
   read?: boolean;
-  delivered?: boolean; // ✅ FIX: Added delivered property
+  delivered?: boolean;
   type?: string;
 }
 
@@ -92,7 +93,6 @@ export default function ChatPage() {
 
   const loadBuyerConversations = useCallback(async () => {
     try {
-      // ✅ FIX: Use correct /conversations endpoint directly
       const res = await apiFetch("/conversations", { method: "GET", suppressErrorLog: true } as any);
       const conversations = res?.conversations || res?.data || res || [];
       return Array.isArray(conversations) ? conversations : [];
@@ -259,7 +259,6 @@ export default function ChatPage() {
       try {
         setIsLoadingMessages(true);
         const res = await apiFetch(`/conversations/${conversationId}/messages?limit=100`, { suppressErrorLog: true } as any);
-        // ✅ FIX: Backend can return messages in res.data, res.messages, or as array directly
         const msgs = res?.data || res?.messages || (Array.isArray(res) ? res : []);
         if (m) setMessages(msgs);
       } catch {
@@ -281,9 +280,10 @@ export default function ChatPage() {
       socket.emit("join_conversation", { conversationId });
     };
     const onDisconnect = () => setConnected(false);
-    const onNewMsg = (msg: any) => {
+    const onNewMsg = (payload: any) => {
+      const msg = payload?.message || payload;
       const incomingText = msg?.text || msg?.content || "";
-      const incomingSender = String(msg?.sender?._id || msg?.sender || msg?.senderId || "");
+      const incomingSender = String(msg?.sender?._id || msg?.sender || msg?.senderId || payload?.senderId || "");
       const isOwnEcho = Boolean(
         currentUserId &&
         pendingMessageRef.current &&
@@ -291,17 +291,19 @@ export default function ChatPage() {
         incomingText.trim() === pendingMessageRef.current.text.trim()
       );
 
-      if (isOwnEcho) return;
+      if (!incomingText || isOwnEcho) return;
 
       setMessages((prev) => {
-        if (prev.some((m) => m._id === msg._id)) return prev;
-        return [...prev, msg];
+        const existingId = msg?._id || msg?.id || payload?.message?._id || payload?.message?.id;
+        if (existingId && prev.some((m) => String(m._id || m.id) === String(existingId))) return prev;
+        return [...prev, { ...msg, _id: existingId || `socket-${Date.now()}` }];
       });
     };
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     socket.on("new_message", onNewMsg);
+    socket.on("conversation_message", onNewMsg);
 
     if (socket.connected) {
       setConnected(true);
@@ -312,6 +314,7 @@ export default function ChatPage() {
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
       socket.off("new_message", onNewMsg);
+      socket.off("conversation_message", onNewMsg);
       socket.emit("leave_conversation", { conversationId });
     };
   }, [conversationId]);
@@ -341,7 +344,6 @@ export default function ChatPage() {
 
       setNewMessage("");
 
-      // ✅ FIX: Added delivered: false to optimistic message
       const optimistic: ChatMessage = {
         _id: tempId,
         sender: currentUserId,
@@ -349,7 +351,7 @@ export default function ChatPage() {
         text,
         timestamp: new Date().toISOString(),
         read: false,
-        delivered: false, // ✅ Added this
+        delivered: false,
       };
       setMessages((prev) => [...prev, optimistic]);
       scrollToBottom();
@@ -359,13 +361,10 @@ export default function ChatPage() {
         body: { conversationId: activeConversationId, text, type: "text" },
       } as any);
 
-      // ✅ FIX: Backend can return saved message in res.message, res.data, or res directly
       const savedMsg = res?.message || res?.data || (res?._id ? res : null);
       if (savedMsg?._id) {
         setMessages((prev) => prev.map((m) => (m._id === tempId ? { ...savedMsg, text: savedMsg.text || savedMsg.content || text } : m)));
       }
-      // If no saved message was returned, keep the optimistic message visible
-      // (server emits the real one via socket or next reload)
 
       pendingMessageRef.current = null;
     } catch (err: any) {
@@ -422,144 +421,146 @@ export default function ChatPage() {
   const chatSubtitle = listing?.sellerName || conversation?.seller?.name || "Seller";
   const prodImage = listing?.imageUrls?.[0] || listing?.images?.[0] || conversation?.productImage || null;
 
-  // === TEMU-STYLE CHAT UI (no WhatsApp-style presence dots or read-receipt ticks) ===
+  // ✅ FIXED: Mobile-friendly, fixed position, no sideways scrolling
   return (
-    <div className="flex flex-col h-screen bg-[#F5F5F5] max-w-3xl mx-auto">
-      {/* ── HEADER ── */}
-      <div className="flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-100 sticky top-0 z-10">
-        <button
-          onClick={() => router.back()}
-          className="p-1 -ml-1 hover:bg-gray-100 rounded-full transition-colors"
-          aria-label="Back"
-        >
-          <ArrowLeft className="w-6 h-6 text-gray-800" />
-        </button>
+    <div className="fixed inset-0 bg-[#F5F5F5] overflow-hidden">
+      <div className="flex flex-col h-full w-full max-w-3xl mx-auto">
+        {/* ── HEADER ── */}
+        <div className="flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-100 flex-shrink-0">
+          <button
+            onClick={() => router.back()}
+            className="p-1 -ml-1 hover:bg-gray-100 rounded-full transition-colors"
+            aria-label="Back"
+          >
+            <ArrowLeft className="w-6 h-6 text-gray-800" />
+          </button>
 
-        <div className="w-9 h-9 rounded-full bg-gray-100 overflow-hidden flex-shrink-0 flex items-center justify-center text-gray-500">
-          {prodImage ? (
-            <img src={prodImage} alt={chatTitle} className="w-full h-full object-cover" />
-          ) : (
-            <Store className="w-4 h-4" />
-          )}
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-gray-900 text-sm truncate">{chatSubtitle}</h3>
-          <p className="text-xs text-gray-500 truncate">{chatTitle}</p>
-        </div>
-
-        {listing?.price ? (
-          <div className="text-sm font-bold flex-shrink-0" style={{ color: TEMU_ORANGE }}>
-            GH₵{listing.price}
+          <div className="w-9 h-9 rounded-full bg-gray-100 overflow-hidden flex-shrink-0 flex items-center justify-center text-gray-500">
+            {prodImage ? (
+              <img src={prodImage} alt={chatTitle} className="w-full h-full object-cover" />
+            ) : (
+              <Store className="w-4 h-4" />
+            )}
           </div>
-        ) : null}
-      </div>
 
-      {/* ── CHAT MESSAGES ── */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-        {isLoadingMessages ? (
-          <div className="flex items-center justify-center h-full">
-            <Loader2 className="w-6 h-6 animate-spin" style={{ color: TEMU_ORANGE }} />
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-gray-900 text-sm truncate">{chatSubtitle}</h3>
+            <p className="text-xs text-gray-500 truncate">{chatTitle}</p>
           </div>
-        ) : messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-400">
-            <MessageCircle className="w-10 h-10 mb-3" />
-            <p className="text-sm font-medium">Start chatting with the seller</p>
-            <p className="text-xs mt-1 mb-4">Ask about the product, price, or delivery</p>
-            <div className="flex flex-wrap justify-center gap-2 px-6">
-              {QUICK_REPLIES.map((q) => (
-                <button
-                  key={q}
-                  onClick={() => setNewMessage(q)}
-                  className="px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
-                  style={{ borderColor: TEMU_ORANGE, color: TEMU_ORANGE }}
-                >
-                  {q}
-                </button>
-              ))}
+
+          {listing?.price ? (
+            <div className="text-sm font-bold flex-shrink-0" style={{ color: TEMU_ORANGE }}>
+              GH₵{listing.price}
             </div>
-          </div>
-        ) : (
-          messages.map((msg, idx) => {
-            const senderObj = typeof msg.sender === "object" ? msg.sender : null;
-            const sender = String(senderObj?._id || msg.sender || msg.senderId || "");
-            const isMine = sender === String(currentUserId);
-            const showDate =
-              idx === 0 ||
-              (msg.timestamp || msg.createdAt) &&
-              (messages[idx - 1]?.timestamp || messages[idx - 1]?.createdAt) &&
-              new Date(msg.timestamp || msg.createdAt || "").toDateString() !==
-              new Date(messages[idx - 1]?.timestamp || messages[idx - 1]?.createdAt || "").toDateString();
+          ) : null}
+        </div>
 
-            return (
-              <React.Fragment key={msg._id || idx}>
-                {showDate && (
-                  <div className="flex justify-center my-3">
-                    <span className="px-3 py-1 text-[11px] font-medium bg-gray-200/80 text-gray-500 rounded-full">
-                      {formatDateLabel(msg.timestamp || msg.createdAt)}
-                    </span>
-                  </div>
-                )}
-                <div className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
-                  <div
-                    className={`max-w-[75%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed break-words whitespace-pre-wrap ${isMine
-                        ? "text-white rounded-br-md"
-                        : "bg-white text-gray-800 rounded-bl-md border border-gray-100"
-                      }`}
-                    style={isMine ? { backgroundColor: TEMU_ORANGE } : undefined}
+        {/* ── CHAT MESSAGES ── */}
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+          {isLoadingMessages ? (
+            <div className="flex items-center justify-center h-full">
+              <Loader2 className="w-6 h-6 animate-spin" style={{ color: TEMU_ORANGE }} />
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-gray-400">
+              <MessageCircle className="w-10 h-10 mb-3" />
+              <p className="text-sm font-medium">Start chatting with the seller</p>
+              <p className="text-xs mt-1 mb-4">Ask about the product, price, or delivery</p>
+              <div className="flex flex-wrap justify-center gap-2 px-6">
+                {QUICK_REPLIES.map((q) => (
+                  <button
+                    key={q}
+                    onClick={() => setNewMessage(q)}
+                    className="px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
+                    style={{ borderColor: TEMU_ORANGE, color: TEMU_ORANGE }}
                   >
-                    <p className="whitespace-pre-wrap">
-                      {msg.text || msg.content || ""}
-                    </p>
-                    <div className={`mt-1 ${isMine ? "text-right" : "text-left"}`}>
-                      <span className={`text-[10px] ${isMine ? "text-white/70" : "text-gray-400"}`}>
-                        {formatTime(msg.timestamp || msg.createdAt)}
+                    {q}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            messages.map((msg, idx) => {
+              const senderObj = typeof msg.sender === "object" ? msg.sender : null;
+              const sender = String(senderObj?._id || msg.sender || msg.senderId || "");
+              const isMine = sender === String(currentUserId);
+              const showDate =
+                idx === 0 ||
+                (msg.timestamp || msg.createdAt) &&
+                (messages[idx - 1]?.timestamp || messages[idx - 1]?.createdAt) &&
+                new Date(msg.timestamp || msg.createdAt || "").toDateString() !==
+                new Date(messages[idx - 1]?.timestamp || messages[idx - 1]?.createdAt || "").toDateString();
+
+              return (
+                <React.Fragment key={msg._id || idx}>
+                  {showDate && (
+                    <div className="flex justify-center my-3">
+                      <span className="px-3 py-1 text-[11px] font-medium bg-gray-200/80 text-gray-500 rounded-full">
+                        {formatDateLabel(msg.timestamp || msg.createdAt)}
                       </span>
                     </div>
+                  )}
+                  <div className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
+                    <div
+                      className={`max-w-[75%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed break-words whitespace-pre-wrap ${isMine
+                          ? "text-white rounded-br-md"
+                          : "bg-white text-gray-800 rounded-bl-md border border-gray-100"
+                        }`}
+                      style={isMine ? { backgroundColor: TEMU_ORANGE } : undefined}
+                    >
+                      <p className="whitespace-pre-wrap break-words">
+                        {msg.text || msg.content || ""}
+                      </p>
+                      <div className={`mt-1 ${isMine ? "text-right" : "text-left"}`}>
+                        <span className={`text-[10px] ${isMine ? "text-white/70" : "text-gray-400"}`}>
+                          {formatTime(msg.timestamp || msg.createdAt)}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </React.Fragment>
-            );
-          })
-        )}
-        <div ref={messagesEndRef} />
-      </div>
+                </React.Fragment>
+              );
+            })
+          )}
+          <div ref={messagesEndRef} />
+        </div>
 
-      {/* ── INPUT BAR ── */}
-      <div className="bg-white border-t border-gray-200 px-4 py-3">
-        {error && (
-          <div className="mb-2 px-3 py-1.5 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between">
-            <p className="text-xs text-red-600">{error}</p>
-            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 text-xs font-medium ml-2">Dismiss</button>
+        {/* ── INPUT BAR ── */}
+        <div className="bg-white border-t border-gray-200 px-4 py-3 flex-shrink-0">
+          {error && (
+            <div className="mb-2 px-3 py-1.5 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between">
+              <p className="text-xs text-red-600 break-words">{error}</p>
+              <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 text-xs font-medium ml-2 flex-shrink-0">Dismiss</button>
+            </div>
+          )}
+          <div className="flex items-center gap-2 bg-gray-50 rounded-2xl border border-gray-200 px-4 py-1.5">
+            <input
+              type="text"
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage();
+                }
+              }}
+              placeholder="Type a message..."
+              className="flex-1 bg-transparent py-2 text-sm outline-none placeholder:text-gray-400 min-w-0"
+              disabled={isSending}
+            />
+            <button
+              onClick={sendMessage}
+              disabled={!newMessage.trim() || isSending}
+              className="w-9 h-9 rounded-full text-white flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+              style={{ backgroundColor: TEMU_ORANGE }}
+            >
+              {isSending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+            </button>
           </div>
-        )}
-        <div className="flex items-center gap-2 bg-gray-50 rounded-2xl border border-gray-200 px-4 py-1.5">
-          <input
-            type="text"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-              }
-            }}
-            placeholder="Type a message..."
-            className="flex-1 bg-transparent py-2 text-sm outline-none placeholder:text-gray-400"
-            disabled={isSending}
-          />
-          <button
-            onClick={sendMessage}
-            disabled={!newMessage.trim() || isSending}
-            className="w-9 h-9 rounded-full text-white flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex-shrink-0"
-            style={{ backgroundColor: TEMU_ORANGE }}
-          >
-            {isSending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Send className="w-4 h-4" />
-            )}
-          </button>
         </div>
       </div>
     </div>
