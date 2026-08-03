@@ -8,6 +8,21 @@ import {
   AlertTriangle
 } from "lucide-react";
 import { apiFetch } from "@/lib/apiClient";
+import { useAuth } from "../context/AuthContext";
+
+function sanitizeName(value?: string | null): string | null {
+  if (typeof value !== "string") return null;
+
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const normalized = trimmed.toLowerCase();
+  if (["user", "users", "guest", "guest user", "new user", "unknown", "null", "undefined"].includes(normalized)) {
+    return null;
+  }
+
+  return trimmed;
+}
 
 // Helper to get avatar based on gender or name initial
 const getAvatarUrl = (gender?: string, name?: string) => {
@@ -24,12 +39,29 @@ const getAvatarUrl = (gender?: string, name?: string) => {
 };
 
 function getDisplayName(user: any): string | null {
-  const raw = user?.displayName || user?.fullName || user?.name || user?.username || '';
-  if (typeof raw === 'string' && raw.trim()) return raw.trim();
-  const first = user?.firstName || '';
-  const last = user?.lastName || '';
-  const fallback = [first, last].filter(Boolean).join(' ').trim();
-  return fallback || null;
+  const candidates = [
+    user?.displayName,
+    user?.fullName,
+    user?.name,
+    user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : null,
+    user?.firstName,
+    user?.lastName,
+    user?.username,
+  ];
+
+  for (const candidate of candidates) {
+    const cleaned = sanitizeName(candidate);
+    if (cleaned) return cleaned;
+  }
+
+  const email = user?.email;
+  if (typeof email === "string" && email.includes("@")) {
+    const localPart = email.split("@")[0].trim();
+    const cleanedEmailName = sanitizeName(localPart);
+    if (cleanedEmailName) return cleanedEmailName;
+  }
+
+  return null;
 }
 
 // Time-of-day config: icon, label, a gen-z one-liner, and a signature gradient per vibe
@@ -68,7 +100,19 @@ function getVibeKey(hour: number) {
 }
 
 export default function Greeting() {
-  const [firstName, setFirstName] = useState<string | null>(null);
+  const { user: authUser } = useAuth();
+  const [firstName, setFirstName] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+
+    try {
+      const raw = localStorage.getItem("unimart:user");
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return getDisplayName(parsed);
+    } catch {
+      return null;
+    }
+  });
   const [userGender, setUserGender] = useState<string | undefined>(undefined);
   const [vibeKey, setVibeKey] = useState<string>("morning");
   const [streakDays, setStreakDays] = useState<number>(0);
@@ -80,8 +124,12 @@ export default function Greeting() {
   const [error, setError] = useState<string | null>(null);
   const vibe = TIME_VIBES[vibeKey];
 
-  // Time-of-day logic
   useEffect(() => {
+    const initialName = getDisplayName(authUser);
+    if (initialName) {
+      setFirstName(initialName);
+    }
+
     try {
       const raw = localStorage.getItem("unimart:user");
       if (raw) {
@@ -92,7 +140,7 @@ export default function Greeting() {
       }
     } catch (e) {}
     setVibeKey(getVibeKey(new Date().getHours()));
-  }, []);
+  }, [authUser]);
 
   // Data Loading logic
   useEffect(() => {
@@ -239,7 +287,7 @@ export default function Greeting() {
     );
   }
 
-  const nameText = firstName || "User";
+  const nameText = firstName || "Welcome";
   const avatarUrl = getAvatarUrl(userGender, nameText);
 
   return (

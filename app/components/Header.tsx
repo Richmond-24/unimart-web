@@ -506,14 +506,15 @@ export default function Header() {
           filter: drop-shadow(0 0 6px rgba(0, 212, 168, 0.55));
         }
         .logo-subtitle {
-          font-size: 9px;
-          letter-spacing: 0.04em;
+          font-size: 8px;
+          letter-spacing: 0.03em;
           font-weight: 500;
           opacity: 0.72;
         }
         @media (min-width: 768px) {
           .logo-subtitle {
             font-size: 10.5px;
+            letter-spacing: 0.04em;
           }
         }
       `}</style>
@@ -528,12 +529,12 @@ export default function Header() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
           {/* ============================= MOBILE APP HEADER ============================= */}
-          <div className="md:hidden bg-gradient-to-b from-[#0E6373] to-[#0B4F5C] -mx-4 px-4 pb-3.5">
+          <div className="md:hidden bg-gradient-to-b from-[#0E6373] to-[#0B4F5C] -mx-4 px-4 pb-3">
             {/* Top bar: logo, messages, notifications */}
-            <div className="flex items-center gap-2 pt-3 pb-2.5">
-              <Link href="/" className="flex items-center gap-2 shrink-0">
-                <img src="/swoop-logo.png" alt="Swoop" className="logo-animate h-7 w-auto object-contain" />
-                <span className="logo-subtitle text-white leading-none whitespace-nowrap self-end pb-[3px]">
+            <div className="flex items-center gap-1.5 pt-2.5 pb-2">
+              <Link href="/" className="flex items-center gap-1.5 shrink-0">
+                <img src="/swoop-logo.png" alt="Swoop" className="logo-animate h-5 w-auto object-contain" />
+                <span className="logo-subtitle text-white leading-none whitespace-nowrap self-end pb-[2px]">
                   Marketplace
                 </span>
               </Link>
@@ -543,12 +544,12 @@ export default function Header() {
               <div className="flex items-center gap-0.5">
                 <button
                   onClick={() => router.push("/messages")}
-                  className="relative p-2 rounded-full active:bg-white/15 transition shrink-0"
+                  className="relative p-1.5 rounded-full active:bg-white/15 transition shrink-0"
                   aria-label="Messages"
                 >
-                  <MessageCircle className="w-5 h-5 text-white" strokeWidth={2} />
+                  <MessageCircle className="w-[18px] h-[18px] text-white" strokeWidth={2} />
                   {!isLoadingMessages && messageCount > 0 && (
-                    <span className="badge-pop absolute top-0.5 right-0.5 bg-[#F97316] text-white text-[9px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1 ring-2 ring-[#0B4F5C]">
+                    <span className="badge-pop absolute top-0 right-0 bg-[#F97316] text-white text-[9px] font-bold rounded-full min-w-[15px] h-[15px] flex items-center justify-center px-1 ring-2 ring-[#0B4F5C]">
                       {messageCount > 9 ? '9+' : messageCount}
                     </span>
                   )}
@@ -567,17 +568,17 @@ export default function Header() {
                     }
                     router.push("/notifications");
                   }}
-                  className="relative p-2 rounded-full active:bg-white/15 transition shrink-0"
+                  className="relative p-1.5 rounded-full active:bg-white/15 transition shrink-0"
                   aria-label="Notifications"
                 >
-                  <Bell className="w-5 h-5 text-white" strokeWidth={2} />
+                  <Bell className="w-[18px] h-[18px] text-white" strokeWidth={2} />
                   {showSignupNotificationPrompt && (
-                    <span className="badge-pop absolute -top-1 -right-1 bg-white text-[#0B4F5C] text-[9px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 border border-orange-500">
+                    <span className="badge-pop absolute -top-0.5 -right-0.5 bg-white text-[#0B4F5C] text-[9px] font-bold rounded-full min-w-[17px] h-[17px] flex items-center justify-center px-1 border border-orange-500">
                       +1
                     </span>
                   )}
                   {notificationCount > 0 && (
-                    <span className="badge-pop absolute top-0.5 right-0.5 bg-[#F97316] text-white text-[9px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1 ring-2 ring-[#0B4F5C]">
+                    <span className="badge-pop absolute top-0 right-0 bg-[#F97316] text-white text-[9px] font-bold rounded-full min-w-[15px] h-[15px] flex items-center justify-center px-1 ring-2 ring-[#0B4F5C]">
                       {notificationCount > 99 ? '99+' : notificationCount}
                     </span>
                   )}
@@ -602,18 +603,18 @@ export default function Header() {
           {/* Search row — an elevated card, the focal element of the bar */}
             <button
               onClick={() => setMobileSearchOpen(true)}
-              className="w-full flex items-center gap-2.5 bg-white rounded-2xl py-3 pl-3.5 pr-4 text-left shadow-[0_2px_10px_rgba(0,0,0,0.10)] active:scale-[0.99] transition-transform"
+              className="w-full flex items-center gap-2.5 bg-white rounded-2xl py-2.5 pl-3 pr-4 text-left shadow-[0_2px_10px_rgba(0,0,0,0.10)] active:scale-[0.99] transition-transform"
             >
-              <span className="flex items-center justify-center w-7 h-7 rounded-full bg-teal-50 shrink-0">
+              <span className="flex items-center justify-center w-6.5 h-6.5 rounded-full bg-teal-50 shrink-0">
                 <Search className="text-teal-600 w-3.5 h-3.5" strokeWidth={2.5} />
               </span>
-              <span className="text-[13.5px] text-slate-400 truncate">
+              <span className="text-[13px] text-slate-400 truncate">
                 {searchQuery ? searchQuery : "Search products, brands, and more..."}
               </span>
             </button>
 
             {/* Category quick-scroll chips */}
-            <div className="pt-3 -mx-4 px-4">
+            <div className="pt-2.5 -mx-4 px-4">
               <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
                 {CATEGORIES.map((cat) => {
                   const Icon = cat.icon;
@@ -621,12 +622,12 @@ export default function Header() {
                     <Link
                       key={cat.href}
                       href={cat.href}
-                      className="flex items-center gap-1.5 shrink-0 bg-white/12 ring-1 ring-white/10 active:bg-white/20 transition rounded-full py-[7px] pl-2.5 pr-3.5"
+                      className="flex items-center gap-1.5 shrink-0 bg-white/12 ring-1 ring-white/10 active:bg-white/20 transition rounded-full py-[6px] pl-2 pr-3"
                     >
-                      <span className="flex items-center justify-center w-5 h-5 rounded-full bg-white/15">
-                        <Icon className="w-3 h-3 text-white" strokeWidth={2.25} />
+                      <span className="flex items-center justify-center w-[18px] h-[18px] rounded-full bg-white/15">
+                        <Icon className="w-[11px] h-[11px] text-white" strokeWidth={2.25} />
                       </span>
-                      <span className="text-white text-xs font-medium whitespace-nowrap">{cat.label}</span>
+                      <span className="text-white text-[11px] font-medium whitespace-nowrap">{cat.label}</span>
                     </Link>
                   );
                 })}

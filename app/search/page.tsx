@@ -5,7 +5,7 @@ import apiFetch from "../../lib/apiClient";
 import Link from 'next/link';
 
 const MAX_SEARCH_HISTORY = 10;
-
+ 
 export default function SearchPage() {
   const [category, setCategory] = useState<string>('all');
   const [q, setQ] = useState<string>('');

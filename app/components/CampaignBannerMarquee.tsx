@@ -4,17 +4,15 @@ import * as React from "react";
 import Image from "next/image";
 import { Gift, Store, Sparkles, TrendingUp, ArrowUpRight } from "lucide-react";
 
-// Images are served from /public/images/promos/ — drop a file with the exact
-// name below into that folder (or change the path to match your own file).
-//
-// These are promotional flyers, not links — nothing navigates on click.
+// Images are served from /public/free.jpeg
+// All promos now use the same free.jpeg image
 const promos = [
   {
     title: "Campus style drops",
     subtitle: "Fresh fashion finds and creator picks landing every Friday.",
     status: "Coming soon",
     accent: "#7C3AED",
-    image: "/images/promos/campus-style.jpg",
+    image: "/last.webp", // Correct: root of public folder
     icon: Sparkles,
   },
   {
@@ -22,7 +20,7 @@ const promos = [
     subtitle: "Budget-friendly essentials, gadgets, and pre-loved deals nearby.",
     status: "Live now",
     accent: "#059669",
-    image: "/images/promos/student-savings.jpg",
+    image: "/camp.webp", // Correct: root of public folder
     icon: Gift,
   },
   {
@@ -30,7 +28,7 @@ const promos = [
     subtitle: "Meet verified campus sellers with trending products and fast replies.",
     status: "Trending",
     accent: "#EA580C",
-    image: "/images/promos/seller-spotlight.jpg",
+    image: "/spot.jpg", // Correct: root of public folder
     icon: Store,
   },
   {
@@ -38,7 +36,7 @@ const promos = [
     subtitle: "A smoother shopping flow designed around how students actually browse.",
     status: "Updated",
     accent: "#2563EB",
-    image: "/images/promos/quick-checkout.jpg",
+    image: "/check.gif", // Correct: root of public folder
     icon: TrendingUp,
   },
 ];
@@ -112,7 +110,7 @@ export default function CampaignBannerGrid() {
                 <div className="relative h-36 w-full">
                   <Image
                     src={promo.image}
-                    alt=""
+                    alt={promo.title}
                     fill
                     sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 78vw"
                     className="object-cover"
