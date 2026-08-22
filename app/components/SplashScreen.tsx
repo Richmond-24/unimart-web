@@ -97,18 +97,46 @@ export default function SplashScreen({ onFinish }: { onFinish: () => void }) {
         </div>
 
         {/* Motto */}
-        <span
-          className="motto"
+        {/* Brand text positioned well below logo */}
+        <div style={{ height: 18 }} />
+        <div
+          className="brand-name-splash"
           style={{
-            fontFamily: "'Poppins', 'Inter', sans-serif",
-            fontSize: "clamp(11px, 3vw, 13px)",
-            fontWeight: 600,
-            color: "#8696a0",
-            letterSpacing: 3.5,
-            textTransform: "uppercase",
+            fontFamily: "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+            fontSize: "clamp(2rem, 7vw, 4rem)",
+            fontWeight: 800,
+            color: "#ffffff",
+            letterSpacing: "-0.02em",
+            textTransform: "none",
             opacity: 0,
             animation: "fadeUpText 0.8s ease-out 1.8s forwards",
             textAlign: "center",
+            marginTop: 8,
+            lineHeight: 1.1,
+            background: "linear-gradient(135deg, #ffffff 0%, #e0e0e0 50%, #00d4a8 100%)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+            filter: "drop-shadow(0 2px 8px rgba(0, 212, 168, 0.3))",
+          }}
+        >
+          ComfyQwest
+        </div>
+
+        {/* Motto */}
+        <span
+          className="motto"
+          style={{
+            fontFamily: "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+            fontSize: "clamp(0.875rem, 2.5vw, 1.125rem)",
+            fontWeight: 500,
+            color: "#8696a0",
+            letterSpacing: 2,
+            textTransform: "uppercase",
+            opacity: 0,
+            animation: "fadeUpText 0.8s ease-out 2.2s forwards",
+            textAlign: "center",
+            marginTop: 12,
           }}
         >
           Shop Smarter

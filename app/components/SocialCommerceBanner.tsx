@@ -373,12 +373,34 @@ export default function AdsPage() {
         </div>
 
         {/* Bottom Promo Banner */}
-        <div className="mt-10 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-6 text-center">
+        {/* Features — compact grid to explain value props at the bottom of campaigns */}
+        <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="flex flex-col items-start gap-2 p-4 bg-white rounded-xl border border-gray-100">
+            <div className="text-2xl">💸</div>
+            <div className="font-semibold">Fair Price Guarantee</div>
+            <div className="text-sm text-gray-500">We track price history so you never overpay.</div>
+          </div>
+          <div className="flex flex-col items-start gap-2 p-4 bg-white rounded-xl border border-gray-100">
+            <div className="text-2xl">🔒</div>
+            <div className="font-semibold">Scam-Free Promise</div>
+            <div className="text-sm text-gray-500">Verified sellers and buyer protection.</div>
+          </div>
+          <div className="flex flex-col items-start gap-2 p-4 bg-white rounded-xl border border-gray-100">
+            <div className="text-2xl">⚡</div>
+            <div className="font-semibold">Fast Checkout</div>
+            <div className="text-sm text-gray-500">One-tap payments and saved addresses.</div>
+          </div>
+          <div className="flex flex-col items-start gap-2 p-4 bg-white rounded-xl border border-gray-100">
+            <div className="text-2xl">⭐</div>
+            <div className="font-semibold">Real Reviews</div>
+            <div className="text-sm text-gray-500">Genuine feedback from real buyers.</div>
+          </div>
+        </div>
+
+        {/* Bottom Promo Banner */}
+        <div className="mt-8 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-6 text-center">
           <p className="text-sm font-medium text-gray-700">
-            🎯 Want to feature your campaign?{" "}
-            <span className="text-indigo-600 font-semibold hover:underline cursor-pointer">
-              Partner with us
-            </span>
+            🎯 Want to feature your campaign? <span className="text-indigo-600 font-semibold hover:underline cursor-pointer">Partner with us</span>
           </p>
         </div>
       </div>

@@ -511,10 +511,26 @@ export default function Header() {
           font-weight: 500;
           opacity: 0.72;
         }
+        .brand-name {
+          font-size: 12px;
+          font-weight: 700;
+          letter-spacing: 0.01em;
+          line-height: 1;
+          opacity: 0.95;
+          color: #ffffff;
+        }
         @media (min-width: 768px) {
           .logo-subtitle {
             font-size: 10.5px;
             letter-spacing: 0.04em;
+          }
+          .brand-name {
+            font-size: 16px;
+          }
+        }
+        @media (min-width: 1024px) {
+          .brand-name {
+            font-size: 18px;
           }
         }
       `}</style>
@@ -533,10 +549,8 @@ export default function Header() {
             {/* Top bar: logo, messages, notifications */}
             <div className="flex items-center gap-1.5 pt-2.5 pb-2">
               <Link href="/" className="flex items-center gap-1.5 shrink-0">
-                <img src="/swoop-logo.png" alt="Swoop" className="logo-animate h-5 w-auto object-contain" />
-                <span className="logo-subtitle text-white leading-none whitespace-nowrap self-end pb-[2px]">
-                  Marketplace
-                </span>
+                {/* INCREASED Mobile Logo Size: h-10 (was h-8) */}
+                <img src="/qwest.png" alt="ComfyQwest" className="logo-animate h-10 w-auto object-contain" />
               </Link>
 
               <div className="flex-1" />
@@ -741,7 +755,8 @@ export default function Header() {
                     >
                       {/* Header */}
                       <div className="bg-gradient-to-r from-[#0B4F5C] to-[#083A44] px-5 py-4">
-                        <img src="/swoop-logo.png" alt="Swoop" className="logo-animate h-6 w-auto object-contain" />
+                        {/* Increased Desktop Menu Logo Size: h-10 (was h-8) */}
+                        <img src="/qwest.png" alt="ComfyQwest" className="logo-animate h-10 w-auto object-contain" />
                       </div>
 
                       {/* Quick links */}
@@ -820,10 +835,8 @@ export default function Header() {
 
                 {/* Logo */}
                 <Link href="/" className="shrink-0 flex items-center gap-2">
-                  <img src="/swoop-logo.png" alt="Swoop" className="logo-animate h-8 w-auto object-contain" />
-                  <span className="logo-subtitle text-white leading-none whitespace-nowrap self-end pb-[3px]">
-                    Marketplace
-                  </span>
+                  {/* INCREASED Desktop Main Logo Size: h-14 md:h-16 lg:h-20 (was h-12 md:h-14 lg:h-16) */}
+                  <img src="/qwest.png" alt="ComfyQwest" className="logo-animate h-14 md:h-16 lg:h-20 w-auto object-contain" />
                 </Link>
               </div>
 

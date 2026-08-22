@@ -1,267 +1,148 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
-import { apiFetch } from "@/lib/apiClient";
-import Link from 'next/link';
-import { Play, Pause, Volume2, VolumeX, Recycle, Heart, ShoppingBag, Star } from "lucide-react";
+import React, { useEffect, useState } from "react";
 
-interface SecondHandItem {
-  _id: string;
-  id?: string;
-  title: string;
-  price: number | string;
-  originalPrice?: number | string;
-  sellerName?: string;
-  seller?: string;
-  imageUrls?: string[];
-  images?: string[];
-  videoUrl?: string;
-  video?: string;
-  rating?: number;
-  reviewCount?: number;
-  condition?: string;
-  category?: string;
+interface SplashProps {
+  onLoaded?: () => void;
 }
 
-interface VideoSecondHandCardProps {
-  item: SecondHandItem;
-}
+export default function SplashScreen({ onLoaded }: SplashProps) {
+  const [isVisible, setIsVisible] = useState(true);
+  const [fadeOut, setFadeOut] = useState(false);
 
-function VideoSecondHandCard({ item }: VideoSecondHandCardProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
-  const [isHovered, setIsHovered] = useState(false);
-  const [isLiked, setIsLiked] = useState(false);
-
-  const togglePlay = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
-    }
-  };
-
-  const toggleMute = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (videoRef.current) {
-      videoRef.current.muted = !isMuted;
-      setIsMuted(!isMuted);
-    }
-  };
-
-  // Auto-play on hover
   useEffect(() => {
-    if (isHovered && videoRef.current && !isPlaying) {
-      videoRef.current.play().catch(() => {});
-      setIsPlaying(true);
-    } else if (!isHovered && videoRef.current && isPlaying) {
-      videoRef.current.pause();
-      setIsPlaying(false);
-    }
-  }, [isHovered]);
+    // Auto-hide after animation completes
+    const timer = setTimeout(() => {
+      setFadeOut(true);
+      setTimeout(() => {
+        setIsVisible(false);
+        onLoaded?.();
+      }, 500);
+    }, 2500);
 
-  const lid = item._id || item.id;
-  const priceDisplay = typeof item.price === 'number' ? `GH₵${item.price}` : (item.price || 'Price on request');
-  const originalPriceDisplay = item.originalPrice ? (typeof item.originalPrice === 'number' ? `GH₵${item.originalPrice}` : item.originalPrice) : null;
+    return () => clearTimeout(timer);
+  }, [onLoaded]);
+
+  if (!isVisible) return null;
 
   return (
-    <Link 
-      href={`/listings/${lid}`}
-      className="relative block group aspect-[3/4] rounded-xl overflow-hidden bg-black shadow-sm hover:shadow-md transition-all duration-300"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+    <div
+      className={`fixed inset-0 z-[9999] flex items-center justify-center bg-gradient-to-br from-white via-gray-50 to-gray-100 transition-opacity duration-500 ${
+        fadeOut ? "opacity-0" : "opacity-100"
+      }`}
     >
-      {/* Video Background */}
-      <video
-        ref={videoRef}
-        src={item.videoUrl || item.video}
-        poster={(item.imageUrls?.[0] || item.images?.[0] || "")}
-        className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
-        loop
-        muted={isMuted}
-        playsInline
-      />
-
-      {/* Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/70 pointer-events-none" />
-
-      {/* Condition Badge */}
-      <div className="absolute top-1.5 left-1.5 bg-[#00D9A3]/90 backdrop-blur-sm text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-1 z-10">
-        <Recycle size={8} />
-        {item.condition || 'Pre-loved'}
+      {/* Background Pattern */}
+      <div className="absolute inset-0 opacity-30">
+        <div className="absolute top-20 left-10 w-72 h-72 bg-[#00D9A3]/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl animate-pulse delay-700" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-purple-400/5 rounded-full blur-3xl animate-pulse delay-1000" />
       </div>
 
-      {/* Like Button */}
-      <button
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          setIsLiked(!isLiked);
-        }}
-        className={`absolute top-1.5 right-1.5 w-7 h-7 rounded-full backdrop-blur-sm flex items-center justify-center transition z-10 ${
-          isLiked ? 'bg-[#FF6B9D] text-white' : 'bg-black/30 text-white hover:bg-black/50'
-        }`}
-      >
-        <Heart size={14} fill={isLiked ? "white" : "none"} />
-      </button>
-
-      {/* Play/Pause Control */}
-      <button
-        onClick={togglePlay}
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/50 transition z-10 opacity-0 group-hover:opacity-100"
-      >
-        {isPlaying ? <Pause size={14} fill="white" /> : <Play size={14} fill="white" className="ml-0.5" />}
-      </button>
-
-      {/* Mute Toggle */}
-      <button
-        onClick={toggleMute}
-        className="absolute bottom-12 right-1.5 w-6 h-6 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/50 transition z-10 opacity-0 group-hover:opacity-100"
-      >
-        {isMuted ? <VolumeX size={12} /> : <Volume2 size={12} />}
-      </button>
-
-      {/* Bottom Content */}
-      <div className="absolute bottom-0 left-0 right-0 p-2.5 z-10">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-white text-[10px] font-semibold truncate max-w-[70%]">@{item.sellerName || item.seller}</span>
-          {item.rating && (
-            <div className="flex items-center gap-0.5 bg-black/40 backdrop-blur-sm px-1 py-0.5 rounded-full">
-              <Star size={8} className="text-[#FFB88C]" fill="#FFB88C" />
-              <span className="text-white text-[9px] font-medium">{item.rating.toFixed(1)}</span>
+      {/* Main Content */}
+      <div className="relative z-10 flex flex-col items-center justify-center px-4 sm:px-6">
+        {/* Logo Container */}
+        <div className="mb-6 sm:mb-8 md:mb-10 animate-fade-in-down">
+          <div className="relative">
+            {/* Logo Placeholder - Replace with your actual logo */}
+            <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 lg:w-32 lg:h-32 rounded-2xl bg-gradient-to-br from-[#00D9A3] to-[#00b88a] shadow-lg flex items-center justify-center transform hover:scale-105 transition-transform duration-300">
+              <span className="text-white text-3xl sm:text-4xl md:text-5xl font-bold">C</span>
             </div>
-          )}
-        </div>
-        
-        <h3 className="text-white text-xs font-bold leading-tight line-clamp-2 mb-1.5 drop-shadow-md min-h-[2.4em]">
-          {item.title}
-        </h3>
-
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-white font-bold text-sm">{priceDisplay}</span>
-          {originalPriceDisplay && (
-            <span className="text-white/60 text-[10px] line-through">{originalPriceDisplay}</span>
-          )}
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-export default function SecondHandDealsVideo() {
-  const [items, setItems] = useState<SecondHandItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-    const load = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const endpoint = '/public/second-hand?limit=6';
-        console.log(`📡 [SecondHandDeals] Fetching from: ${endpoint}`);
-        
-        const res = await apiFetch(endpoint, { suppressErrorLog: false });
-        
-        if (mounted) {
-          let data: any[] = [];
-          if (res?.success && Array.isArray(res.data)) {
-            data = res.data;
-          } else if (Array.isArray(res)) {
-            data = res;
-          } else if (res?.data && Array.isArray(res.data)) {
-            data = res.data;
-          } else if (res?.items && Array.isArray(res.items)) {
-            data = res.items;
-          }
-          
-          const mapped = data.map((p: any) => ({
-            ...p,
-            _id: p._id || p.id,
-            title: p.title || p.name || 'Great second-hand find',
-            price: p.price || p.amount || 0,
-            sellerName: p.sellerName || p.seller?.name || p.seller?.username || 'verified seller',
-            imageUrls: p.imageUrls || p.images || (p.image ? [p.image] : []),
-            videoUrl: p.videoUrl || p.video || undefined,
-            condition: p.condition || p.itemCondition || 'Pre-loved'
-          }));
-          
-          setItems(mapped);
-          console.log(`✅ [SecondHandDeals] Loaded ${mapped.length} items`);
-        }
-      } catch (err: any) {
-        console.error('❌ [SecondHandDeals] Error:', err);
-        setError(err.message || 'Failed to load second-hand items');
-        setItems([]);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-    load();
-    return () => { mounted = false };
-  }, []);
-
-  return (
-    <section className="py-6 bg-[#FAFAFB]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-[#00D9A3]/10 flex items-center justify-center">
-              <Recycle className="text-[#00D9A3]" size={16} />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold font-display">Second-hand Picks</h2>
-              <p className="text-xs text-gray-500">Sustainably sourced & budget-friendly</p>
-            </div>
+            {/* Decorative ring */}
+            <div className="absolute -inset-2 rounded-2xl border-2 border-[#00D9A3]/20 animate-spin-slow" style={{ animationDuration: '8s' }} />
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-          {loading && new Array(6).fill(0).map((_, i) => (
-            <div key={i} className="aspect-[3/4] bg-slate-200 rounded-xl animate-pulse" />
-          ))}
-
-          {!loading && error && items.length === 0 && (
-            <div className="col-span-full text-center py-8">
-              <p className="text-red-500 text-sm mb-2">{error}</p>
-              <button 
-                onClick={() => window.location.reload()} 
-                className="px-3 py-1.5 bg-[#00D9A3] text-white text-xs rounded-lg hover:bg-[#00b88a] transition"
-              >
-                Retry
-              </button>
-            </div>
-          )}
-
-          {!loading && !error && items.length === 0 && (
-            <div className="col-span-full text-center py-8 text-gray-500 text-sm">
-              No second-hand items are available right now.
-            </div>
-          )}
-
-          {!loading && items.map((item) => (
-            <VideoSecondHandCard key={item._id || item.id} item={item} />
-          ))}
+        {/* Brand Name - Responsive Modern Typography */}
+        <div className="animate-fade-in-up">
+          <h1 
+            className="text-center font-display tracking-tight leading-none select-none"
+            style={{
+              fontSize: 'clamp(2rem, 8vw, 5rem)',
+              fontWeight: 800,
+              fontFamily: "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+              background: 'linear-gradient(135deg, #1a1a1a 0%, #333333 50%, #00D9A3 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            comfyquest
+          </h1>
+          
+          {/* Subtle underline accent */}
+          <div className="mt-2 sm:mt-3 md:mt-4 h-1 w-16 sm:w-20 md:w-24 mx-auto rounded-full bg-gradient-to-r from-[#00D9A3] to-transparent opacity-60" />
         </div>
 
-        {/* See all button */}
-        <div className="mt-6 flex justify-center">
-          <Link 
-            href="/search?category=second-hand" 
-            className="px-4 py-2 text-xs font-semibold text-[#00D9A3] bg-[#00D9A3]/10 border border-[#00D9A3]/20 rounded-lg hover:bg-[#00D9A3]/20 transition-colors"
-          >
-            See all Second-hand →
-          </Link>
+        {/* Tagline */}
+        <p 
+          className="mt-4 sm:mt-6 md:mt-8 text-center text-gray-500 font-light tracking-wide animate-fade-in-up-delayed"
+          style={{
+            fontSize: 'clamp(0.75rem, 2.5vw, 1.125rem)',
+          }}
+        >
+          Discover • Connect • Thrive
+        </p>
+
+        {/* Loading Indicator */}
+        <div className="mt-8 sm:mt-10 md:mt-12 flex items-center gap-2 animate-pulse">
+          <div className="w-2 h-2 rounded-full bg-[#00D9A3]" />
+          <div className="w-2 h-2 rounded-full bg-[#00D9A3] animate-bounce" style={{ animationDelay: '0.1s' }} />
+          <div className="w-2 h-2 rounded-full bg-[#00D9A3] animate-bounce" style={{ animationDelay: '0.2s' }} />
         </div>
       </div>
-    </section>
+
+      {/* CSS Animations */}
+      <style jsx>{`
+        @keyframes fade-in-down {
+          from {
+            opacity: 0;
+            transform: translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        @keyframes fade-in-up {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        @keyframes spin-slow {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+        
+        .animate-fade-in-down {
+          animation: fade-in-down 0.6s ease-out forwards;
+        }
+        
+        .animate-fade-in-up {
+          animation: fade-in-up 0.6s ease-out 0.3s forwards;
+          opacity: 0;
+        }
+        
+        .animate-fade-in-up-delayed {
+          animation: fade-in-up 0.6s ease-out 0.5s forwards;
+          opacity: 0;
+        }
+        
+        .animate-spin-slow {
+          animation: spin-slow 8s linear infinite;
+        }
+      `}</style>
+    </div>
   );
 }

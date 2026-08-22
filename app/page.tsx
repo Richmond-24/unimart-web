@@ -8,7 +8,6 @@ import StudentDeals from "./components/StudentDeals";
 import FashionDeals from "./components/FashionDeals";
 import ProductGrid from "./components/ProductGrid";
 import FlashDeals from "./components/FlashDeals";
-import SecondHandDeals from "./components/SecondHandDeals";
 import SocialCommerceBanner from "./components/SocialCommerceBanner";
 
 import Greeting from "./components/Greeting";
@@ -28,7 +27,6 @@ export default function Home() {
       <FashionDeals />
       <ProductGrid horizontal />
       <FlashDeals />
-      <SecondHandDeals />
       <SocialCommerceBanner />
       
     </div>
