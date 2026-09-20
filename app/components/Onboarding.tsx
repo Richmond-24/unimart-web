@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 const TemuDiscover = ({ color }) => (
   <svg width="100%" height="100%" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
     <defs>
-      <filter id="glow-orange" x="-20%" y="-20%" width="140%" height="140%">
+      <filter id="glow-teal" x="-20%" y="-20%" width="140%" height="140%">
         <feGaussianBlur stdDeviation="10" result="blur" />
         <feComposite in="SourceGraphic" in2="blur" operator="over" />
       </filter>
@@ -24,7 +24,7 @@ const TemuDiscover = ({ color }) => (
       
       {/* Discount Tag on Bag */}
       <g className="animate-bounce-slow">
-        <circle cx="240" cy="280" r="35" fill="#FF4500" filter="url(#glow-orange)" />
+        <circle cx="240" cy="280" r="35" fill={color} filter="url(#glow-teal)" />
         <text x="240" y="275" textAnchor="middle" fill="white" fontSize="14" fontWeight="900" fontFamily="sans-serif">90%</text>
         <text x="240" y="295" textAnchor="middle" fill="white" fontSize="12" fontWeight="bold" fontFamily="sans-serif">OFF</text>
       </g>
@@ -43,7 +43,7 @@ const TemuDiscover = ({ color }) => (
   </svg>
 );
 
-const SwoopAuthentic = ({ color }) => (
+const KoomboAuthentic = ({ color }) => (
   <svg width="100%" height="100%" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
     {/* Central Verified Badge */}
     <g className="animate-pop-in">
@@ -52,10 +52,10 @@ const SwoopAuthentic = ({ color }) => (
       
       {/* Sparkles */}
       <g className="animate-float-2">
-         <path d="M280 120 L285 135 L300 140 L285 145 L280 160 L275 145 L260 140 L275 135 Z" fill="#FFD700" />
+         <path d="M280 120 L285 135 L300 140 L285 145 L280 160 L275 145 L260 140 L275 135 Z" fill={color} />
       </g>
       <g className="animate-float-3">
-         <path d="M120 280 L125 295 L140 300 L125 305 L120 320 L115 305 L100 300 L115 295 Z" fill="#FFD700" />
+         <path d="M120 280 L125 295 L140 300 L125 305 L120 320 L115 305 L100 300 L115 295 Z" fill={color} />
       </g>
     </g>
 
@@ -98,7 +98,7 @@ const TemuSell = ({ color }) => (
     
     {/* Success Check */}
     <g className="animate-pop-in">
-       <circle cx="280" cy="100" r="20" fill="#00B46C" />
+       <circle cx="280" cy="100" r="20" fill={color} />
        <path d="M272 100L276 104L284 96" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
     </g>
   </svg>
@@ -110,23 +110,23 @@ const slides = [
     tag: "SHOP SMARTER",
     headline: "Unbeatable\nPrices.",
     sub: "Shop millions of items at factory direct prices. Free shipping on every order.",
-    accent: "#FB7701", // Temu Orange
+    accent: "#00bcd4", // Teal Blue
     animation: TemuDiscover
   },
   {
     image: "/images/event.jpg",
     tag: "SOCIAL COMMERCE REDEFINED",
-    headline: "Shop authentic\nproducts on Swoop",
+    headline: "Shop authentic\nproducts on Koombo",
     sub: "Join the community! Discover verified products and shop with confidence alongside friends.",
-    accent: "#E60012", // Temu Red/Pinkish
-    animation: SwoopAuthentic
+    accent: "#00bcd4", // Teal Blue
+    animation: KoomboAuthentic
   },
   {
     image: "/images/used.jpg",
     tag: "AI AUTHENTICATED",
     headline: "Upload a screenshot\nor video. AI verifies it.",
     sub: "Simply upload a screenshot or video of the product. Our advanced AI instantly authenticates it for you.",
-    accent: "#00B46C", // Temu Green/Money
+    accent: "#00bcd4", // Teal Blue
     animation: TemuSell
   },
 ];
@@ -295,8 +295,8 @@ export default function Onboard({ onDone }) {
           display: inline-flex; align-items: center;
           font-size: 12px; font-weight: 800; letter-spacing: 0.5px;
           text-transform: uppercase;
-          color: #FB7701;
-          background: #FFF4E6;
+          color: #00bcd4;
+          background: #E0F7FA;
           border-radius: 6px; 
           padding: 6px 12px;
           width: fit-content;
@@ -360,7 +360,7 @@ export default function Onboard({ onDone }) {
           height: 8px; border-radius: 100px; border: none; cursor: pointer;
           transition: all 0.3s; width: 8px; background: #E5E7EB;
         }
-        .ob-dot.active { width: 24px; background: #FB7701; }
+        .ob-dot.active { width: 24px; background: #00bcd4; }
 
         .ob-cta {
           flex: 1; height: 56px; border-radius: 30px; border: none;
@@ -368,9 +368,9 @@ export default function Onboard({ onDone }) {
           font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 700;
           color: white; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;
           margin-left: 20px;
-          box-shadow: 0 4px 12px rgba(251, 119, 1, 0.3);
+          box-shadow: 0 4px 12px rgba(0, 188, 212, 0.3);
         }
-        .ob-cta:hover { box-shadow: 0 6px 16px rgba(251, 119, 1, 0.4); transform: translateY(-1px); }
+        .ob-cta:hover { box-shadow: 0 6px 16px rgba(0, 188, 212, 0.4); transform: translateY(-1px); }
         .ob-cta:active { transform: scale(0.98); }
 
         .ob-legal {
@@ -393,7 +393,7 @@ export default function Onboard({ onDone }) {
 
             {/* Top bar */}
             <div className="ob-topbar">
-              <img src="/swoop-logo.png" alt="Swoop Logo" className="ob-logo-img" />
+              <img src="/swoop-logo.png" alt="Koombo Logo" className="ob-logo-img" />
               <button type="button" className="ob-skip" onClick={goAuth}>Skip</button>
             </div>
           </div>

@@ -1,33 +1,33 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Sun, Cloud, Moon, Flame,
-  AlertTriangle, Sparkles
+  AlertTriangle, ArrowRight, RefreshCw
 } from "lucide-react";
 import { apiFetch } from "@/lib/apiClient";
 import { useAuth } from "../context/AuthContext";
+
+// --- Utilities ---
 
 function sanitizeName(value?: string | null): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   if (!trimmed) return null;
   const normalized = trimmed.toLowerCase();
-  if (["user", "users", "guest", "guest user", "new user", "unknown", "null", "undefined"].includes(normalized)) {
-    return null;
-  }
+  const blacklist = ["user", "users", "guest", "guest user", "new user", "unknown", "null", "undefined"];
+  if (blacklist.includes(normalized)) return null;
   return trimmed;
 }
 
 const getAvatarUrl = (gender?: string, name?: string) => {
-  if (gender === 'male') return "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop";
-  if (gender === 'female') return "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop";
+  if (gender === 'male') return "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop&q=80";
+  if (gender === 'female') return "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&q=80";
   const initial = name ? name.charAt(0).toUpperCase() : 'U';
-  const colors = ['6C5CE7', 'FF6B9D', '00D9A3', 'FFB88C', '3B82F6'];
+  const colors = ['6366f1', 'ec4899', '14b8a6', 'f59e0b', '8b5cf6']; 
   const colorIndex = initial.charCodeAt(0) % colors.length;
-  const bgColor = colors[colorIndex];
-  return `https://ui-avatars.com/api/?name=${initial}&background=${bgColor}&color=fff&size=128&font-size=0.4`;
+  return `https://ui-avatars.com/api/?name=${initial}&background=${colors[colorIndex]}&color=fff&size=128&font-size=0.4&rounded=true`;
 };
 
 function getDisplayName(user: any): string | null {
@@ -49,34 +49,57 @@ function getDisplayName(user: any): string | null {
   return null;
 }
 
-const TIME_VIBES: Record<string, { label: string; sub: string; icon: React.ReactNode; gradient: string; accent: string }> = {
+// --- Modern Design System ---
+
+const TIME_VIBES: Record<string, { 
+  label: string; 
+  sub: string; 
+  icon: React.ReactNode; 
+  gradientFrom: string;
+  gradientTo: string;
+  accentColor: string;
+  textColor: string;
+  subTextColor: string;
+}> = {
   morning: {
-    label: "Good morning",
-    sub: "Start your day with great deals",
-    icon: <Sun size={16} />,
-    gradient: "from-amber-100 via-orange-50 to-white",
-    accent: "text-orange-500",
+    label: "Morning",
+    sub: "Start strong",
+    icon: <Sun size={14} />,
+    gradientFrom: "from-amber-50",
+    gradientTo: "to-orange-50",
+    accentColor: "text-amber-500",
+    textColor: "text-gray-900",
+    subTextColor: "text-gray-500",
   },
   afternoon: {
-    label: "Good afternoon",
-    sub: "Keep the momentum going",
-    icon: <Cloud size={16} />,
-    gradient: "from-teal-50 via-cyan-50 to-white",
-    accent: "text-teal-600",
+    label: "Afternoon",
+    sub: "Keep going",
+    icon: <Cloud size={14} />,
+    gradientFrom: "from-sky-50",
+    gradientTo: "to-blue-50",
+    accentColor: "text-sky-500",
+    textColor: "text-gray-900",
+    subTextColor: "text-gray-500",
   },
   evening: {
-    label: "Good evening",
-    sub: "Time to unwind & browse",
-    icon: <Moon size={16} />,
-    gradient: "from-indigo-50 via-purple-50 to-white",
-    accent: "text-indigo-600",
+    label: "Evening",
+    sub: "Wind down",
+    icon: <Moon size={14} />,
+    gradientFrom: "from-indigo-50",
+    gradientTo: "to-purple-50",
+    accentColor: "text-indigo-500",
+    textColor: "text-gray-900",
+    subTextColor: "text-gray-500",
   },
   night: {
-    label: "Good night",
-    sub: "Late night finds await",
-    icon: <Moon size={16} />,
-    gradient: "from-slate-900 via-slate-800 to-slate-900",
-    accent: "text-slate-200",
+    label: "Night",
+    sub: "Late vibes",
+    icon: <Moon size={14} />,
+    gradientFrom: "from-slate-900",
+    gradientTo: "to-gray-900",
+    accentColor: "text-violet-400",
+    textColor: "text-white",
+    subTextColor: "text-gray-400",
   },
 };
 
@@ -87,21 +110,21 @@ function getVibeKey(hour: number) {
   return "night";
 }
 
+// --- Compact Modern Card Component ---
+
 export default function Greeting() {
   const { user: authUser } = useAuth();
   const [firstName, setFirstName] = useState<string | null>(null);
   const [userGender, setUserGender] = useState<string | undefined>(undefined);
   const [vibeKey, setVibeKey] = useState<string>("morning");
-  
-  // Stats
   const [streakDays, setStreakDays] = useState<number>(0);
-  
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
   const vibe = TIME_VIBES[vibeKey];
-  const isDarkMode = vibeKey === 'night';
+  const isNight = vibeKey === 'night';
 
+  // Data fetching logic
   useEffect(() => {
     const initialName = getDisplayName(authUser);
     if (initialName) setFirstName(initialName);
@@ -126,7 +149,6 @@ export default function Greeting() {
         setError(null);
         const token = localStorage.getItem('unimart:token');
 
-        // Helper to update state from data object
         const updateStateFromData = (u: any) => {
             if (!u) return;
             try { localStorage.setItem("unimart:user", JSON.stringify(u)); } catch (e) {}
@@ -154,12 +176,10 @@ export default function Greeting() {
           if (u) updateStateFromData(u);
         } catch (err: any) {
           if (mounted) {
-             // Fallback to local storage on error
              try {
                 const raw = localStorage.getItem("unimart:user");
                 if (raw) updateStateFromData(JSON.parse(raw));
              } catch (e) {}
-             
              if (err.status === 401) localStorage.removeItem('unimart:token');
              else setError('Connection failed');
           }
@@ -172,7 +192,6 @@ export default function Greeting() {
     }
     
     loadUser();
-
     const onStorage = (e: StorageEvent) => { if (e.key === "unimart:user") loadUser(); };
     window.addEventListener("storage", onStorage);
     window.addEventListener("unimart:authChanged", loadUser as EventListener);
@@ -183,26 +202,39 @@ export default function Greeting() {
     };
   }, []);
 
+  // --- Loading State ---
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-4">
-        <div className="h-[140px] w-full bg-gray-100 rounded-3xl animate-pulse" />
+      <div className="w-full max-w-md mx-auto p-3">
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="h-24 rounded-2xl bg-gradient-to-r from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-900 animate-pulse"
+        />
       </div>
     );
   }
 
+  // --- Error State ---
   if (error) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-4">
-        <div className="bg-red-50 border border-red-100 rounded-2xl p-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <div className="w-full max-w-md mx-auto p-3">
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-2xl p-4 flex items-center justify-between"
+        >
+          <div className="flex items-center gap-2">
             <AlertTriangle size={16} className="text-red-500" />
-            <span className="text-sm font-medium text-red-700">Unable to load profile</span>
+            <span className="text-sm font-medium text-red-700 dark:text-red-300">Load error</span>
           </div>
-          <button onClick={() => window.dispatchEvent(new Event('unimart:authChanged'))} className="text-xs font-bold text-red-600 bg-red-100 px-3 py-1.5 rounded-full">
-            Retry
+          <button 
+            onClick={() => window.dispatchEvent(new Event('unimart:authChanged'))} 
+            className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-xl transition-colors"
+          >
+            <RefreshCw size={14} className="text-red-600 dark:text-red-400" />
           </button>
-        </div>
+        </motion.div>
       </div>
     );
   }
@@ -211,55 +243,130 @@ export default function Greeting() {
   const avatarUrl = getAvatarUrl(userGender, nameText);
 
   return (
-    <div className={`max-w-7xl mx-auto px-4 py-4 font-sans transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-      
-      {/* Main Hero Card */}
+    <div className="w-full max-w-md mx-auto p-3">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className={`relative overflow-hidden rounded-[2rem] shadow-xl shadow-black/5 bg-gradient-to-br ${vibe.gradient} border ${isDarkMode ? 'border-white/10' : 'border-white/60'}`}
+        layout
+        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ 
+          duration: 0.4, 
+          ease: [0.22, 1, 0.36, 1],
+          type: "spring",
+          stiffness: 300,
+          damping: 25
+        }}
+        className={`
+          relative overflow-hidden rounded-2xl 
+          bg-gradient-to-br ${vibe.gradientFrom} ${vibe.gradientTo}
+          dark:from-gray-900 dark:to-gray-800
+          border border-white/20 dark:border-gray-700/50
+          shadow-lg shadow-black/5 dark:shadow-black/20
+          backdrop-blur-xl
+        `}
       >
-        {/* Decorative Background Elements */}
-        <div className={`absolute top-0 right-0 w-64 h-64 bg-gradient-to-br ${vibe.gradient} opacity-50 blur-3xl -translate-y-1/2 translate-x-1/4`} />
-        
-        <div className="relative z-10 p-5 sm:p-6">
-          <div className="flex items-center gap-4 sm:gap-6">
+        {/* Animated gradient orb */}
+        <motion.div
+          animate={{
+            scale: [1, 1.1, 1],
+            opacity: [0.3, 0.5, 0.3],
+          }}
+          transition={{
+            duration: 4,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+          className={`absolute -top-10 -right-10 w-32 h-32 rounded-full blur-2xl opacity-40 pointer-events-none
+            ${isNight ? 'bg-violet-500' : 
+              vibeKey === 'morning' ? 'bg-amber-400' : 
+              vibeKey === 'afternoon' ? 'bg-sky-400' : 'bg-indigo-400'}
+          `}
+        />
+
+        <div className="relative z-10 p-4">
+          <div className="flex items-center gap-3">
             
-            {/* Avatar Section */}
-            <div className="relative group cursor-pointer shrink-0">
-              <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border-2 ${isDarkMode ? 'border-white/20' : 'border-white'} shadow-lg transform transition-transform group-hover:scale-105`}>
-                <img src={avatarUrl} alt={nameText} className="w-full h-full object-cover" />
-              </div>
-              {streakDays > 0 && (
-                <div className="absolute -top-2 -right-2 bg-white dark:bg-slate-800 text-orange-500 rounded-full px-2 py-1 shadow-md flex items-center gap-1 border border-orange-100 dark:border-orange-900/30 z-20">
-                  <Flame size={12} fill="currentColor" />
-                  <span className="text-[10px] font-black">{streakDays}</span>
+            {/* Avatar with animated ring */}
+            <motion.div 
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="relative shrink-0"
+            >
+              <div className="relative">
+                <div className="w-12 h-12 rounded-xl overflow-hidden ring-2 ring-white/50 dark:ring-gray-700 shadow-md">
+                  <img src={avatarUrl} alt={nameText} className="w-full h-full object-cover" />
                 </div>
-              )}
+                
+                {/* Streak badge */}
+                <AnimatePresence>
+                  {streakDays > 0 && (
+                    <motion.div
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0, opacity: 0 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                      className="absolute -bottom-1 -right-1 bg-white dark:bg-gray-800 rounded-lg px-1.5 py-0.5 shadow-lg border border-orange-100 dark:border-orange-900/50"
+                    >
+                      <div className="flex items-center gap-0.5">
+                        <Flame size={10} className="text-orange-500" fill="currentColor" />
+                        <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400">{streakDays}</span>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </motion.div>
+
+            {/* Text content */}
+            <div className="flex-1 min-w-0">
+              <motion.div
+                initial={{ opacity: 0, x: -5 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.1 }}
+                className="flex items-center gap-1.5 mb-1"
+              >
+                <span className={`${vibe.accentColor}`}>{vibe.icon}</span>
+                <span className={`text-xs font-semibold uppercase tracking-wide ${isNight ? 'text-gray-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                  {vibe.label}
+                </span>
+              </motion.div>
+              
+              <motion.h2 
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 }}
+                className={`text-xl font-bold leading-tight ${vibe.textColor} truncate`}
+              >
+                Hi, {nameText}
+              </motion.h2>
+              
+              <motion.p 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className={`text-xs mt-0.5 ${vibe.subTextColor}`}
+              >
+                {vibe.sub}
+              </motion.p>
             </div>
 
-            {/* Text Content - Full Width Now */}
-            <div className="flex-1 min-w-0 pt-1">
-              <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider mb-2 ${isDarkMode ? 'bg-white/10 text-white/80' : 'bg-black/5 text-gray-600'}`}>
-                {vibe.icon}
-                <span>{vibe.label}</span>
-              </div>
-              
-              {/* NAME IS NOW THE MAIN FOCUS */}
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight truncate leading-tight drop-shadow-sm">
-                Hi, {nameText} 
-                <Sparkles size={28} className={`inline-block ml-2 mb-1 ${vibe.accent}`} />
-              </h1>
-              
-              <p className={`text-sm sm:text-base mt-2 font-medium max-w-md ${isDarkMode ? 'text-white/60' : 'text-gray-500'}`}>
-                {vibe.sub}
-              </p>
-            </div>
+            {/* CTA Arrow */}
+            <motion.button
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.25 }}
+              whileHover={{ scale: 1.1, x: 2 }}
+              whileTap={{ scale: 0.9 }}
+              className={`shrink-0 p-2 rounded-xl ${isNight ? 'bg-white/10 hover:bg-white/20' : 'bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/20'} transition-all`}
+            >
+              <ArrowRight size={16} className={vibe.accentColor} />
+            </motion.button>
 
           </div>
         </div>
-      </motion.div>
 
+        {/* Subtle bottom gradient line */}
+        <div className={`absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-${vibeKey === 'night' ? 'violet' : vibeKey === 'morning' ? 'amber' : vibeKey === 'afternoon' ? 'sky' : 'indigo'}-500 to-transparent opacity-50`} />
+      </motion.div>
     </div>
   );
 }

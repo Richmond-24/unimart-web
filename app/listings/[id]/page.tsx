@@ -833,7 +833,7 @@ export default function ListingPage() {
 
   // ===== COMPUTED VALUES =====
   const currentUrl = typeof window !== "undefined" ? window.location.href : "";
-  const shareText = listing ? `${listing.title} - GH₵ ${listing.price}` : "Check this out on Swoop!";
+  const shareText = listing ? `${listing.title} - GH₵ ${listing.price}` : "Check this out on Koombo!";
   
   const photos: string[] = listing?.imageUrls?.length ? listing.imageUrls : FALLBACK_PHOTOS;
   const videoUrl = listing?.videoUrls?.[0] || listing?.videoUrl;
@@ -1245,9 +1245,9 @@ export default function ListingPage() {
             <div>
               <div className="flex items-center gap-1.5">
                 <Flame size={15} className="text-[#FF6B9D]" />
-                <h2 className="text-sm lg:text-xl font-black">Trending on Swoop</h2>
+                <h2 className="text-sm lg:text-xl font-black">Trending on Koombo</h2>
               </div>
-              <p className="text-[11px] lg:text-sm text-[#6B6B76] font-medium mt-0.5">🎬 Short clips and viral finds on Swoop</p>
+              <p className="text-[11px] lg:text-sm text-[#6B6B76] font-medium mt-0.5">🎬 Short clips and viral finds on Koombo</p>
             </div>
             <Link href="/feed" className="text-[11px] lg:text-sm font-black text-[#6C5CE7] shrink-0 flex items-center gap-1 lg:hover:text-[#5a4bd4] transition-colors">
               View all <ChevronRight size={12} />

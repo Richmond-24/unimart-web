@@ -1,305 +1,214 @@
-// app/components/HeroCarousel.tsx
-
 "use client";
 
-import React, { useEffect, useState } from "react";
-import Image from "next/image";
-import apiFetch from "../../lib/apiClient";
+import * as React from "react";
+import { ArrowRight, ChevronLeft, ChevronRight, Tag } from "lucide-react";
 
-interface Slide {
-  _id?: string;
-  id?: string;
-  title?: string;
-  description?: string;
-  imageUrl?: string;
-  imageUrls?: string[];
-  link?: string;
-  buttonText?: string;
-  backgroundColor?: string;
-}
+type Ad = {
+  title: string;
+  tagline: string;
+  price: string;
+  oldPrice?: string;
+  discount?: string;
+  cta: string;
+  image: string;
+  accent: string;
+};
 
-interface HeroCarouselProps {
-  autoPlay?: boolean;
-  interval?: number;
-}
-
-// Default slides as fallback
-const DEFAULT_SLIDES: Slide[] = [
+const ads: Ad[] = [
   {
-    id: '1',
-    title: 'Welcome to UniMart',
-    description: 'Your campus marketplace for buying and selling',
-    imageUrl: '/images/hero-banner-1.jpg',
-    buttonText: 'Shop Now',
-    link: '/products'
+    title: "Wireless Earbuds Pro",
+    tagline: "Noise cancelling, all-day battery",
+    price: "GHS 249",
+    oldPrice: "GHS 349",
+    discount: "29% OFF",
+    cta: "Shop now",
+    image:
+      "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?q=80&w=1200&auto=format&fit=crop",
+    accent: "#7C3AED",
   },
   {
-    id: '2',
-    title: 'Find Great Deals',
-    description: 'Discover amazing products from fellow students',
-    imageUrl: '/images/hero-banner-2.jpg',
-    buttonText: 'Explore',
-    link: '/products'
+    title: "Campus Sneaker Drop",
+    tagline: "Limited colorways, sizes going fast",
+    price: "GHS 199",
+    oldPrice: "GHS 260",
+    discount: "23% OFF",
+    cta: "Grab a pair",
+    image:
+      "https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=1200&auto=format&fit=crop",
+    accent: "#EA580C",
   },
   {
-    id: '3',
-    title: 'Sell Your Items',
-    description: 'List your items and reach thousands of students',
-    imageUrl: '/images/hero-banner-3.jpg',
-    buttonText: 'Start Selling',
-    link: '/sell'
-  }
+    title: "Mini Desk Lamp",
+    tagline: "Warm light for late-night study",
+    price: "GHS 79",
+    oldPrice: "GHS 110",
+    discount: "28% OFF",
+    cta: "Light it up",
+    image:
+      "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?q=80&w=1200&auto=format&fit=crop",
+    accent: "#059669",
+  },
+  {
+    title: "Everyday Backpack",
+    tagline: "Water-resistant, laptop-ready",
+    price: "GHS 159",
+    oldPrice: "GHS 210",
+    discount: "24% OFF",
+    cta: "See details",
+    image:
+      "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?q=80&w=1200&auto=format&fit=crop",
+    accent: "#2563EB",
+  },
 ];
 
-export default function HeroCarousel({
-  autoPlay = true,
-  interval = 5000
-}: HeroCarouselProps) {
-  const [slides, setSlides] = useState<Slide[]>(DEFAULT_SLIDES);
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [loading, setLoading] = useState(true);
+const AUTOPLAY_MS = 3500;
 
-  useEffect(() => {
-    const fetchSlides = async () => {
-      try {
-        // ✅ FIXED: Use "/hero-slides" NOT "/hero-slides"
-        const endpoint = "/hero-slides";
-        console.log(`📡 [HeroCarousel] Fetching from: ${endpoint}`);
+export default function AdsCardSlider() {
+  const [active, setActive] = React.useState(0);
+  const [paused, setPaused] = React.useState(false);
+  const [progressKey, setProgressKey] = React.useState(0);
+  const timerRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
-        const response = await apiFetch(endpoint, { suppressErrorLog: true });
-
-        console.log('✅ [HeroCarousel] Response received:', response);
-
-        // Check if we got valid slides
-        let newSlides: Slide[] | null = null;
-
-        if (response?.data && Array.isArray(response.data) && response.data.length > 0) {
-          newSlides = response.data.map((item: any) => ({
-            id: item._id || item.id || String(Math.random()),
-            title: item.title || 'Special Offer',
-            description: item.description || 'Check out our latest deals',
-            imageUrl: item.imageUrl || item.imageUrls?.[0] || '/images/hero-banner-1.jpg',
-            link: item.link || '/products',
-            buttonText: item.buttonText || 'Learn More',
-            backgroundColor: item.backgroundColor || '#f0f0f0'
-          }));
-        } else if (Array.isArray(response) && response.length > 0) {
-          newSlides = response.map((item: any) => ({
-            id: item._id || item.id || String(Math.random()),
-            title: item.title || 'Special Offer',
-            description: item.description || 'Check out our latest deals',
-            imageUrl: item.imageUrl || item.imageUrls?.[0] || '/images/hero-banner-1.jpg',
-            link: item.link || '/products',
-            buttonText: item.buttonText || 'Learn More',
-            backgroundColor: item.backgroundColor || '#f0f0f0'
-          }));
-        }
-
-        if (newSlides && newSlides.length > 0) {
-          console.log(`✅ [HeroCarousel] Loaded ${newSlides.length} slides from API`);
-          setSlides(newSlides);
-        } else {
-          console.log('ℹ️ [HeroCarousel] Using default slides (no API data)');
-        }
-      } catch (error: any) {
-        // Silently fail - use default slides
-        console.log('ℹ️ [HeroCarousel] Using default slides (API error)');
-      } finally {
-        setLoading(false);
-      }
+  React.useEffect(() => {
+    if (paused) return;
+    timerRef.current = setInterval(() => {
+      setActive((prev) => (prev + 1) % ads.length);
+      setProgressKey((k) => k + 1);
+    }, AUTOPLAY_MS);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
     };
+  }, [paused, active]);
 
-    fetchSlides();
-  }, []);
-
-  // Auto-play functionality
-  useEffect(() => {
-    if (!autoPlay || slides.length === 0 || loading) return;
-
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % slides.length);
-    }, interval);
-
-    return () => clearInterval(timer);
-  }, [autoPlay, interval, slides.length, loading]);
-
-  // Navigation functions
-  const goToSlide = (index: number) => {
-    setCurrentSlide(index);
+  const goTo = (idx: number) => {
+    setActive(idx);
+    setProgressKey((k) => k + 1);
   };
 
-  const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % slides.length);
-  };
-
-  const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
-  };
-
-  // Loading state
-  if (loading) {
-    return (
-      <div className="w-full">
-        <div className="relative w-full h-[180px] sm:h-[220px] md:h-[280px] lg:h-[320px] bg-slate-100 animate-pulse rounded-2xl overflow-hidden">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-slate-400 text-sm">Loading...</div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // If no slides, don't render
-  if (slides.length === 0) {
-    return null;
-  }
-
-  const current = slides[currentSlide] || slides[0];
+  const prev = () => goTo((active - 1 + ads.length) % ads.length);
+  const next = () => goTo((active + 1) % ads.length);
 
   return (
-    <div className="w-full">
-      {/* Main slide */}
-      <div className="relative w-full h-[180px] sm:h-[220px] md:h-[280px] lg:h-[320px] rounded-2xl overflow-hidden group shadow-sm">
-        {/* Slide Background */}
+    <section className="bg-[#FAF9F6] px-4 py-8 sm:px-6 sm:py-10">
+      <div className="mx-auto max-w-6xl">
+        {/* SIGNIFICANTLY INCREASED CARD HEIGHTS */}
         <div
-          className="absolute inset-0 transition-all duration-700"
-          style={{
-            backgroundColor: current.backgroundColor || '#f0f0f0',
-          }}
+          className="group relative h-72 w-full overflow-hidden rounded-3xl shadow-lg ring-1 ring-black/5 sm:h-96 md:h-[32rem]"
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
         >
-          {/* Image */}
-          {current.imageUrl && (
-            <div className="relative w-full h-full">
-              <Image
-                src={current.imageUrl}
-                alt={current.title || 'Hero slide'}
-                fill
-                className="object-cover"
-                priority
-                onError={(e) => {
-                  // Fallback if image fails to load
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
+          {/* Slides */}
+          {ads.map((ad, idx) => (
+            <div
+              key={ad.title}
+              className="absolute inset-0 transition-opacity duration-700 ease-out"
+              style={{ opacity: idx === active ? 1 : 0, pointerEvents: idx === active ? "auto" : "none" }}
+            >
+              <img
+                src={ad.image}
+                alt={ad.title}
+                className="h-full w-full object-cover"
+                style={{
+                  transform: idx === active ? "scale(1.06)" : "scale(1)",
+                  transition: "transform 4.2s ease-out",
                 }}
               />
-              {/* Gradient Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-r from-black/55 via-black/10 to-transparent" />
-            </div>
-          )}
-        </div>
+              {/* Scrim for text legibility */}
+              <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent" />
 
-        {/* Content */}
-        <div className="absolute inset-0 flex items-center justify-start p-4 sm:p-6 md:p-8">
-          <div className="max-w-md text-white">
-            {current.title && (
-              <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-1.5 leading-tight drop-shadow-md">
-                {current.title}
-              </h1>
-            )}
-            {current.description && (
-              <p className="text-xs sm:text-sm md:text-base mb-3 md:mb-4 drop-shadow-md text-white/90 line-clamp-2">
-                {current.description}
-              </p>
-            )}
-            {current.buttonText && current.link && (
-              <a
-                href={current.link}
-                className="inline-block px-4 py-2 md:px-5 md:py-2.5 bg-white text-slate-900 text-xs sm:text-sm font-semibold rounded-full hover:bg-slate-100 transition shadow-md"
+              {/* Content overlay */}
+              <div className="absolute inset-0 flex items-center">
+                <div className="flex flex-col gap-3 px-6 sm:px-10 md:px-14">
+                  {ad.discount && (
+                    <span
+                      className="flex w-fit items-center gap-2 rounded-full px-4 py-1.5 text-sm font-bold text-white sm:text-base"
+                      style={{ backgroundColor: ad.accent }}
+                    >
+                      <Tag className="h-4 w-4 sm:h-5 sm:w-5" />
+                      {ad.discount}
+                    </span>
+                  )}
+                  <h3 className="text-2xl font-bold text-white sm:text-3xl md:text-4xl">{ad.title}</h3>
+                  <p className="hidden text-base text-white/80 sm:block sm:text-lg md:text-xl">
+                    {ad.tagline}
+                  </p>
+                  <div className="mt-1 flex items-baseline gap-3">
+                    <span className="text-xl font-bold text-white sm:text-2xl md:text-3xl">
+                      {ad.price}
+                    </span>
+                    {ad.oldPrice && (
+                      <span className="text-sm text-white/50 line-through sm:text-base md:text-lg">
+                        {ad.oldPrice}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    className="group/btn mt-3 flex w-fit items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 transition-all duration-300 hover:gap-3 sm:px-6 sm:py-3 sm:text-base"
+                  >
+                    {ad.cta}
+                    <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover/btn:translate-x-0.5 sm:h-5 sm:w-5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {/* LARGER NAVIGATION ARROWS */}
+          <button
+            type="button"
+            onClick={prev}
+            aria-label="Previous slide"
+            className="absolute left-4 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-gray-800 opacity-0 shadow-lg transition-all duration-300 hover:bg-white group-hover:opacity-100 sm:h-12 sm:w-12"
+          >
+            <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" />
+          </button>
+          <button
+            type="button"
+            onClick={next}
+            aria-label="Next slide"
+            className="absolute right-4 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-gray-800 opacity-0 shadow-lg transition-all duration-300 hover:bg-white group-hover:opacity-100 sm:h-12 sm:w-12"
+          >
+            <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" />
+          </button>
+
+          {/* LARGER PROGRESS DOTS */}
+          <div className="absolute bottom-5 left-1/2 flex -translate-x-1/2 items-center gap-2.5">
+            {ads.map((ad, idx) => (
+              <button
+                key={ad.title}
+                type="button"
+                onClick={() => goTo(idx)}
+                aria-label={`Go to slide ${idx + 1}`}
+                className="relative h-2 overflow-hidden rounded-full bg-white/40 transition-all duration-500"
+                style={{ width: idx === active ? 32 : 8 }}
               >
-                {current.buttonText}
-              </a>
-            )}
+                {idx === active && !paused && (
+                  <span
+                    key={progressKey}
+                    className="absolute inset-y-0 left-0 rounded-full bg-white"
+                    style={{ animation: `slideProgress ${AUTOPLAY_MS}ms linear forwards` }}
+                  />
+                )}
+                {idx === active && paused && (
+                  <span className="absolute inset-0 rounded-full bg-white" />
+                )}
+              </button>
+            ))}
           </div>
         </div>
-
-        {/* Navigation Arrows */}
-        {slides.length > 1 && (
-          <>
-            <button
-              onClick={prevSlide}
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white p-1.5 rounded-full backdrop-blur-sm transition-opacity opacity-0 group-hover:opacity-100"
-              aria-label="Previous slide"
-            >
-              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <button
-              onClick={nextSlide}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white p-1.5 rounded-full backdrop-blur-sm transition-opacity opacity-0 group-hover:opacity-100"
-              aria-label="Next slide"
-            >
-              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-
-            {/* Dot Indicators — mobile only, the grid strip below takes over on sm+ */}
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 sm:hidden">
-              {slides.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => goToSlide(index)}
-                  className={`h-1.5 rounded-full transition-all ${
-                    index === currentSlide
-                      ? 'bg-white w-5'
-                      : 'bg-white/50 w-1.5 hover:bg-white/80'
-                  }`}
-                  aria-label={`Go to slide ${index + 1}`}
-                />
-              ))}
-            </div>
-          </>
-        )}
       </div>
 
-      {/* Thumbnail grid strip — a compact, Figma-style nav for the same slides */}
-      {slides.length > 1 && (
-        <div className="hidden sm:grid gap-2 mt-2.5" style={{ gridTemplateColumns: `repeat(${Math.min(slides.length, 6)}, minmax(0, 1fr))` }}>
-          {slides.map((slide, index) => (
-            <button
-              key={slide.id || slide._id || index}
-              onClick={() => goToSlide(index)}
-              className={`relative h-14 md:h-16 rounded-xl overflow-hidden transition-all ${
-                index === currentSlide
-                  ? 'ring-2 ring-offset-2 ring-teal-600'
-                  : 'ring-1 ring-black/5 opacity-70 hover:opacity-100'
-              }`}
-              aria-label={`Go to slide ${index + 1}`}
-            >
-              {slide.imageUrl && (
-                <Image
-                  src={slide.imageUrl}
-                  alt=""
-                  fill
-                  className="object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                  }}
-                />
-              )}
-              <div className={`absolute inset-0 transition-colors ${index === currentSlide ? 'bg-black/10' : 'bg-black/25'}`} />
-              {index === currentSlide && (
-                <span className="absolute bottom-1 left-1 right-1 h-0.5 bg-white/40 rounded-full overflow-hidden">
-                  <span
-                    key={currentSlide}
-                    className="block h-full bg-white rounded-full"
-                    style={{ animation: autoPlay ? `heroProgress ${interval}ms linear forwards` : undefined, width: autoPlay ? undefined : '100%' }}
-                  />
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-
-      <style jsx>{`
-        @keyframes heroProgress {
-          from { width: 0%; }
-          to { width: 100%; }
+      <style jsx global>{`
+        @keyframes slideProgress {
+          from {
+            width: 0%;
+          }
+          to {
+            width: 100%;
+          }
         }
       `}</style>
-    </div>
+    </section>
   );
 }

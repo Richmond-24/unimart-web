@@ -15,6 +15,29 @@
   --unimart-teal: #0d9488;
 }
 
+/* Move Botpress / Webchat floating widget up on small screens so it doesn't cover footer/profile */
+@media (max-width: 640px) {
+  /* Target several reasonable widget/container class and id names used by common webchat embeds */
+  .bpw-widget,
+  .bpw-container,
+  .bpw-floating,
+  .botpress-webchat,
+  #bpw-webchat,
+  iframe[id^="bp-"],
+  iframe[src*="botpress"] {
+    bottom: calc(4.5rem + env(safe-area-inset-bottom)) !important;
+    /* keep the widget above footer items */
+    z-index: 99999 !important;
+    /* small upward nudge if needed */
+    transform: translateY(-0.25rem) !important;
+  }
+
+  /* If the widget injects a container inside body, allow the container to be slightly smaller */
+  body > .botpress-webchat {
+    margin-bottom: 0.25rem !important;
+  }
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

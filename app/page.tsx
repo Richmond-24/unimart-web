@@ -1,5 +1,5 @@
 
-import ClientOnly from "./components/ClientOnly";
+import Header from "./components/Header";
 import HeroCarousel from "./components/HeroCarousel";
 import BigBanner from "./components/BigBanner";
 import CategoryFilter from "./components/CategoryFilter";
@@ -10,15 +10,12 @@ import ProductGrid from "./components/ProductGrid";
 import FlashDeals from "./components/FlashDeals";
 import SocialCommerceBanner from "./components/SocialCommerceBanner";
 
-import Greeting from "./components/Greeting";
 // Header and RiriAI now provided globally by layout
 
 export default function Home() {
   return (
     <div className="w-full bg-white">
-      <ClientOnly>
-        <Greeting />
-      </ClientOnly>
+      <Header />
       <HeroCarousel />
       <CategoryFilter />
       <BigBanner />

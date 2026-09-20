@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "./context/AuthContext";
 
-const LOGO_SRC = "/swoop-logo-teal.png";
+const LOGO_SRC = "/h.png";
 
 // Available emojis for avatar
 const AVATAR_EMOJIS = [
@@ -155,17 +155,20 @@ function RiriMascot({
   showTag = true,
   typingSentiment = "",
   showTypingSentiment = false,
-  avatarEmoji = "😊"
+  avatarEmoji = "😊",
+  size = "medium"
 }) {
   const scale = 1 + flexLevel * 0.045;
   const showSentiment = sentiment.length > 0;
   const showTyping = showTypingSentiment && typingSentiment.length > 0;
+  
+  const svgSize = size === "large" ? 100 : size === "small" ? 48 : 64;
 
   return (
     <div className="riri-mascot-wrapper">
       <div className={`riri-mascot riri-${state}`} style={{ transform: `scale(${scale})` }}>
         <div className="riri-container">
-          <svg width="72" height="72" viewBox="0 0 80 80" className="riri-svg">
+          <svg width={svgSize} height={svgSize} viewBox="0 0 80 80" className="riri-svg">
             {/* Shadow */}
             <ellipse className="riri-shadow" cx="40" cy="70" rx="20" ry="5" fill="rgba(18,18,18,0.05)" />
             
@@ -576,44 +579,137 @@ export default function AuthFlow({ onDone }) {
           align-items: center;
           justify-content: center;
           background: var(--paper);
-          background-color: var(--paper);
-          padding: 0;
           font-family: 'Inter', sans-serif;
           color: var(--ink);
-          overflow-x: hidden;
-          position: relative;
+          padding: 0;
         }
 
-        .auth-card {
+        /* Desktop Layout - Two Column */
+        .auth-container {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
           width: 100%;
-          max-width: 420px;
-          background: var(--panel);
-          box-shadow: none;
-          min-height: 100vh;
-          min-height: 100dvh;
+          max-width: 1100px;
+          height: auto;
+          max-height: 90vh;
+          background: white;
+          border-radius: 20px;
+          box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+          overflow: hidden;
+          margin: 20px;
+        }
+
+        /* Left Panel - Branding & Mascot */
+        .auth-brand-panel {
+          background: linear-gradient(135deg, var(--accent-soft) 0%, #ffffff 100%);
           display: flex;
           flex-direction: column;
-          padding: 24px 20px;
-          opacity: 0;
-          animation: fadeIn 0.4s ease-out forwards;
+          align-items: center;
+          justify-content: center;
+          padding: 40px 32px;
+          position: relative;
+          overflow-y: auto;
         }
 
-        @media (min-width: 600px) {
-          .auth-card {
-            min-height: auto;
-            border-radius: 24px;
-            border: 1px solid var(--line);
-            box-shadow: 0 20px 40px -20px rgba(14,124,134,0.15);
-            padding: 32px;
-            margin: 20px;
-          }
+        .auth-brand-panel::before {
+          content: '';
+          position: absolute;
+          top: -50%;
+          left: -50%;
+          width: 200%;
+          height: 200%;
+          background: radial-gradient(circle, rgba(14,124,134,0.05) 0%, transparent 70%);
+          animation: rotateGradient 20s linear infinite;
+          pointer-events: none;
         }
 
-        @keyframes fadeIn {
-          to { opacity: 1; }
+        @keyframes rotateGradient {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
 
-        /* --- Tabs --- */
+        .brand-content {
+          position: relative;
+          z-index: 1;
+          text-align: center;
+          max-width: 380px;
+        }
+
+        .brand-logo {
+          margin-bottom: 24px;
+        }
+
+        .brand-logo img {
+          height: 56px;
+          width: auto;
+          object-fit: contain;
+          filter: drop-shadow(0 2px 8px rgba(14,124,134,0.15));
+        }
+
+        .brand-mascot {
+          margin: 24px 0;
+        }
+
+        .brand-headline {
+          font-family: 'Space Grotesk', sans-serif;
+          font-size: 32px;
+          font-weight: 700;
+          line-height: 1.15;
+          letter-spacing: -0.02em;
+          color: var(--ink);
+          margin-bottom: 12px;
+        }
+
+        .brand-subheadline {
+          font-size: 15px;
+          color: var(--muted);
+          line-height: 1.5;
+          margin-bottom: 24px;
+        }
+
+        .brand-features {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          text-align: left;
+        }
+
+        .brand-feature {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          font-size: 14px;
+          color: var(--ink-soft);
+        }
+
+        .brand-feature-icon {
+          width: 28px;
+          height: 28px;
+          background: var(--accent-soft);
+          border-radius: 6px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 16px;
+          flex-shrink: 0;
+        }
+
+        /* Right Panel - Form */
+        .auth-form-panel {
+          display: flex;
+          flex-direction: column;
+          padding: 40px 36px;
+          overflow-y: auto;
+          max-height: 90vh;
+        }
+
+        .form-container {
+          max-width: 420px;
+          width: 100%;
+          margin: 0 auto;
+        }
+
+        /* Tabs */
         .tab-row {
           position: relative;
           display: flex;
@@ -650,6 +746,50 @@ export default function AuthFlow({ onDone }) {
         }
         .tab-btn.active { color: var(--accent-deep); }
 
+        /* Mobile Layout */
+        @media (max-width: 968px) {
+          .auth-page {
+            padding: 0;
+          }
+          
+          .auth-container {
+            grid-template-columns: 1fr;
+            max-width: 100%;
+            max-height: none;
+            height: 100vh;
+            height: 100dvh;
+            border-radius: 0;
+            box-shadow: none;
+            margin: 0;
+          }
+
+          .auth-brand-panel {
+            display: none;
+          }
+
+          .auth-form-panel {
+            padding: 24px 20px;
+            max-height: none;
+          }
+
+          .mobile-logo {
+            display: block !important;
+            text-align: center;
+            margin-bottom: 24px;
+          }
+
+          .mobile-logo img {
+            height: 48px;
+            width: auto;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .auth-form-panel {
+            padding: 20px 16px;
+          }
+        }
+
         /* --- RIRI Mascot Wrapper --- */
         .riri-mascot-wrapper {
           display: flex;
@@ -681,7 +821,7 @@ export default function AuthFlow({ onDone }) {
           position: absolute;
           bottom: -4px;
           right: -6px;
-          font-size: 28px;
+          font-size: 24px;
           filter: drop-shadow(0 2px 8px rgba(0,0,0,0.15));
           animation: emojiFloat 2.5s ease-in-out infinite;
           z-index: 15;
@@ -694,13 +834,6 @@ export default function AuthFlow({ onDone }) {
         @keyframes emojiFloat {
           0%, 100% { transform: translateY(0) scale(1); }
           50% { transform: translateY(-3px) scale(1.05); }
-        }
-
-        @media (max-width: 420px) {
-          .riri-avatar-emoji { font-size: 22px; bottom: -2px; right: -4px; }
-        }
-        @media (max-width: 360px) {
-          .riri-avatar-emoji { font-size: 18px; bottom: 0px; right: -2px; }
         }
 
         /* --- RIRI Typing Sentiment Text --- */
@@ -728,13 +861,13 @@ export default function AuthFlow({ onDone }) {
         /* --- RIRI AI Tag --- */
         .riri-ai-tag {
           position: absolute;
-          top: -10px;
-          right: -16px;
+          top: -8px;
+          right: -12px;
           background: linear-gradient(135deg, #0E7C86, #0A5F67);
           color: white;
-          padding: 4px 12px 4px 10px;
-          border-radius: 20px;
-          font-size: 10px;
+          padding: 3px 10px 3px 8px;
+          border-radius: 16px;
+          font-size: 9px;
           font-weight: 700;
           letter-spacing: 0.04em;
           box-shadow: 0 4px 16px rgba(14,124,134,0.35), inset 0 1px 0 rgba(255,255,255,0.2);
@@ -750,17 +883,17 @@ export default function AuthFlow({ onDone }) {
         }
         
         .riri-ai-icon {
-          font-size: 12px;
+          font-size: 11px;
           line-height: 1;
         }
         .riri-ai-text {
-          font-size: 10px;
+          font-size: 9px;
           letter-spacing: 0.06em;
         }
         .riri-ai-pulse {
           position: absolute;
           inset: -2px;
-          border-radius: 20px;
+          border-radius: 16px;
           border: 1.5px solid rgba(14,124,134,0.3);
           animation: tagPulseRing 2.5s ease-in-out infinite;
           pointer-events: none;
@@ -772,29 +905,6 @@ export default function AuthFlow({ onDone }) {
         @keyframes tagPulseRing {
           0%, 100% { transform: scale(1); opacity: 0.5; }
           50% { transform: scale(1.15); opacity: 0; }
-        }
-
-        @media (max-width: 420px) {
-          .riri-ai-tag {
-            top: -8px;
-            right: -12px;
-            padding: 3px 10px 3px 8px;
-            font-size: 9px;
-          }
-          .riri-ai-icon { font-size: 10px; }
-          .riri-ai-text { font-size: 9px; }
-          .riri-typing-sentiment { font-size: 10px; }
-        }
-        @media (max-width: 360px) {
-          .riri-ai-tag {
-            top: -6px;
-            right: -8px;
-            padding: 2px 8px 2px 6px;
-            font-size: 8px;
-          }
-          .riri-ai-icon { font-size: 9px; }
-          .riri-ai-text { font-size: 8px; }
-          .riri-typing-sentiment { font-size: 9px; }
         }
 
         .riri-sentiment-bubble {
@@ -936,7 +1046,7 @@ export default function AuthFlow({ onDone }) {
           display: flex;
           align-items: flex-start;
           justify-content: space-between;
-          gap: 12px;
+          gap: 16px;
           margin-bottom: 20px;
         }
 
@@ -958,10 +1068,10 @@ export default function AuthFlow({ onDone }) {
           color: var(--ink);
         }
         .form-hint {
-          font-size: 14px;
+          font-size: 13px;
           color: var(--muted);
-          margin-top: 4px;
-          line-height: 1.4;
+          margin-top: 6px;
+          line-height: 1.5;
         }
 
         /* --- Emoji Picker --- */
@@ -976,12 +1086,12 @@ export default function AuthFlow({ onDone }) {
 
         .emoji-trigger {
           flex-shrink: 0;
-          width: 52px;
-          height: 52px;
-          border-radius: 16px;
+          width: 48px;
+          height: 48px;
+          border-radius: 14px;
           border: 1px solid var(--line);
           background: #FAFAFA;
-          font-size: 24px;
+          font-size: 22px;
           cursor: pointer;
           display: flex;
           align-items: center;
@@ -1012,11 +1122,11 @@ export default function AuthFlow({ onDone }) {
 
         .field-input-flex {
           flex: 1;
-          padding: 16px;
-          border-radius: 16px;
+          padding: 14px;
+          border-radius: 14px;
           border: 1px solid var(--line);
           background: #FAFAFA;
-          font-size: 16px;
+          font-size: 15px;
           font-family: 'Inter', sans-serif;
           color: var(--ink);
           outline: none;
@@ -1037,16 +1147,16 @@ export default function AuthFlow({ onDone }) {
           width: 100%;
           max-width: 320px;
           background: white;
-          border-radius: 16px;
+          border-radius: 14px;
           border: 1px solid var(--line);
           box-shadow: 0 12px 40px rgba(0,0,0,0.12);
-          padding: 12px;
+          padding: 10px;
           z-index: 100;
           display: grid;
           grid-template-columns: repeat(7, 1fr);
           gap: 4px;
           animation: dropdownIn 0.2s ease-out;
-          max-height: 280px;
+          max-height: 260px;
           overflow-y: auto;
         }
         @keyframes dropdownIn {
@@ -1059,7 +1169,7 @@ export default function AuthFlow({ onDone }) {
           aspect-ratio: 1;
           border: none;
           background: transparent;
-          font-size: 24px;
+          font-size: 22px;
           border-radius: 8px;
           cursor: pointer;
           transition: all 0.15s ease;
@@ -1078,11 +1188,11 @@ export default function AuthFlow({ onDone }) {
 
         .avatar-prompt {
           width: 100%;
-          margin-top: 8px;
+          margin-top: 10px;
           padding: 10px 14px;
           background: var(--accent-soft);
-          border-radius: 12px;
-          font-size: 13px;
+          border-radius: 10px;
+          font-size: 12px;
           color: var(--accent-deep);
           font-weight: 500;
           display: flex;
@@ -1095,18 +1205,18 @@ export default function AuthFlow({ onDone }) {
           to { opacity: 1; transform: translateY(0); }
         }
         .avatar-prompt .prompt-emoji {
-          font-size: 20px;
+          font-size: 18px;
         }
 
         /* Regular field input for non-username steps */
         .field-input {
           width: 100%;
           margin-top: 8px;
-          padding: 16px;
-          border-radius: 16px;
+          padding: 14px;
+          border-radius: 14px;
           border: 1px solid var(--line);
           background: #FAFAFA;
-          font-size: 16px;
+          font-size: 15px;
           font-family: 'Inter', sans-serif;
           color: var(--ink);
           outline: none;
@@ -1186,8 +1296,8 @@ export default function AuthFlow({ onDone }) {
           flex: 1;
           font-family: 'Space Grotesk', sans-serif;
           font-weight: 600;
-          font-size: 16px;
-          padding: 16px 24px;
+          font-size: 15px;
+          padding: 14px 20px;
           border-radius: 999px;
           border: none;
           background: linear-gradient(135deg, var(--accent), var(--accent-deep));
@@ -1212,20 +1322,20 @@ export default function AuthFlow({ onDone }) {
           font-family: 'Space Grotesk', sans-serif;
           font-weight: 600;
           font-size: 14px;
-          padding: 16px;
+          padding: 14px;
           border-radius: 999px;
           border: none;
           background: transparent;
           color: var(--muted);
           cursor: pointer;
           transition: color 0.2s;
-          min-width: 80px;
+          min-width: 70px;
         }
         .btn-ghost:hover { color: var(--ink); }
 
         .switch-line {
-          margin-top: 24px;
-          font-size: 14px;
+          margin-top: 20px;
+          font-size: 13px;
           color: var(--muted);
           text-align: center;
         }
@@ -1236,7 +1346,7 @@ export default function AuthFlow({ onDone }) {
           border: none;
           cursor: pointer;
           padding: 0;
-          font-size: 14px;
+          font-size: 13px;
         }
 
         /* --- Success --- */
@@ -1246,26 +1356,26 @@ export default function AuthFlow({ onDone }) {
           align-items: center;
           justify-content: center;
           text-align: center;
-          padding: 40px 0;
-          min-height: 300px;
+          padding: 32px 0;
+          min-height: 280px;
         }
         .success-title {
           font-family: 'Space Grotesk', sans-serif;
           font-weight: 700;
           font-size: 24px;
-          margin-top: 20px;
+          margin-top: 16px;
           opacity: 0;
           animation: fadeUp 0.5s ease-out 0.35s forwards;
         }
         .success-text {
-          margin-top: 10px;
-          font-size: 15px;
+          margin-top: 8px;
+          font-size: 14px;
           color: var(--muted);
           opacity: 0;
           animation: fadeUp 0.5s ease-out 0.5s forwards;
         }
         .success-foot {
-          margin-top: 24px;
+          margin-top: 20px;
           font-family: 'JetBrains Mono', monospace;
           font-size: 10px;
           letter-spacing: 0.16em;
@@ -1279,22 +1389,12 @@ export default function AuthFlow({ onDone }) {
         }
 
         /* --- Login form --- */
-        .login-logo { 
-          text-align: center;
-          margin-bottom: 12px;
-        }
-        .login-logo img { 
-          height: 32px; 
-          width: auto; 
-          display: block;
-          margin: 0 auto;
-        }
         .login-header {
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 12px;
-          margin-bottom: 4px;
+          margin-bottom: 8px;
         }
         .login-title {
           font-family: 'Space Grotesk', sans-serif;
@@ -1306,7 +1406,7 @@ export default function AuthFlow({ onDone }) {
         }
         .login-sub {
           text-align: center;
-          font-size: 15px;
+          font-size: 14px;
           color: var(--muted);
           margin-bottom: 24px;
         }
@@ -1315,306 +1415,314 @@ export default function AuthFlow({ onDone }) {
           margin-top: 16px;
         }
         .login-field label {
-          font-size: 14px;
-          font-weight: 500;
+          font-size: 13px;
+          font-weight: 600;
           display: block;
           margin-bottom: 6px;
           color: var(--ink-soft);
         }
-
-        /* --- Responsive --- */
-        @media (max-width: 420px) {
-          .auth-card { padding: 20px 16px; }
-          .form-title { font-size: 22px; }
-          .field-input, .field-input-flex { padding: 14px; font-size: 16px; }
-          .btn-primary { padding: 14px 20px; font-size: 15px; }
-          .login-title { font-size: 24px; }
-          .emoji-trigger { width: 46px; height: 46px; font-size: 20px; }
-          .riri-sentiment-bubble { 
-            font-size: 12px; 
-            padding: 6px 14px;
-            white-space: normal;
-            max-width: 160px;
-          }
-          .emoji-picker-dropdown {
-            padding: 8px;
-            gap: 2px;
-            max-width: 280px;
-          }
-          .emoji-option { font-size: 20px; }
-          .riri-typing-sentiment { font-size: 10px; }
-        }
-
-        @media (max-width: 360px) {
-          .auth-card { padding: 16px 12px; }
-          .form-title { font-size: 20px; }
-          .field-input, .field-input-flex { padding: 12px; font-size: 15px; }
-          .btn-primary { padding: 12px 16px; font-size: 14px; }
-          .btn-ghost { font-size: 13px; padding: 12px; min-width: 60px; }
-          .login-title { font-size: 22px; }
-          .emoji-trigger { width: 40px; height: 40px; font-size: 18px; }
-          .riri-sentiment-bubble {
-            font-size: 11px;
-            padding: 4px 12px;
-            max-width: 130px;
-          }
-          .emoji-picker-dropdown {
-            padding: 6px;
-            gap: 2px;
-            max-width: 240px;
-          }
-          .emoji-option { font-size: 18px; }
-          .riri-typing-sentiment { font-size: 9px; }
-        }
       `}</style>
 
-      <div className="auth-card">
-        {/* Logo at top of both login and signup */}
-        <div className="login-logo">
-          <img src={LOGO_SRC} alt="Swoop" />
-        </div>
-
-        {/* Tabs */}
-        <div className="tab-row">
-          <div className="tab-indicator" style={{ transform: mode === "signup" ? "translateX(100%)" : "translateX(0%)" }} />
-          <button className={`tab-btn ${mode === "login" ? "active" : ""}`} onClick={() => switchMode("login")}>
-            Log in
-          </button>
-          <button className={`tab-btn ${mode === "signup" ? "active" : ""}`} onClick={() => switchMode("signup")}>
-            Sign up
-          </button>
-        </div>
-
-        {mode === "login" ? (
-          /* --- LOGIN FORM with RIRI AI --- */
-          <form onSubmit={handleLoginSubmit}>
-            <div className="login-header">
-              <div className="login-title">Welcome back</div>
+      <div className="auth-container">
+        {/* Left Panel - Branding (Desktop Only) */}
+        <div className="auth-brand-panel">
+          <div className="brand-content">
+            <div className="brand-logo">
+              <img src={LOGO_SRC} alt="Swoop" />
+            </div>
+            
+            <div className="brand-mascot">
               <RiriMascot 
-                state="idle" 
+                state="happy" 
                 showTag={true}
-                typingSentiment="I'm RIRI, your AI assistant"
+                typingSentiment="Welcome to Swoop!"
                 showTypingSentiment={true}
-                avatarEmoji={selectedEmoji}
-              />
-            </div>
-            <div className="login-sub">Sign in to continue shopping</div>
-
-            <div className="login-field">
-              <label>Email address</label>
-              <input
-                type="email"
-                className="field-input"
-                value={loginValues.email}
-                onChange={(e) => setLoginValues((v) => ({ ...v, email: e.target.value }))}
-                placeholder="you@example.com"
-                autoComplete="email"
-              />
-            </div>
-            <div className="login-field">
-              <label>Password</label>
-              <input
-                type="password"
-                className="field-input"
-                value={loginValues.password}
-                onChange={(e) => setLoginValues((v) => ({ ...v, password: e.target.value }))}
-                placeholder="Your password"
-                autoComplete="current-password"
+                avatarEmoji="🚀"
+                size="large"
               />
             </div>
 
-            {error && <div className="error-banner">{error}</div>}
+            <h1 className="brand-headline">
+              Your Campus<br />Marketplace
+            </h1>
+            <p className="brand-subheadline">
+              Join thousands of students buying, selling, and discovering amazing deals on campus.
+            </p>
 
-            <button type="submit" className="btn-primary" disabled={loading} style={{ marginTop: 24 }}>
-              {loading ? "Signing in…" : "Sign in"}
-            </button>
+            <div className="brand-features">
+              <div className="brand-feature">
+                <div className="brand-feature-icon">🛍️</div>
+                <span>Shop verified products from fellow students</span>
+              </div>
+              <div className="brand-feature">
+                <div className="brand-feature-icon">🤖</div>
+                <span>AI-powered authentication & safety</span>
+              </div>
+              <div className="brand-feature">
+                <div className="brand-feature-icon">⚡</div>
+                <span>Fast, secure transactions</span>
+              </div>
+              <div className="brand-feature">
+                <div className="brand-feature-icon">🎓</div>
+                <span>Exclusive campus community</span>
+              </div>
+            </div>
+          </div>
+        </div>
 
-            <div className="switch-line">
-              New to Swoop?{" "}
-              <button type="button" className="switch-link" onClick={() => switchMode("signup")}>
-                Create an account
+        {/* Right Panel - Form */}
+        <div className="auth-form-panel">
+          <div className="form-container">
+            {/* Mobile Logo (hidden on desktop) */}
+            <div className="mobile-logo" style={{ display: 'none' }}>
+              <img src={LOGO_SRC} alt="Swoop" />
+            </div>
+
+            {/* Tabs */}
+            <div className="tab-row">
+              <div className="tab-indicator" style={{ transform: mode === "signup" ? "translateX(100%)" : "translateX(0%)" }} />
+              <button className={`tab-btn ${mode === "login" ? "active" : ""}`} onClick={() => switchMode("login")}>
+                Log in
+              </button>
+              <button className={`tab-btn ${mode === "signup" ? "active" : ""}`} onClick={() => switchMode("signup")}>
+                Sign up
               </button>
             </div>
-          </form>
-        ) : success ? (
-          /* --- SUCCESS STATE --- */
-          <div className="success-wrap">
-            <RiriMascot state="celebrate" showTag={true} avatarEmoji={selectedEmoji} />
-            <div className="success-title">
-              Welcome{username ? `, ${selectedEmoji} ${username}` : ""}! 🎉
-            </div>
-            <div className="success-text">Your account is ready. Taking you to Swoop now…</div>
-            <div className="success-foot">✨ RIRI AI is excited to have you! ✨</div>
-          </div>
-        ) : (
-          /* --- SIGNUP FLOW --- */
-          <div>
-            {/* Header with mascot */}
-            <div className="form-header">
-              <div>
-                <div className="form-step-badge">
-                  Step {STEPS[step].number} of {String(STEPS.length).padStart(2, "0")}
+
+            {mode === "login" ? (
+              /* --- LOGIN FORM with RIRI AI --- */
+              <form onSubmit={handleLoginSubmit}>
+                <div className="login-header">
+                  <div className="login-title">Welcome back</div>
+                  <RiriMascot 
+                    state="idle" 
+                    showTag={true}
+                    typingSentiment="I'm RIRI, your AI assistant"
+                    showTypingSentiment={true}
+                    avatarEmoji={selectedEmoji}
+                    size="small"
+                  />
                 </div>
-                <div className="form-title">{STEPS[step].question}</div>
-                <div className="form-hint">{STEPS[step].hint}</div>
-              </div>
-              <RiriMascot 
-                state={mascotState} 
-                flexLevel={step === 2 ? strength.score : 0}
-                sentiment={showSentiment ? sentiment : ""}
-                showTag={true}
-                typingSentiment={currentTypingSentiment}
-                showTypingSentiment={showTypingSentiment}
-                avatarEmoji={selectedEmoji}
-              />
-            </div>
+                <div className="login-sub">Sign in to continue shopping</div>
 
-            {/* Progress */}
-            <div className="progress-track">
-              <div className={`progress-fill ${loading ? "loading" : ""}`} style={{ width: `${progressPct}%` }} />
-            </div>
-            <div className="progress-message">{getProgressMessage()}</div>
+                <div className="login-field">
+                  <label>Email address</label>
+                  <input
+                    type="email"
+                    className="field-input"
+                    value={loginValues.email}
+                    onChange={(e) => setLoginValues((v) => ({ ...v, email: e.target.value }))}
+                    placeholder="you@example.com"
+                    autoComplete="email"
+                  />
+                </div>
+                <div className="login-field">
+                  <label>Password</label>
+                  <input
+                    type="password"
+                    className="field-input"
+                    value={loginValues.password}
+                    onChange={(e) => setLoginValues((v) => ({ ...v, password: e.target.value }))}
+                    placeholder="Your password"
+                    autoComplete="current-password"
+                  />
+                </div>
 
-            {/* Input - with emoji picker for username step */}
-            {STEPS[step].key === "username" ? (
-              <>
-                <div className="field-input-wrapper" ref={emojiPickerRef}>
-                  <button 
-                    type="button"
-                    className={`emoji-trigger ${showEmojiPicker ? "open" : ""}`}
-                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    title="Click to choose your avatar emoji"
-                  >
-                    {selectedEmoji}
-                    <span className="chevron">▾</span>
+                {error && <div className="error-banner">{error}</div>}
+
+                <button type="submit" className="btn-primary" disabled={loading} style={{ marginTop: 24 }}>
+                  {loading ? "Signing in…" : "Sign in"}
+                </button>
+
+                <div className="switch-line">
+                  New to Swoop?{" "}
+                  <button type="button" className="switch-link" onClick={() => switchMode("signup")}>
+                    Create an account
                   </button>
-                  
+                </div>
+              </form>
+            ) : success ? (
+              /* --- SUCCESS STATE --- */
+              <div className="success-wrap">
+                <RiriMascot state="celebrate" showTag={true} avatarEmoji={selectedEmoji} size="large" />
+                <div className="success-title">
+                  Welcome{username ? `, ${selectedEmoji} ${username}` : ""}! 🎉
+                </div>
+                <div className="success-text">Your account is ready. Taking you to Swoop now…</div>
+                <div className="success-foot">✨ RIRI AI is excited to have you! ✨</div>
+              </div>
+            ) : (
+              /* --- SIGNUP FLOW --- */
+              <div>
+                {/* Header with mascot */}
+                <div className="form-header">
+                  <div>
+                    <div className="form-step-badge">
+                      Step {STEPS[step].number} of {String(STEPS.length).padStart(2, "0")}
+                    </div>
+                    <div className="form-title">{STEPS[step].question}</div>
+                    <div className="form-hint">{STEPS[step].hint}</div>
+                  </div>
+                  <RiriMascot 
+                    state={mascotState} 
+                    flexLevel={step === 2 ? strength.score : 0}
+                    sentiment={showSentiment ? sentiment : ""}
+                    showTag={true}
+                    typingSentiment={currentTypingSentiment}
+                    showTypingSentiment={showTypingSentiment}
+                    avatarEmoji={selectedEmoji}
+                    size="small"
+                  />
+                </div>
+
+                {/* Progress */}
+                <div className="progress-track">
+                  <div className={`progress-fill ${loading ? "loading" : ""}`} style={{ width: `${progressPct}%` }} />
+                </div>
+                <div className="progress-message">{getProgressMessage()}</div>
+
+                {/* Input - with emoji picker for username step */}
+                {STEPS[step].key === "username" ? (
+                  <>
+                    <div className="field-input-wrapper" ref={emojiPickerRef}>
+                      <button 
+                        type="button"
+                        className={`emoji-trigger ${showEmojiPicker ? "open" : ""}`}
+                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                        title="Click to choose your avatar emoji"
+                      >
+                        {selectedEmoji}
+                        <span className="chevron">▾</span>
+                      </button>
+                      
+                      <input
+                        ref={(el) => {
+                          inputRefs.current[step] = el;
+                        }}
+                        type="text"
+                        className="field-input-flex"
+                        value={values.username}
+                        onChange={(e) => handleTyping(e, "username")}
+                        onKeyDown={handleKeyDown}
+                        placeholder={STEPS[step].placeholder}
+                        autoComplete="username"
+                      />
+                      
+                      {showEmojiPicker && (
+                        <div className="emoji-picker-dropdown">
+                          {AVATAR_EMOJIS.map((emoji) => (
+                            <button
+                              key={emoji}
+                              type="button"
+                              className={`emoji-option ${selectedEmoji === emoji ? "selected" : ""}`}
+                              onClick={() => {
+                                setSelectedEmoji(emoji);
+                                setShowEmojiPicker(false);
+                              }}
+                              title={`Select ${emoji} as your avatar`}
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Avatar prompt - shows when username has at least 2 characters */}
+                    {showAvatarPrompt && (
+                      <div className="avatar-prompt">
+                        <span className="prompt-emoji">👆</span>
+                        <span>
+                          <strong>Tap the emoji</strong> to choose your avatar! 
+                          You can always change it later.
+                        </span>
+                      </div>
+                    )}
+
+                    {username.length >= 2 && (
+                      <div className="field-validation valid">
+                        <IconWave /> {selectedEmoji} {username} — awesome username!
+                      </div>
+                    )}
+                  </>
+                ) : (
                   <input
                     ref={(el) => {
                       inputRefs.current[step] = el;
                     }}
-                    type="text"
-                    className="field-input-flex"
-                    value={values.username}
-                    onChange={(e) => handleTyping(e, "username")}
+                    type={STEPS[step].type}
+                    className={`field-input ${STEPS[step].key === "confirm" && confirmMismatch ? "shake" : ""}`}
+                    value={values[STEPS[step].key]}
+                    onChange={(e) => handleTyping(e, STEPS[step].key)}
                     onKeyDown={handleKeyDown}
                     placeholder={STEPS[step].placeholder}
-                    autoComplete="username"
+                    autoComplete={STEPS[step].autoComplete}
                   />
-                  
-                  {showEmojiPicker && (
-                    <div className="emoji-picker-dropdown">
-                      {AVATAR_EMOJIS.map((emoji) => (
-                        <button
-                          key={emoji}
-                          type="button"
-                          className={`emoji-option ${selectedEmoji === emoji ? "selected" : ""}`}
-                          onClick={() => {
-                            setSelectedEmoji(emoji);
-                            setShowEmojiPicker(false);
-                          }}
-                          title={`Select ${emoji} as your avatar`}
-                        >
-                          {emoji}
-                        </button>
+                )}
+
+                {/* Live validation feedback for other steps */}
+                {STEPS[step].key === "email" && emailLooksValid && (
+                  <div className="field-validation valid">
+                    <IconMail /> Valid email address!
+                  </div>
+                )}
+
+                {STEPS[step].key === "password" && values.password.length > 0 && (
+                  <div className="strength-row">
+                    <div className="strength-bars">
+                      {[0, 1, 2].map((barIdx) => (
+                        <div className="strength-bar" key={barIdx}>
+                          <span style={{ width: strength.score > barIdx ? "100%" : "0%" }} />
+                        </div>
                       ))}
                     </div>
+                    <span className="strength-label">{strength.label}</span>
+                  </div>
+                )}
+
+                {STEPS[step].key === "confirm" && values.confirm.length > 0 && (
+                  <div className={`field-validation ${confirmMatches ? "valid" : ""}`}>
+                    {confirmMatches ? (
+                      <>✨ Passwords match!</>
+                    ) : confirmMismatch ? (
+                      <>⚠️ Passwords don't match</>
+                    ) : null}
+                  </div>
+                )}
+
+                {error && <div className="error-banner">{error}</div>}
+
+                {/* Navigation */}
+                <div className="nav-row">
+                  {step > 0 && (
+                    <button type="button" className="btn-ghost" onClick={handleBack}>
+                      ← Back
+                    </button>
                   )}
+                  <button 
+                    type="button" 
+                    className="btn-primary" 
+                    onClick={handleNext} 
+                    disabled={loading}
+                  >
+                    {loading ? "Creating…" : step === STEPS.length - 1 ? (
+                      <>Create account →</>
+                    ) : (
+                      <>Next →</>
+                    )}
+                  </button>
                 </div>
 
-                {/* Avatar prompt - shows when username has at least 2 characters */}
-                {showAvatarPrompt && (
-                  <div className="avatar-prompt">
-                    <span className="prompt-emoji">👆</span>
-                    <span>
-                      <strong>Tap the emoji</strong> to choose your avatar! 
-                      You can always change it later.
-                    </span>
-                  </div>
-                )}
-
-                {username.length >= 2 && (
-                  <div className="field-validation valid">
-                    <IconWave /> {selectedEmoji} {username} — awesome username!
-                  </div>
-                )}
-              </>
-            ) : (
-              <input
-                ref={(el) => {
-                  inputRefs.current[step] = el;
-                }}
-                type={STEPS[step].type}
-                className={`field-input ${STEPS[step].key === "confirm" && confirmMismatch ? "shake" : ""}`}
-                value={values[STEPS[step].key]}
-                onChange={(e) => handleTyping(e, STEPS[step].key)}
-                onKeyDown={handleKeyDown}
-                placeholder={STEPS[step].placeholder}
-                autoComplete={STEPS[step].autoComplete}
-              />
-            )}
-
-            {/* Live validation feedback for other steps */}
-            {STEPS[step].key === "email" && emailLooksValid && (
-              <div className="field-validation valid">
-                <IconMail /> Valid email address!
-              </div>
-            )}
-
-            {STEPS[step].key === "password" && values.password.length > 0 && (
-              <div className="strength-row">
-                <div className="strength-bars">
-                  {[0, 1, 2].map((barIdx) => (
-                    <div className="strength-bar" key={barIdx}>
-                      <span style={{ width: strength.score > barIdx ? "100%" : "0%" }} />
-                    </div>
-                  ))}
+                <div className="switch-line">
+                  Already have an account?{" "}
+                  <button type="button" className="switch-link" onClick={() => switchMode("login")}>
+                    Log in
+                  </button>
                 </div>
-                <span className="strength-label">{strength.label}</span>
               </div>
             )}
-
-            {STEPS[step].key === "confirm" && values.confirm.length > 0 && (
-              <div className={`field-validation ${confirmMatches ? "valid" : ""}`}>
-                {confirmMatches ? (
-                  <>✨ Passwords match!</>
-                ) : confirmMismatch ? (
-                  <>⚠️ Passwords don't match</>
-                ) : null}
-              </div>
-            )}
-
-            {error && <div className="error-banner">{error}</div>}
-
-            {/* Navigation */}
-            <div className="nav-row">
-              {step > 0 && (
-                <button type="button" className="btn-ghost" onClick={handleBack}>
-                  ← Back
-                </button>
-              )}
-              <button 
-                type="button" 
-                className="btn-primary" 
-                onClick={handleNext} 
-                disabled={loading}
-              >
-                {loading ? "Creating…" : step === STEPS.length - 1 ? (
-                  <>Create account →</>
-                ) : (
-                  <>Next →</>
-                )}
-              </button>
-            </div>
-
-            <div className="switch-line">
-              Already have an account?{" "}
-              <button type="button" className="switch-link" onClick={() => switchMode("login")}>
-                Log in
-              </button>
-            </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
