@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import apiFetch from "../../lib/apiClient";
 import { useAuth } from "../context/AuthContext";
-import Footer from "../../app/components/Footer"; // Import the exact footer
+import Footer from "../../app/components/Footer";
 
 interface Review {
   id: string;
@@ -27,16 +27,6 @@ const BADGES = {
   GOLD: { id: 'gold', name: 'Gold Buyer', icon: '🥇', color: '#b45309', bg: '#fffbeb', border: '#fbbf24', description: 'Spent ₵1000+', category: 'spending' },
   SOCIAL_BUTTERFLY: { id: 'social_butterfly', name: 'Social Butterfly', icon: '🦋', color: '#db2777', bg: '#fdf2f8', border: '#f9a8d4', description: 'Shared 10+ products', category: 'social' },
 };
-
-function hexToRgba(hex: string, alpha: number) {
-  const clean = hex.replace('#', '');
-  const full = clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean;
-  const num = parseInt(full, 16);
-  const r = (num >> 16) & 255;
-  const g = (num >> 8) & 255;
-  const b = num & 255;
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
 
 function BadgeTooltip({ badge, children }: { badge: any; children: React.ReactNode }) {
   return (
@@ -127,7 +117,6 @@ export default function ProfilePage() {
   const handleSave = async () => {
     setStatus(null);
     try {
-      // Simplified save logic for demo
       setStatus("Profile updated successfully");
       setEditing(false);
     } catch (err) { setStatus("Failed to update"); }
@@ -140,25 +129,26 @@ export default function ProfilePage() {
       
       {/* Mobile Header */}
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-100 px-4 py-3 flex items-center justify-between">
-        <button onClick={() => router.back()} className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition">
+        <button onClick={() => router.back()} className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition shrink-0">
           <i className="ti ti-arrow-left text-lg"></i>
         </button>
-        <h1 className="font-bold text-lg">My Profile</h1>
-        <div className="w-9"></div>
+        <h1 className="font-bold text-lg text-center flex-1 mx-2">My Profile</h1>
+        <div className="w-9 shrink-0"></div>
       </header>
 
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
         
         {/* Profile Card */}
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 relative overflow-hidden">
+        <div className="bg-white rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-100 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#6C5CE7]/10 to-[#FF6B9D]/10 rounded-bl-full -mr-10 -mt-10"></div>
           
-          <div className="flex items-center gap-4 relative z-10">
-            <div className="relative">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 relative z-10">
+            {/* Avatar */}
+            <div className="relative shrink-0">
               <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#6C5CE7] to-[#FF6B9D] p-1 shadow-lg shadow-[#6C5CE7]/20">
                 <div className="w-full h-full rounded-xl bg-white flex items-center justify-center text-2xl font-black text-[#6C5CE7] overflow-hidden">
                   {avatarPreview || user?.avatar ? (
-                    <img src={avatarPreview || user.avatar} className="w-full h-full object-cover" />
+                    <img src={avatarPreview || user.avatar} className="w-full h-full object-cover" alt="Profile" />
                   ) : (
                     initials
                   )}
@@ -170,36 +160,68 @@ export default function ProfilePage() {
                   <input type="file" className="hidden" onChange={(e) => {
                     const f = e.target.files?.[0];
                     if(f) { setAvatarFile(f); setAvatarPreview(URL.createObjectURL(f)); }
-                  }} />
+                  }} accept="image/*" />
                 </label>
               )}
             </div>
             
-            <div className="flex-1 min-w-0">
+            {/* User Info */}
+            <div className="flex-1 min-w-0 w-full">
               {!editing ? (
-                <>
-                  <h2 className="font-black text-xl truncate">{getDisplayName(user)}</h2>
-                  <p className="text-slate-500 text-sm truncate">{user?.email || "No email"}</p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="px-2 py-0.5 rounded-md bg-[#6C5CE7]/10 text-[#6C5CE7] text-[10px] font-bold uppercase tracking-wide">
+                <div className="space-y-1">
+                  {/* Name - handles any length */}
+                  <h2 className="font-black text-lg sm:text-xl break-words leading-tight">
+                    {getDisplayName(user)}
+                  </h2>
+                  
+                  {/* Email - handles overflow */}
+                  <p className="text-slate-500 text-sm truncate max-w-full">
+                    {user?.email || "No email"}
+                  </p>
+                  
+                  {/* Badges/Level Row */}
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                    <span className="px-2 py-0.5 rounded-md bg-[#6C5CE7]/10 text-[#6C5CE7] text-[10px] font-bold uppercase tracking-wide whitespace-nowrap">
                       Level {Math.floor((user?.xp || 0) / 500) + 1}
                     </span>
-                    <span className="text-xs text-slate-400 font-medium">{user?.xp || 0} XP</span>
+                    <span className="text-xs text-slate-400 font-medium whitespace-nowrap">
+                      {user?.xp || 0} XP
+                    </span>
                   </div>
-                </>
+                </div>
               ) : (
                 <div className="space-y-2">
-                  <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-semibold focus:border-[#6C5CE7] outline-none" value={name} onChange={e => setName(e.target.value)} />
+                  <input 
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm font-semibold focus:border-[#6C5CE7] outline-none" 
+                    value={name} 
+                    onChange={e => setName(e.target.value)} 
+                    placeholder="Enter your name"
+                  />
                   <div className="flex gap-2">
-                    <button onClick={handleSave} className="bg-[#6C5CE7] text-white text-xs font-bold px-3 py-1.5 rounded-lg">Save</button>
-                    <button onClick={() => setEditing(false)} className="bg-slate-100 text-slate-600 text-xs font-bold px-3 py-1.5 rounded-lg">Cancel</button>
+                    <button 
+                      onClick={handleSave} 
+                      className="bg-[#6C5CE7] text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-[#5B4BD6] transition"
+                    >
+                      Save
+                    </button>
+                    <button 
+                      onClick={() => setEditing(false)} 
+                      className="bg-slate-100 text-slate-600 text-xs font-bold px-4 py-2 rounded-lg hover:bg-slate-200 transition"
+                    >
+                      Cancel
+                    </button>
                   </div>
                 </div>
               )}
             </div>
             
+            {/* Edit Button */}
             {!editing && (
-              <button onClick={() => setEditing(true)} className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:text-[#6C5CE7] hover:bg-[#6C5CE7]/10 transition">
+              <button 
+                onClick={() => setEditing(true)} 
+                className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:text-[#6C5CE7] hover:bg-[#6C5CE7]/10 transition shrink-0"
+                aria-label="Edit profile"
+              >
                 <i className="ti ti-pencil"></i>
               </button>
             )}
@@ -228,7 +250,7 @@ export default function ProfilePage() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab as any)}
-              className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all ${
+              className={`flex-1 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wide transition-all ${
                 activeTab === tab ? "bg-white text-[#6C5CE7] shadow-sm" : "text-slate-500 hover:text-slate-700"
               }`}
             >
@@ -247,7 +269,7 @@ export default function ProfilePage() {
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between py-2 border-b border-slate-50">
                   <span className="text-slate-500">Phone</span>
-                  <span className="font-semibold">{user?.phone || "Not set"}</span>
+                  <span className="font-semibold text-right break-words max-w-[60%]">{user?.phone || "Not set"}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b border-slate-50">
                   <span className="text-slate-500">Member Since</span>
@@ -255,12 +277,17 @@ export default function ProfilePage() {
                 </div>
                 <div className="flex justify-between py-2">
                   <span className="text-slate-500">Status</span>
-                  <span className="font-semibold text-[#00D9A3] flex items-center gap-1"><i className="ti ti-check-circle text-xs"></i> Active</span>
+                  <span className="font-semibold text-[#00D9A3] flex items-center gap-1">
+                    <i className="ti ti-check-circle text-xs"></i> Active
+                  </span>
                 </div>
               </div>
             </div>
             
-            <button onClick={logout} className="w-full bg-red-50 text-red-600 font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-red-100 transition">
+            <button 
+              onClick={logout} 
+              className="w-full bg-red-50 text-red-600 font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-red-100 transition"
+            >
               <i className="ti ti-logout"></i> Sign Out
             </button>
           </div>
@@ -274,8 +301,8 @@ export default function ProfilePage() {
                   <div className="w-12 h-12 rounded-full flex items-center justify-center text-2xl" style={{ background: badge.bg }}>
                     {badge.icon}
                   </div>
-                  <div>
-                    <div className="font-bold text-xs" style={{ color: badge.color }}>{badge.name}</div>
+                  <div className="w-full">
+                    <div className="font-bold text-xs truncate" style={{ color: badge.color }}>{badge.name}</div>
                     <div className="text-[10px] text-slate-400 mt-0.5 line-clamp-2">{badge.description}</div>
                   </div>
                 </div>
@@ -293,7 +320,7 @@ export default function ProfilePage() {
                 <div className="w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center text-xl">
                   <i className="ti ti-lock"></i>
                 </div>
-                <div className="font-bold text-xs text-slate-500">{badge.name}</div>
+                <div className="font-bold text-xs text-slate-500 truncate w-full">{badge.name}</div>
               </div>
             ))}
           </div>
@@ -303,15 +330,15 @@ export default function ProfilePage() {
           <div className="space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-300">
             {reviews.length > 0 ? reviews.map((r) => (
               <div key={r.id} className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-                <div className="flex justify-between items-start mb-2">
-                  <h4 className="font-bold text-sm truncate pr-4">{r.product}</h4>
-                  <div className="flex text-[#FFB88C] text-xs">
+                <div className="flex justify-between items-start mb-2 gap-2">
+                  <h4 className="font-bold text-sm truncate flex-1 pr-2">{r.product}</h4>
+                  <div className="flex text-[#FFB88C] text-xs shrink-0">
                     {[...Array(5)].map((_, i) => (
                       <i key={i} className={`ti ${i < r.rating ? "ti-star-filled" : "ti-star"} ${i >= r.rating ? "text-slate-200" : ""}`}></i>
                     ))}
                   </div>
                 </div>
-                <p className="text-xs text-slate-600 leading-relaxed mb-2">{r.text}</p>
+                <p className="text-xs text-slate-600 leading-relaxed mb-2 break-words">{r.text}</p>
                 <div className="text-[10px] text-slate-400 font-medium">{r.date}</div>
               </div>
             )) : (
