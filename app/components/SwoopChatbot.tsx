@@ -2,33 +2,80 @@
 
 import { useEffect, useState, useRef } from "react";
 
+type BotpressApi = {
+  init: (config: {
+    botId: string;
+    clientId: string;
+    configuration?: {
+      composerPlaceholder?: string;
+      botName?: string;
+      botDescription?: string;
+      color?: string;
+      variant?: string;
+      themeMode?: string;
+      fontFamily?: string;
+    };
+  }) => void;
+  open?: () => void;
+  close?: () => void;
+  on?: (event: string, cb: (evt?: unknown) => void) => void;
+  sendEvent?: (evt: { type?: string; payload?: unknown }) => void;
+  toggle?: () => void;
+};
+
 declare global {
   interface Window {
-    botpress?: {
-      init: (config: {
-        botId: string;
-        clientId: string;
-        configuration?: {
-          composerPlaceholder?: string;
-          botName?: string;
-          botDescription?: string;
-          color?: string;
-          variant?: string;
-          themeMode?: string;
-          fontFamily?: string;
-        };
-      }) => void;
-      open?: () => void;
-      close?: () => void;
-      on?: (
-        event: string,
-        callback: (evt?: unknown) => void
-      ) => void;
-    };
-
+    botpress?: BotpressApi;
+    botpressWebChat?: BotpressApi;
     UNIMART_API_URL?: string;
   }
 }
+
+const getBotpressApi = (): BotpressApi | undefined => {
+  if (typeof window === "undefined") return undefined;
+  const api = window.botpressWebChat ?? window.botpress;
+  if (api && !window.botpress) {
+    // normalise global for older codepaths
+    window.botpress = api;
+  }
+  return api;
+};
+
+const openBotpressChat = (): boolean => {
+  const botpress = getBotpressApi();
+  if (!botpress) return false;
+  if (typeof botpress.open === "function") {
+    botpress.open();
+    return true;
+  }
+  if (typeof botpress.sendEvent === "function") {
+    botpress.sendEvent({ type: "show" });
+    return true;
+  }
+  if (typeof botpress.toggle === "function") {
+    botpress.toggle();
+    return true;
+  }
+  return false;
+};
+
+const closeBotpressChat = (): boolean => {
+  const botpress = getBotpressApi();
+  if (!botpress) return false;
+  if (typeof botpress.close === "function") {
+    botpress.close();
+    return true;
+  }
+  if (typeof botpress.sendEvent === "function") {
+    botpress.sendEvent({ type: "hide" });
+    return true;
+  }
+  if (typeof botpress.toggle === "function") {
+    botpress.toggle();
+    return true;
+  }
+  return false;
+};
 
 // Fallback to the production Botpress ID if env var is missing in deployment
 const DEFAULT_BOTPRESS_CLIENT_ID = "907b0daa-a442-49ca-a209-bb3f4ada8047";
@@ -190,10 +237,11 @@ export default function SwoopChatbot() {
     injectBotpressStyles();
 
     const configureBotpress = () => {
-      if (!window.botpress) return;
+      const botpress = getBotpressApi();
+      if (!botpress) return;
 
       try {
-        window.botpress.init({
+        botpress.init({
           botId: clientId,
           clientId: clientId,
           configuration: {
@@ -209,13 +257,13 @@ export default function SwoopChatbot() {
 
         injectBotpressStyles();
 
-        if (window.botpress.on) {
-          window.botpress.on("webchat:opened", () => {
+        if (botpress.on) {
+          botpress.on("webchat:opened", () => {
             setIsOpen(true);
             injectBotpressStyles();
           });
 
-          window.botpress.on("webchat:closed", () => {
+          botpress.on("webchat:closed", () => {
             setIsOpen(false);
           });
         }
@@ -225,7 +273,7 @@ export default function SwoopChatbot() {
 
         if (pendingOpenRef.current) {
           pendingOpenRef.current = false;
-          window.botpress.open?.();
+          openBotpressChat();
           setIsOpen(true);
         }
       } catch (err) {
@@ -235,8 +283,8 @@ export default function SwoopChatbot() {
       }
     };
 
-    // If window.botpress is already present
-    if (window.botpress) {
+    // If Botpress global is already present
+    if (getBotpressApi()) {
       configureBotpress();
       return;
     }
@@ -275,7 +323,9 @@ export default function SwoopChatbot() {
   }, []);
 
   const toggleChat = () => {
-    if (!window.botpress || !ready) {
+    const botpress = getBotpressApi();
+
+    if (!botpress || !ready) {
       pendingOpenRef.current = true;
       setIsLoading(true);
       injectBotpressStyles();
@@ -284,14 +334,14 @@ export default function SwoopChatbot() {
 
     if (isOpen) {
       try {
-        window.botpress.close?.();
+        closeBotpressChat();
       } catch {
         // Ignore
       }
       setIsOpen(false);
     } else {
       try {
-        window.botpress.open?.();
+        openBotpressChat();
       } catch {
         // Ignore
       }
@@ -309,7 +359,7 @@ export default function SwoopChatbot() {
         className="
           group
           fixed
-          z-[9999]
+            z-9999
           flex
           items-center
           justify-center
