@@ -194,7 +194,7 @@ export default function AdsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAFB] font-sans selection:bg-indigo-100 selection:text-indigo-900">
+    <div className="min-h-screen font-sans selection:bg-indigo-100 selection:text-indigo-900" style={{ background: 'var(--bg)' }}>
       
       {/* Modern Sticky Header */}
       <header className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${isScrolled ? 'bg-white/80 backdrop-blur-md shadow-sm py-4' : 'bg-transparent py-6'}`}>

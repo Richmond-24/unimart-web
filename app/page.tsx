@@ -14,7 +14,7 @@ import SocialCommerceBanner from "./components/SocialCommerceBanner";
 
 export default function Home() {
   return (
-    <div className="w-full bg-white">
+    <div className="w-full" style={{ background: 'var(--bg)' }}>
       <Header />
       <HeroCarousel />
       <CategoryFilter />

@@ -1,4 +1,3 @@
-
 import type { Metadata } from "next";
 import {
   Space_Grotesk,
@@ -19,6 +18,7 @@ import MessageListener from "./components/MessageListener";
 import SocketProvider from "./components/SocketProvider";
 import WelcomeBadgeModal from "./components/WelcomeBadgeModal";
 import SwoopChatbot from "./components/SwoopChatbot";
+import ThemeScript from "./components/ThemeScript";
 
 // ============================================================
 // FONTS
@@ -56,8 +56,8 @@ const figtree = Figtree({
 // ============================================================
 
 export const metadata: Metadata = {
-  title: "Koombo",
-  description: "AI-powered commerce platform",
+  title: "UniMart",
+  description: "Campus Marketplace & Social Commerce",
 };
 
 // ============================================================
@@ -77,6 +77,7 @@ export default function RootLayout({
       data-app-stage="splash"
     >
       <head>
+        <ThemeScript />
         <meta
           name="viewport"
           content="width=device-width, initial-scale=1, viewport-fit=cover"

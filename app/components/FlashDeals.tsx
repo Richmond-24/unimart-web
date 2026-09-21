@@ -521,7 +521,7 @@ export default function FlashDealsVideo() {
   }, []);
 
   return (
-    <section id="flash-deals-video" className="py-12 bg-[#FAFAFB]">
+    <section id="flash-deals-video" className="py-12" style={{ background: 'var(--bg)' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header */}

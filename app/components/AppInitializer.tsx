@@ -22,7 +22,12 @@ export default function AppInitializer() {
     if (!isLoading && splashFinished) {
       const hasSeenOnboarding = localStorage.getItem('unimart:onboarded') === '1';
 
-      if (isAuthenticated && token) {
+      // If localStorage already has a token, prefer ready immediately so
+      // refreshing an authenticated user preserves the logged-in state.
+      const hasToken = !!localStorage.getItem('unimart:token');
+      const hasGuest = !!localStorage.getItem('unimart:guest');
+
+      if ((isAuthenticated && token) || hasToken || hasGuest) {
         setStage('ready');
       } else if (hasSeenOnboarding) {
         setStage('auth');

@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -144,7 +143,7 @@ export default function CommentsSection({ listingId }: { listingId: string }) {
           >
             <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center text-white font-bold text-sm shadow-sm">
+                <div className="w-9 h-9 rounded-full bg-linear-to-br from-teal-500 to-emerald-500 flex items-center justify-center text-white font-bold text-sm shadow-sm">
                   {(c.name || "A")
                     .split(" ")
                     .map((s: string) => s[0])

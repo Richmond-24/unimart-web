@@ -62,8 +62,8 @@ export default function CampaignBannerGrid() {
   return (
     <section
       aria-label="Campus campaign highlights"
-      className="relative overflow-hidden bg-[#FAF9F6] py-10 opacity-0 md:py-20"
-      style={{ animation: "fadeIn 0.7s ease-out forwards" }}
+      className="relative overflow-hidden py-10 opacity-0 md:py-20"
+      style={{ background: 'var(--bg)', animation: "fadeIn 0.7s ease-out forwards" }}
     >
       {/* Ambient background glow */}
       <div className="pointer-events-none absolute inset-0 -z-10">
@@ -84,9 +84,9 @@ export default function CampaignBannerGrid() {
                 Campus campaigns
               </p>
             </div>
-            <h2 className="text-2xl font-bold tracking-tight text-gray-900 md:text-4xl">
+                <h2 className="text-2xl font-bold tracking-tight text-gray-900 md:text-4xl">
               Latest update{" "}
-              <span className="bg-gradient-to-r from-violet-600 to-blue-600 bg-clip-text text-transparent">
+              <span className="bg-linear-to-r from-violet-600 to-blue-600 bg-clip-text text-transparent">
                 on Koombo
               </span>{" "}
               right now
@@ -124,7 +124,7 @@ export default function CampaignBannerGrid() {
         {/* Horizontal scroller */}
         <div
           ref={scrollerRef}
-          className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-6"
+          className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4 [-ms-overflow-style:none] scrollbar-none [&::-webkit-scrollbar]:hidden sm:gap-6"
         >
           {promos.map((promo, idx) => {
             const Icon = promo.icon;
@@ -162,7 +162,7 @@ export default function CampaignBannerGrid() {
                     className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
                   />
                   {/* Image gradient overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
+                  <div className="absolute inset-0 bg-linear-to-t from-black/25 via-transparent to-transparent" />
 
                   <span
                     className="absolute left-3 top-3 flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-semibold text-white shadow-sm backdrop-blur-sm sm:text-[11px]"

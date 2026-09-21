@@ -27,7 +27,7 @@ export default function CategoryFilter({ activeCategory }: { activeCategory?: st
   );
 
   return (
-    <section className="bg-[#F7F7F7] px-3 py-5 sm:px-6 sm:py-8">
+    <section className="px-3 py-5 sm:px-6 sm:py-8" style={{ background: 'var(--bg)' }}>
       <div className="mx-auto max-w-5xl">
         {/* Category avatar strip — the Temu signature element */}
         <div className="-mx-3 overflow-x-auto px-3 sm:mx-0 sm:px-0">

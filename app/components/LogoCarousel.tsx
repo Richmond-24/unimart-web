@@ -99,7 +99,7 @@ function Row({ title, emoji, pillStyle, brands, direction = "left", duration = "
 
 export default function LogoCarousel() {
   return (
-    <section className="py-8 bg-[#f7f8fa] rounded-[28px]">
+    <section className="py-8 rounded-[28px]" style={{ background: 'var(--bg)' }}>
       <style>{`
         @keyframes scrollLeft {
           0% { transform: translateX(0); }

@@ -4,7 +4,6 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import apiFetch from "../../lib/apiClient";
 import { useAuth } from "../context/AuthContext";
-import Footer from "../../app/components/Footer";
 
 interface Review {
   id: string;
@@ -37,7 +36,7 @@ function BadgeTooltip({ badge, children }: { badge: any; children: React.ReactNo
           <span className="text-lg">{badge.icon}</span> {badge.name}
         </div>
         <div className="text-slate-400 leading-tight">{badge.description}</div>
-        <div className="absolute bottom-[-6px] left-1/2 -translate-x-1/2 w-3 h-3 bg-slate-900 rotate-45"></div>
+        <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-slate-900 rotate-45"></div>
       </div>
     </div>
   );
@@ -54,8 +53,8 @@ function getDisplayName(user: any): string {
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { logout } = useAuth();
-  const [user, setUser] = useState<any | null>(null);
+  const { logout, user: authUser, isLoading } = useAuth();
+  const [user, setUser] = useState<any | null>(authUser);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -68,49 +67,49 @@ export default function ProfilePage() {
   const [userBadges, setUserBadges] = useState<any[]>([]);
 
   useEffect(() => {
-    let active = true;
-    async function loadProfile() {
-      try {
-        if (!localStorage.getItem('unimart:token')) return;
-        const res = await apiFetch("/auth/me");
-        if (!active) return;
-        const u = res?.user || res?.data || null;
-        if (u) {
-          setUser(u);
-          setName(getDisplayName(u));
-          setEmail(u.email || "");
-          setPhone(u.phone || "");
-          const earned = calculateBadges(u);
-          setUserBadges(earned);
-          try { localStorage.setItem("unimart:user", JSON.stringify(u)); } catch (e) { }
-          
-          // Load reviews
-          const revRes = await apiFetch("/reviews");
-          if (revRes && Array.isArray(revRes.data)) {
-             setReviews(revRes.data.map((r: any) => ({
-                id: r._id || r.id,
-                product: r.targetTitle || "Item",
-                rating: r.rating || 0,
-                text: r.comment || "",
-                date: new Date(r.createdAt || Date.now()).toLocaleDateString(),
-                helpful: r.helpful || 0,
-              })));
-          }
-        }
-      } catch (err) { console.error(err); }
+    // If auth context supplies a user, use it and fetch reviews separately.
+    if (authUser) {
+      setUser(authUser);
+      setName(getDisplayName(authUser));
+      setEmail(authUser.email || "");
+      setPhone(authUser.phone || "");
+      setUserBadges(calculateBadges(authUser));
     }
-    loadProfile();
+
+    let active = true;
+    async function loadReviews() {
+      try {
+        const revRes = await apiFetch("/reviews");
+        if (!active) return;
+        if (revRes && Array.isArray(revRes.data)) {
+          setReviews(revRes.data.map((r: any) => ({
+            id: r._id || r.id,
+            product: r.targetTitle || "Item",
+            rating: r.rating || 0,
+            text: r.comment || "",
+            date: new Date(r.createdAt || Date.now()).toLocaleDateString(),
+            helpful: r.helpful || 0,
+          })));
+        }
+      } catch (err) {
+        console.debug('Failed to load reviews', err);
+      }
+    }
+
+    loadReviews();
     return () => { active = false; };
-  }, []);
+  }, [authUser]);
 
   const calculateBadges = (userData: any) => {
     const earned: any[] = [];
     const spent = userData?.totalSpent || 0;
     const streak = userData?.streakDays || 0;
+
     if (userData?.isVerified) earned.push(BADGES.VERIFIED);
     if (streak >= 7) earned.push(BADGES.STREAK_7);
     if (spent >= 1000) earned.push(BADGES.GOLD);
     else if (spent >= 100) earned.push(BADGES.BRONZE);
+
     return earned;
   };
 
@@ -119,33 +118,37 @@ export default function ProfilePage() {
     try {
       setStatus("Profile updated successfully");
       setEditing(false);
-    } catch (err) { setStatus("Failed to update"); }
+    } catch (err) {
+      setStatus("Failed to update");
+    }
   };
 
-  const initials = name ? name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) : "U";
+  const initials = name
+    ? name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)
+    : "U";
 
   return (
-    <div className="min-h-screen bg-[#FAFAFB] pb-24 font-sans text-slate-900">
-      
+    <div className="min-h-screen pb-24 font-sans" style={{ background: 'var(--bg)', color: 'var(--text)' }}>
       {/* Mobile Header */}
-      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-100 px-4 py-3 flex items-center justify-between">
-        <button onClick={() => router.back()} className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition shrink-0">
+      <header className="sticky top-0 z-40 border-b border-slate-200 px-4 py-3 backdrop-blur-md flex items-center justify-between" style={{ background: 'var(--header-bg)' }}>
+        <button
+          onClick={() => router.back()}
+          className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition shrink-0"
+        >
           <i className="ti ti-arrow-left text-lg"></i>
         </button>
+
         <h1 className="font-bold text-lg text-center flex-1 mx-2">My Profile</h1>
         <div className="w-9 shrink-0"></div>
       </header>
 
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-        
-        {/* Profile Card */}
-        <div className="bg-white rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-100 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#6C5CE7]/10 to-[#FF6B9D]/10 rounded-bl-full -mr-10 -mt-10"></div>
-          
+      <div className="rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-100 relative overflow-hidden" style={{ background: 'var(--surface)' }}>
+          <div className="absolute top-0 right-0 w-32 h-32 bg-linear-to-br from-[#6C5CE7]/10 to-[#FF6B9D]/10 rounded-bl-full -mr-10 -mt-10"></div>
+
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 relative z-10">
-            {/* Avatar */}
             <div className="relative shrink-0">
-              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#6C5CE7] to-[#FF6B9D] p-1 shadow-lg shadow-[#6C5CE7]/20">
+              <div className="w-20 h-20 rounded-2xl bg-linear-to-br from-[#6C5CE7] to-[#FF6B9D] p-1 shadow-lg shadow-[#6C5CE7]/20">
                 <div className="w-full h-full rounded-xl bg-white flex items-center justify-center text-2xl font-black text-[#6C5CE7] overflow-hidden">
                   {avatarPreview || user?.avatar ? (
                     <img src={avatarPreview || user.avatar} className="w-full h-full object-cover" alt="Profile" />
@@ -154,32 +157,37 @@ export default function ProfilePage() {
                   )}
                 </div>
               </div>
+
               {editing && (
                 <label className="absolute -bottom-2 -right-2 w-8 h-8 bg-[#00D9A3] rounded-full flex items-center justify-center text-white shadow-md cursor-pointer">
                   <i className="ti ti-camera text-sm"></i>
-                  <input type="file" className="hidden" onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if(f) { setAvatarFile(f); setAvatarPreview(URL.createObjectURL(f)); }
-                  }} accept="image/*" />
+                  <input
+                    type="file"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) {
+                        setAvatarFile(f);
+                        setAvatarPreview(URL.createObjectURL(f));
+                      }
+                    }}
+                    accept="image/*"
+                  />
                 </label>
               )}
             </div>
-            
-            {/* User Info */}
+
             <div className="flex-1 min-w-0 w-full">
               {!editing ? (
                 <div className="space-y-1">
-                  {/* Name - handles any length */}
-                  <h2 className="font-black text-lg sm:text-xl break-words leading-tight">
+                  <h2 className="font-black text-lg sm:text-xl wrap-break-word leading-tight">
                     {getDisplayName(user)}
                   </h2>
-                  
-                  {/* Email - handles overflow */}
+
                   <p className="text-slate-500 text-sm truncate max-w-full">
                     {user?.email || "No email"}
                   </p>
-                  
-                  {/* Badges/Level Row */}
+
                   <div className="flex flex-wrap items-center gap-2 mt-2">
                     <span className="px-2 py-0.5 rounded-md bg-[#6C5CE7]/10 text-[#6C5CE7] text-[10px] font-bold uppercase tracking-wide whitespace-nowrap">
                       Level {Math.floor((user?.xp || 0) / 500) + 1}
@@ -191,21 +199,21 @@ export default function ProfilePage() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <input 
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm font-semibold focus:border-[#6C5CE7] outline-none" 
-                    value={name} 
-                    onChange={e => setName(e.target.value)} 
+                  <input
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm font-semibold focus:border-[#6C5CE7] outline-none"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
                     placeholder="Enter your name"
                   />
                   <div className="flex gap-2">
-                    <button 
-                      onClick={handleSave} 
+                    <button
+                      onClick={handleSave}
                       className="bg-[#6C5CE7] text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-[#5B4BD6] transition"
                     >
                       Save
                     </button>
-                    <button 
-                      onClick={() => setEditing(false)} 
+                    <button
+                      onClick={() => setEditing(false)}
                       className="bg-slate-100 text-slate-600 text-xs font-bold px-4 py-2 rounded-lg hover:bg-slate-200 transition"
                     >
                       Cancel
@@ -214,11 +222,10 @@ export default function ProfilePage() {
                 </div>
               )}
             </div>
-            
-            {/* Edit Button */}
+
             {!editing && (
-              <button 
-                onClick={() => setEditing(true)} 
+              <button
+                onClick={() => setEditing(true)}
                 className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:text-[#6C5CE7] hover:bg-[#6C5CE7]/10 transition shrink-0"
                 aria-label="Edit profile"
               >
@@ -227,7 +234,6 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* Stats Row */}
           <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-50">
             <div className="text-center">
               <div className="text-lg font-black text-slate-900">{reviews.length}</div>
@@ -244,7 +250,6 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Tabs */}
         <div className="flex p-1 bg-slate-100 rounded-xl">
           {["overview", "badges", "reviews"].map((tab) => (
             <button
@@ -259,17 +264,16 @@ export default function ProfilePage() {
           ))}
         </div>
 
-        {/* Content */}
         {activeTab === "overview" && (
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+            <div className="rounded-2xl p-5 shadow-sm border border-slate-100" style={{ background: 'var(--surface)' }}>
               <h3 className="font-bold text-sm mb-4 flex items-center gap-2">
                 <i className="ti ti-user-circle text-[#6C5CE7]"></i> Account Details
               </h3>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between py-2 border-b border-slate-50">
                   <span className="text-slate-500">Phone</span>
-                  <span className="font-semibold text-right break-words max-w-[60%]">{user?.phone || "Not set"}</span>
+                  <span className="font-semibold text-right wrap-break-word max-w-[60%]">{user?.phone || "Not set"}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b border-slate-50">
                   <span className="text-slate-500">Member Since</span>
@@ -283,9 +287,9 @@ export default function ProfilePage() {
                 </div>
               </div>
             </div>
-            
-            <button 
-              onClick={logout} 
+
+            <button
+              onClick={logout}
               className="w-full bg-red-50 text-red-600 font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-red-100 transition"
             >
               <i className="ti ti-logout"></i> Sign Out
@@ -297,7 +301,7 @@ export default function ProfilePage() {
           <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-bottom-4 duration-300">
             {userBadges.length > 0 ? userBadges.map((badge) => (
               <BadgeTooltip key={badge.id} badge={badge}>
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex flex-col items-center text-center gap-2 hover:border-[#6C5CE7]/30 transition cursor-pointer">
+                <div className="rounded-2xl p-4 shadow-sm border border-slate-100 flex flex-col items-center text-center gap-2 hover:border-[#6C5CE7]/30 transition cursor-pointer" style={{ background: 'var(--surface)' }}>
                   <div className="w-12 h-12 rounded-full flex items-center justify-center text-2xl" style={{ background: badge.bg }}>
                     {badge.icon}
                   </div>
@@ -313,8 +317,7 @@ export default function ProfilePage() {
                 <p className="text-sm">No badges earned yet. Keep shopping!</p>
               </div>
             )}
-            
-            {/* Locked Badges Preview */}
+
             {Object.values(BADGES).filter(b => !userBadges.find(ub => ub.id === b.id)).slice(0, 2).map((badge) => (
               <div key={badge.id} className="bg-slate-50 rounded-2xl p-4 border border-slate-100 flex flex-col items-center text-center gap-2 opacity-60 grayscale">
                 <div className="w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center text-xl">
@@ -329,7 +332,7 @@ export default function ProfilePage() {
         {activeTab === "reviews" && (
           <div className="space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-300">
             {reviews.length > 0 ? reviews.map((r) => (
-              <div key={r.id} className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+              <div key={r.id} className="rounded-2xl p-4 shadow-sm border border-slate-100" style={{ background: 'var(--surface)' }}>
                 <div className="flex justify-between items-start mb-2 gap-2">
                   <h4 className="font-bold text-sm truncate flex-1 pr-2">{r.product}</h4>
                   <div className="flex text-[#FFB88C] text-xs shrink-0">
@@ -338,7 +341,7 @@ export default function ProfilePage() {
                     ))}
                   </div>
                 </div>
-                <p className="text-xs text-slate-600 leading-relaxed mb-2 break-words">{r.text}</p>
+                <p className="text-xs text-slate-600 leading-relaxed mb-2 wrap-break-word">{r.text}</p>
                 <div className="text-[10px] text-slate-400 font-medium">{r.date}</div>
               </div>
             )) : (
@@ -349,13 +352,8 @@ export default function ProfilePage() {
             )}
           </div>
         )}
-
       </div>
 
-      {/* Exact Footer Design */}
-      <Footer />
-      
-      {/* Tabler Icons Link */}
       <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
     </div>
   );

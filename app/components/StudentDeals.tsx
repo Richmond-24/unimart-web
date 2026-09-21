@@ -142,21 +142,21 @@ function SocialProductCard({ item }: SocialProductCardProps) {
           h-full
           flex flex-col
           overflow-hidden
-          rounded-3xl
+          rounded-2xl
           bg-white
           border border-gray-100
           shadow-sm
           transition-all
           duration-500
-          hover:-translate-y-2
-          hover:shadow-2xl
+          hover:-translate-y-1
+          hover:shadow-xl
           hover:border-gray-200
         "
       >
         {/* =========================================================
-            MEDIA CONTAINER
+            MEDIA CONTAINER - IMPROVED RESPONSIVE SIZING
         ========================================================== */}
-        <div className="relative aspect-[4/5] w-full overflow-hidden bg-gray-50">
+        <div className="relative w-full aspect-[3/4] sm:aspect-[4/5] overflow-hidden bg-gray-50">
           
           {/* Video or Image */}
           {hasVideo ? (
@@ -183,34 +183,34 @@ function SocialProductCard({ item }: SocialProductCardProps) {
             </div>
           )}
 
-          {/* Gradients for text readability */}
-          <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/60 to-transparent pointer-events-none opacity-60" />
-          <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none" />
+          {/* Gradients for text readability - Adjusted opacity for mobile */}
+          <div className="absolute inset-x-0 top-0 h-20 sm:h-32 bg-gradient-to-b from-black/50 sm:from-black/60 to-transparent pointer-events-none opacity-60" />
+          <div className="absolute inset-x-0 bottom-0 h-32 sm:h-48 bg-gradient-to-t from-black/70 sm:from-black/80 via-black/30 sm:via-black/40 to-transparent pointer-events-none" />
 
           {/* =========================================================
-              TOP BADGES & ACTIONS
+              TOP BADGES & ACTIONS - SMALLER ON MOBILE
           ========================================================== */}
-          <div className="absolute top-4 left-4 z-20 flex flex-wrap gap-2 max-w-[80%]">
+          <div className="absolute top-2 sm:top-4 left-2 sm:left-4 z-20 flex flex-wrap gap-1.5 sm:gap-2 max-w-[75%] sm:max-w-[80%]">
             {item.discountPercent && item.discountPercent > 0 && (
-              <span className="px-3 py-1.5 rounded-full bg-red-500/90 backdrop-blur-md text-white text-[10px] font-bold shadow-lg animate-pulse-slow">
+              <span className="px-2 py-1 sm:px-3 sm:py-1.5 rounded-full bg-red-500/90 backdrop-blur-md text-white text-[9px] sm:text-[10px] font-bold shadow-lg animate-pulse-slow">
                 -{item.discountPercent}% OFF
               </span>
             )}
             
             {item.isVerified && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-emerald-500/90 backdrop-blur-md text-white text-[10px] font-bold shadow-lg">
-                <CheckCircle2 size={10} fill="currentColor" />
+              <span className="inline-flex items-center gap-1 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-full bg-emerald-500/90 backdrop-blur-md text-white text-[9px] sm:text-[10px] font-bold shadow-lg">
+                <CheckCircle2 size={8} className="sm:w-2.5 sm:h-2.5" fill="currentColor" />
                 Verified
               </span>
             )}
           </div>
 
           {/* =========================================================
-              VIDEO INTERACTION CONTROLS
+              VIDEO INTERACTION CONTROLS - RESPONSIVE SIZING
           ========================================================== */}
           {hasVideo && (
             <>
-              {/* Central Play/Pause Overlay (Visible when paused or initial load) */}
+              {/* Central Play/Pause Overlay - Smaller on mobile */}
               {showPlayOverlay && (
                 <button
                   onClick={togglePlay}
@@ -219,8 +219,7 @@ function SocialProductCard({ item }: SocialProductCardProps) {
                     inset-0
                     m-auto
                     z-30
-                    w-16
-                    h-16
+                    w-12 h-12 sm:w-16 sm:h-16
                     rounded-full
                     bg-white/20
                     backdrop-blur-md
@@ -237,28 +236,29 @@ function SocialProductCard({ item }: SocialProductCardProps) {
                   "
                   aria-label="Play video"
                 >
-                  <Play size={32} fill="white" className="ml-1" />
+                  <Play size={24} className="sm:w-8 sm:h-8 ml-0.5 sm:ml-1" fill="white" />
                 </button>
               )}
 
-              {/* Small Play Indicator when playing (Optional, can be removed if clean look preferred) */}
+              {/* Small Play Indicator when playing */}
               {!showPlayOverlay && (
-                 <div className="absolute top-4 right-4 z-20 px-2 py-1 rounded-lg bg-black/40 backdrop-blur-md text-white text-[9px] font-bold flex items-center gap-1">
-                   <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
-                   LIVE PREVIEW
+                 <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-lg bg-black/40 backdrop-blur-md text-white text-[8px] sm:text-[9px] font-bold flex items-center gap-1">
+                   <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+                   LIVE
                  </div>
               )}
 
-              {/* Mute Toggle - Bottom Left of Media */}
+              {/* Mute Toggle - Bottom Left of Media - Smaller on mobile */}
               <button
                 onClick={toggleMute}
                 className="
                   absolute
-                  bottom-4
-                  left-4
+                  bottom-2
+                  left-2
+                  sm:bottom-4
+                  sm:left-4
                   z-20
-                  w-9
-                  h-9
+                  w-8 h-8 sm:w-9 sm:h-9
                   rounded-full
                   bg-black/40
                   backdrop-blur-md
@@ -272,24 +272,24 @@ function SocialProductCard({ item }: SocialProductCardProps) {
                 "
                 aria-label={isMuted ? "Unmute" : "Mute"}
               >
-                {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                {isMuted ? <VolumeX size={14} className="sm:w-4 sm:h-4" /> : <Volume2 size={14} className="sm:w-4 sm:h-4" />}
               </button>
             </>
           )}
 
           {/* =========================================================
-              SOCIAL ACTIONS (RIGHT SIDE) - CLEANED UP
+              SOCIAL ACTIONS (RIGHT SIDE) - COMPACT FOR MOBILE
           ========================================================== */}
-          <div className="absolute right-3 bottom-32 z-20 flex flex-col gap-3">
+          <div className="absolute right-2 bottom-24 sm:right-3 sm:bottom-32 z-20 flex flex-col gap-2 sm:gap-3">
             {/* Like Button */}
             <button
               onClick={toggleLike}
-              className="group/btn flex flex-col items-center gap-1"
+              className="group/btn flex flex-col items-center gap-0.5 sm:gap-1"
               aria-label={liked ? "Unlike" : "Like"}
             >
               <div
                 className={`
-                  w-10 h-10
+                  w-8 h-8 sm:w-10 sm:h-10
                   rounded-full
                   backdrop-blur-md
                   border border-white/10
@@ -306,72 +306,74 @@ function SocialProductCard({ item }: SocialProductCardProps) {
                 `}
               >
                 <Heart
-                  size={18}
-                  className={`transition-colors duration-300 ${liked ? "text-white" : "text-white"}`}
+                  size={14}
+                  className="sm:w-[18px] sm:h-[18px] transition-colors duration-300 text-white"
                   fill={liked ? "white" : "none"}
                 />
               </div>
-              <span className="text-[10px] font-bold text-white drop-shadow-md bg-black/20 px-1.5 py-0.5 rounded-md backdrop-blur-sm">
+              <span className="text-[9px] sm:text-[10px] font-bold text-white drop-shadow-md bg-black/20 px-1 sm:px-1.5 py-0.5 rounded-md backdrop-blur-sm">
                 {(item.likes || 0).toLocaleString()}
               </span>
             </button>
 
-            {/* View Count (Replaced Share/Message with Views for Social Proof) */}
+            {/* View Count */}
             {item.views && (
-              <div className="flex flex-col items-center gap-1">
-                <div className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center text-white">
-                  <Eye size={18} />
+              <div className="flex flex-col items-center gap-0.5 sm:gap-1">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center text-white">
+                  <Eye size={14} className="sm:w-[18px] sm:h-[18px]" />
                 </div>
-                <span className="text-[10px] font-bold text-white drop-shadow-md bg-black/20 px-1.5 py-0.5 rounded-md backdrop-blur-sm">
-                  {(item.views / 1000).toFixed(1)}k
+                <span className="text-[9px] sm:text-[10px] font-bold text-white drop-shadow-md bg-black/20 px-1 sm:px-1.5 py-0.5 rounded-md backdrop-blur-sm">
+                  {item.views >= 1000 
+                    ? `${(item.views / 1000).toFixed(1)}k`
+                    : item.views}
                 </span>
               </div>
             )}
           </div>
 
           {/* =========================================================
-              BOTTOM MEDIA INFO
+              BOTTOM MEDIA INFO - RESPONSIVE PADDING & TEXT
           ========================================================== */}
-          <div className="absolute bottom-0 left-0 right-0 z-10 p-4 pr-12">
+          <div className="absolute bottom-0 left-0 right-0 z-10 p-2.5 sm:p-4 pr-10 sm:pr-12">
             {/* Seller Info */}
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-gray-900 text-xs font-bold shadow-sm border border-white/20">
+            <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-gray-900 text-[10px] sm:text-xs font-bold shadow-sm border border-white/20">
                 {(item.sellerName || item.seller || "S")[0].toUpperCase()}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-white/90 text-xs font-medium truncate drop-shadow-sm">
+                <p className="text-white/90 text-[10px] sm:text-xs font-medium truncate drop-shadow-sm">
                   {item.sellerName || item.seller || "Verified Seller"}
                 </p>
               </div>
             </div>
 
-            {/* Title */}
-            <h3 className="text-white text-base font-bold leading-snug line-clamp-2 drop-shadow-md mb-1">
+            {/* Title - Better line clamping for mobile */}
+            <h3 className="text-white text-sm sm:text-base font-bold leading-snug line-clamp-2 drop-shadow-md mb-1">
               {item.title}
             </h3>
             
             {/* Rating Mini */}
             {item.rating && (
               <div className="flex items-center gap-1">
-                <Star size={10} className="text-yellow-400" fill="currentColor" />
-                <span className="text-white/80 text-[10px] font-medium">{item.rating}</span>
+                <Star size={8} className="sm:w-2.5 sm:h-2.5 text-yellow-400" fill="currentColor" />
+                <span className="text-white/80 text-[9px] sm:text-[10px] font-medium">{item.rating}</span>
               </div>
             )}
           </div>
         </div>
 
         {/* =========================================================
-            FOOTER / PRICE ACTION
+            FOOTER / PRICE ACTION - COMPACT FOR MOBILE
         ========================================================== */}
-        <div className="p-4 flex items-center justify-between bg-white mt-auto">
-          <div className="flex flex-col">
-            <span className="text-xs text-gray-500 font-medium mb-0.5">Price</span>
-            <div className="flex items-baseline gap-2">
-              <span className="text-lg font-extrabold text-gray-900 tracking-tight">
+        <div className="p-2.5 sm:p-4 flex items-center justify-between bg-white mt-auto">
+          <div className="flex flex-col min-w-0 flex-1 mr-2">
+            <span className="text-[10px] sm:text-xs text-gray-500 font-medium mb-0.5">Price</span>
+            <div className="flex items-baseline gap-1.5 sm:gap-2 flex-wrap">
+              <span className="text-base sm:text-lg font-extrabold text-gray-900 tracking-tight truncate">
                 {price}
               </span>
               {originalPrice && (
-                <span className="text-xs text-gray-400 line-through font-medium">
+                <span className="text-[10px] sm:text-xs text-gray-400 line-through font-medium">
                   {originalPrice}
                 </span>
               )}
@@ -386,8 +388,8 @@ function SocialProductCard({ item }: SocialProductCardProps) {
             }}
             className="
               shrink-0
-              w-10 h-10
-              rounded-xl
+              w-9 h-9 sm:w-10 sm:h-10
+              rounded-lg sm:rounded-xl
               bg-gray-900
               text-white
               flex items-center justify-center
@@ -399,7 +401,7 @@ function SocialProductCard({ item }: SocialProductCardProps) {
             "
             aria-label="Add to cart"
           >
-            <ShoppingCart size={18} />
+            <ShoppingCart size={16} className="sm:w-[18px] sm:h-[18px]" />
           </button>
         </div>
       </div>
@@ -408,20 +410,20 @@ function SocialProductCard({ item }: SocialProductCardProps) {
 }
 
 /* ================================================================
-   SKELETON LOADER
+   SKELETON LOADER - RESPONSIVE
 ================================================================ */
 function CardSkeleton() {
   return (
-    <div className="rounded-3xl bg-white border border-gray-100 overflow-hidden shadow-sm h-full flex flex-col">
-      <div className="aspect-[4/5] bg-gray-100 animate-pulse relative">
-        <div className="absolute top-4 left-4 w-16 h-6 bg-gray-200 rounded-full animate-pulse" />
+    <div className="rounded-2xl bg-white border border-gray-100 overflow-hidden shadow-sm h-full flex flex-col">
+      <div className="aspect-[3/4] sm:aspect-[4/5] bg-gray-100 animate-pulse relative">
+        <div className="absolute top-2 left-2 sm:top-4 sm:left-4 w-14 h-5 sm:w-16 sm:h-6 bg-gray-200 rounded-full animate-pulse" />
       </div>
-      <div className="p-4 space-y-3 flex-1">
-        <div className="h-4 w-3/4 bg-gray-100 rounded-lg animate-pulse" />
-        <div className="h-3 w-1/2 bg-gray-100 rounded-lg animate-pulse" />
+      <div className="p-2.5 sm:p-4 space-y-2 sm:space-y-3 flex-1">
+        <div className="h-3 sm:h-4 w-3/4 bg-gray-100 rounded-lg animate-pulse" />
+        <div className="h-2.5 sm:h-3 w-1/2 bg-gray-100 rounded-lg animate-pulse" />
         <div className="flex justify-between items-end mt-auto pt-2">
-          <div className="h-6 w-20 bg-gray-100 rounded-lg animate-pulse" />
-          <div className="w-10 h-10 bg-gray-100 rounded-xl animate-pulse" />
+          <div className="h-5 sm:h-6 w-16 sm:w-20 bg-gray-100 rounded-lg animate-pulse" />
+          <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gray-100 rounded-lg sm:rounded-xl animate-pulse" />
         </div>
       </div>
     </div>
@@ -429,7 +431,7 @@ function CardSkeleton() {
 }
 
 /* ================================================================
-   MAIN SECTION COMPONENT
+   MAIN SECTION COMPONENT - IMPROVED GRID
 ================================================================ */
 export default function StudentDealsVideo() {
   const [items, setItems] = useState<DealItem[]>([]);
@@ -485,34 +487,34 @@ export default function StudentDealsVideo() {
   }, []);
 
   return (
-    <section className="py-12 bg-[#FAFAFB] min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="py-8 sm:py-12 min-h-screen" style={{ background: 'var(--bg)' }}>
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
         
-        {/* Header - Simplified */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-gray-900 flex items-center justify-center shadow-lg shadow-gray-900/20 rotate-3 hover:rotate-0 transition-transform duration-300">
-              <Zap size={24} className="text-white" fill="white" />
+        {/* Header - Simplified & Responsive */}
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 sm:gap-6 mb-6 sm:mb-10">
+          <div className="flex items-start gap-3 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gray-900 flex items-center justify-center shadow-lg shadow-gray-900/20 rotate-3 hover:rotate-0 transition-transform duration-300">
+              <Zap size={20} className="sm:w-6 sm:h-6 text-white" fill="white" />
             </div>
             <div>
-              <h2 className="text-3xl font-bold text-gray-900 tracking-tight">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
                 Trending Now
               </h2>
-              <p className="text-gray-500 mt-1 flex items-center gap-2 text-sm font-medium">
-                <TrendingUp size={16} className="text-green-500" />
+              <p className="text-gray-500 mt-0.5 sm:mt-1 flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-medium">
+                <TrendingUp size={14} className="sm:w-4 sm:h-4 text-green-500" />
                 Hot deals from campus sellers
               </p>
             </div>
           </div>
         </div>
 
-        {/* Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-          {loading && Array.from({ length: 5 }).map((_, i) => <CardSkeleton key={i} />)}
+        {/* Grid - IMPROVED RESPONSIVE BREAKPOINTS */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6">
+          {loading && Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />)}
           
           {!loading && loadError && (
-            <div className="col-span-full py-20 text-center bg-white rounded-3xl border border-dashed border-gray-300">
-              <p className="text-gray-900 font-semibold text-lg">{loadError}</p>
+            <div className="col-span-full py-16 sm:py-20 text-center bg-white rounded-2xl sm:rounded-3xl border border-dashed border-gray-300 px-4">
+              <p className="text-gray-900 font-semibold text-base sm:text-lg">{loadError}</p>
               <button onClick={() => window.location.reload()} className="mt-4 px-6 py-2 rounded-full bg-gray-900 text-white text-sm font-medium hover:bg-gray-800 transition">
                 Try Again
               </button>
@@ -520,8 +522,8 @@ export default function StudentDealsVideo() {
           )}
 
           {!loading && !loadError && items.length === 0 && (
-             <div className="col-span-full py-20 text-center">
-               <p className="text-gray-500">No trending deals found.</p>
+             <div className="col-span-full py-16 sm:py-20 text-center px-4">
+               <p className="text-gray-500 text-sm sm:text-base">No trending deals found.</p>
              </div>
           )}
 
@@ -532,16 +534,15 @@ export default function StudentDealsVideo() {
 
         {/* Footer Action */}
         {items.length > 0 && (
-          <div className="mt-12 flex justify-center">
+          <div className="mt-8 sm:mt-12 flex justify-center px-4">
             <Link
               href="/marketplace"
               className="
                 group
                 inline-flex
                 items-center
-                gap-3
-                px-8
-                py-3.5
+                gap-2 sm:gap-3
+                px-6 py-3 sm:px-8 sm:py-3.5
                 rounded-full
                 bg-white
                 border border-gray-200
@@ -556,7 +557,7 @@ export default function StudentDealsVideo() {
               "
             >
               Explore All Marketplace
-              <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+              <ArrowRight size={14} className="sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
         )}

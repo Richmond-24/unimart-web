@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 declare global {
   interface Window {
@@ -30,15 +30,19 @@ declare global {
   }
 }
 
+// Fallback to the production Botpress ID if env var is missing in deployment
+const DEFAULT_BOTPRESS_CLIENT_ID = "907b0daa-a442-49ca-a209-bb3f4ada8047";
+
 /*
 |--------------------------------------------------------------------------
-| Botpress positioning
+| Botpress positioning & responsive styles
 |--------------------------------------------------------------------------
 */
 
 function injectBotpressStyles() {
-  const STYLE_ID = "koombo-botpress-positioning";
+  if (typeof document === "undefined") return;
 
+  const STYLE_ID = "koombo-botpress-positioning";
   const existing = document.getElementById(STYLE_ID);
 
   if (existing) {
@@ -46,70 +50,57 @@ function injectBotpressStyles() {
   }
 
   const style = document.createElement("style");
-
   style.id = STYLE_ID;
-
   style.textContent = `
     /*
     ================================================================
-    HIDE BOTPRESS DEFAULT FAB
+    HIDE BOTPRESS DEFAULT FAB (Use custom UniMart launcher)
     ================================================================
     */
-
-    .bpFab {
+    .bpFab,
+    .bpFabContainer,
+    .bpFabWrapper,
+    [class*="bpFab"],
+    .bpCustomToggleWebchat {
       display: none !important;
       visibility: hidden !important;
       pointer-events: none !important;
     }
 
+    /*
+    ================================================================
+    PRESERVE CLOSED STATE (Ensure no click interception when closed)
+    ================================================================
+    */
+    .bpWebchat.bpClose,
+    .bpWebchat[class*="bpClose"] {
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+      transform: translateY(80px) !important;
+    }
 
     /*
     ================================================================
-    MOBILE
+    MOBILE CHAT WINDOW (Open State)
     ================================================================
     */
-
     @media (max-width: 640px) {
-
-      /*
-      --------------------------------------------------------------
-      BOTPRESS CHAT WINDOW
-      --------------------------------------------------------------
-      Adjusted bottom offset to accommodate new larger launcher position
-      */
-
-      .bpWebchat {
+      .bpWebchat:not(.bpClose) {
         position: fixed !important;
-
         top: auto !important;
         left: auto !important;
-
         right: 10px !important;
-
-        bottom: 145px !important;
-
+        bottom: calc(85px + env(safe-area-inset-bottom, 0px)) !important;
         width: calc(100vw - 20px) !important;
         max-width: 380px !important;
-
         height: min(64vh, 520px) !important;
         max-height: 520px !important;
-
         border-radius: 20px !important;
-
         overflow: hidden !important;
-
         z-index: 9998 !important;
-
-        box-shadow:
-          0 12px 40px rgba(0, 0, 0, 0.25) !important;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25) !important;
       }
-
-
-      /*
-      --------------------------------------------------------------
-      BOTPRESS INTERNAL CONTAINERS
-      --------------------------------------------------------------
-      */
 
       .bpWebchat iframe {
         max-width: 100% !important;
@@ -117,74 +108,37 @@ function injectBotpressStyles() {
       }
     }
 
-
     /*
     ================================================================
     SMALL PHONES
     ================================================================
     */
-
     @media (max-width: 380px) {
-
-      .bpWebchat {
+      .bpWebchat:not(.bpClose) {
         right: 8px !important;
-
         width: calc(100vw - 16px) !important;
-
-        bottom: 140px !important;
-
+        bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
         height: 60vh !important;
-
         max-height: 470px !important;
       }
     }
 
-
     /*
     ================================================================
-    VERY SHORT MOBILE SCREENS
+    DESKTOP CHAT WINDOW (Open State)
     ================================================================
     */
-
-    @media (max-width: 640px) and (max-height: 650px) {
-
-      .bpWebchat {
-        bottom: 130px !important;
-
-        height: 56vh !important;
-
-        max-height: 400px !important;
-      }
-    }
-
-
-    /*
-    ================================================================
-    DESKTOP
-    ================================================================
-    */
-
     @media (min-width: 641px) {
-
-      .bpWebchat {
+      .bpWebchat:not(.bpClose) {
         position: fixed !important;
-
         right: 24px !important;
-
         bottom: 96px !important;
-
         max-width: 420px !important;
-
         max-height: 680px !important;
-
         border-radius: 20px !important;
-
         overflow: hidden !important;
-
         z-index: 9998 !important;
-
-        box-shadow:
-          0 12px 40px rgba(0, 0, 0, 0.25) !important;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25) !important;
       }
     }
   `;
@@ -192,307 +146,184 @@ function injectBotpressStyles() {
   document.head.appendChild(style);
 }
 
-
 /*
 |--------------------------------------------------------------------------
-| Koombo Chatbot
+| Swoop / UniMart AI Chatbot Component
 |--------------------------------------------------------------------------
 */
 
-export default function KoomboChatbot() {
+export default function SwoopChatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [ready, setReady] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const pendingOpenRef = useRef(false);
 
   useEffect(() => {
-    /*
-    ------------------------------------------------------------------
-    ENVIRONMENT VARIABLES
-    ------------------------------------------------------------------
-    */
+    // Only initialize Botpress on allowed routes (home, listing details, profile)
+    if (typeof window === 'undefined') return;
+    // Do not initialize while app is in non-ready stage (splash/onboard/auth)
+    const appStage = document.documentElement.getAttribute('data-app-stage');
+    if (appStage && appStage !== 'ready') return;
+
+    const pathname = window.location.pathname || '/';
+    const allowed = (
+      pathname === '/' ||
+      pathname === '/profile' ||
+      pathname.startsWith('/listings') ||
+      pathname.startsWith('/listings/')
+    );
+    if (!allowed) return; // do not load botpress on disallowed pages
 
     const clientId =
-      process.env.NEXT_PUBLIC_BOTPRESS_CLIENT_ID;
+      process.env.NEXT_PUBLIC_BOTPRESS_CLIENT_ID || DEFAULT_BOTPRESS_CLIENT_ID;
 
     const API_URL =
       process.env.NEXT_PUBLIC_API_URL ||
-      "https://unimart-backend-f4ss.onrender.com";
-
-
-    /*
-    ------------------------------------------------------------------
-    MAKE BACKEND URL AVAILABLE TO THE APP
-    ------------------------------------------------------------------
-    */
+      "https://unimart-backend-6pld.onrender.com";
 
     try {
       window.UNIMART_API_URL = API_URL;
     } catch {
-      // Ignore.
+      // Ignore
     }
-
-
-    /*
-    ------------------------------------------------------------------
-    BOT ID CHECK
-    ------------------------------------------------------------------
-    */
-
-    if (!clientId) {
-      console.warn(
-        "NEXT_PUBLIC_BOTPRESS_CLIENT_ID is not configured."
-      );
-
-      return;
-    }
-
-
-    /*
-    ------------------------------------------------------------------
-    APPLY POSITIONING IMMEDIATELY
-    ------------------------------------------------------------------
-    */
 
     injectBotpressStyles();
 
+    const configureBotpress = () => {
+      if (!window.botpress) return;
 
-    /*
-    ------------------------------------------------------------------
-    PREVENT DUPLICATE BOTpress SCRIPT
-    ------------------------------------------------------------------
-    */
+      try {
+        window.botpress.init({
+          botId: clientId,
+          clientId: clientId,
+          configuration: {
+            composerPlaceholder: "What are you looking for?",
+            botName: "RIRI.ai",
+            botDescription: "Your AI shopping assistant",
+            color: "#0d9488",
+            variant: "solid",
+            themeMode: "light",
+            fontFamily: "Inter",
+          },
+        });
 
-    const existingScript =
-      document.getElementById(
-        "botpress-webchat-script"
-      );
+        injectBotpressStyles();
 
-    if (existingScript) {
-      injectBotpressStyles();
-      setReady(true);
+        if (window.botpress.on) {
+          window.botpress.on("webchat:opened", () => {
+            setIsOpen(true);
+            injectBotpressStyles();
+          });
+
+          window.botpress.on("webchat:closed", () => {
+            setIsOpen(false);
+          });
+        }
+
+        setReady(true);
+        setIsLoading(false);
+
+        if (pendingOpenRef.current) {
+          pendingOpenRef.current = false;
+          window.botpress.open?.();
+          setIsOpen(true);
+        }
+      } catch (err) {
+        console.warn("Botpress initialization error", err);
+        setReady(true);
+        setIsLoading(false);
+      }
+    };
+
+    // If window.botpress is already present
+    if (window.botpress) {
+      configureBotpress();
       return;
     }
 
+    // Check if script element already exists in DOM
+    const existingScript = document.getElementById("botpress-webchat-script") as HTMLScriptElement | null;
+    if (existingScript) {
+      if (window.botpress) {
+        configureBotpress();
+      } else {
+        existingScript.addEventListener("load", configureBotpress);
+      }
+      return;
+    }
 
-    /*
-    ------------------------------------------------------------------
-    LOAD BOTPRESS
-    ------------------------------------------------------------------
-    */
-
-    const script =
-      document.createElement("script");
-
-    script.id =
-      "botpress-webchat-script";
-
-    script.src =
-      "https://cdn.botpress.cloud/webchat/v3.3/inject.js";
-
+    // Create and append the Botpress script
+    const script = document.createElement("script");
+    script.id = "botpress-webchat-script";
+    script.src = "https://cdn.botpress.cloud/webchat/v3.3/inject.js";
     script.async = true;
 
-
-    /*
-    ------------------------------------------------------------------
-    SCRIPT LOADED
-    ------------------------------------------------------------------
-    */
-
     script.onload = () => {
-      if (!window.botpress) {
-        console.error(
-          "Botpress Webchat failed to initialize."
-        );
-
-        return;
-      }
-
-
-      /*
-      --------------------------------------------------------------
-      INITIALIZE BOTPRESS
-      --------------------------------------------------------------
-      */
-
-      window.botpress.init({
-        botId: clientId,
-
-        clientId: clientId,
-
-        configuration: {
-          composerPlaceholder:
-            "What are you looking for?",
-
-          botName:
-            "RIRI.ai",
-
-          botDescription:
-            "Your AI shopping assistant",
-
-          color:
-            "#0d9488",
-
-          variant:
-            "solid",
-
-          themeMode:
-            "light",
-
-          fontFamily:
-            "Inter",
-        },
-      });
-
-
-      /*
-      --------------------------------------------------------------
-      APPLY POSITIONING AGAIN
-      --------------------------------------------------------------
-      */
-
-      injectBotpressStyles();
-
-
-      /*
-      --------------------------------------------------------------
-      BOTPRESS EVENTS
-      --------------------------------------------------------------
-      */
-
-      try {
-        if (window.botpress?.on) {
-
-          window.botpress.on(
-            "message:sent",
-            (evt: unknown) => {
-              console.debug(
-                "botpress message:sent",
-                evt
-              );
-            }
-          );
-
-          window.botpress.on(
-            "webchat:opened",
-            () => {
-              setIsOpen(true);
-              injectBotpressStyles();
-            }
-          );
-
-          window.botpress.on(
-            "webchat:closed",
-            () => {
-              setIsOpen(false);
-            }
-          );
-        }
-      } catch {
-        // Ignore event listener errors.
-      }
-
-      setReady(true);
+      configureBotpress();
     };
-
-
-    /*
-    ------------------------------------------------------------------
-    SCRIPT ERROR
-    ------------------------------------------------------------------
-    */
 
     script.onerror = () => {
-      console.error(
-        "Unable to load Botpress Webchat."
-      );
+      console.warn("Unable to load Botpress Webchat script.");
+      setIsLoading(false);
     };
-
-
-    /*
-    ------------------------------------------------------------------
-    ADD SCRIPT
-    ------------------------------------------------------------------
-    */
 
     document.body.appendChild(script);
 
-    return () => {};
+    return () => {
+      // Retain script in DOM across fast re-renders to prevent re-fetch
+    };
   }, []);
 
-
-  /*
-  |--------------------------------------------------------------------------
-  | OPEN / CLOSE CHAT
-  |--------------------------------------------------------------------------
-  */
-
   const toggleChat = () => {
-    if (!window.botpress) return;
+    if (!window.botpress || !ready) {
+      pendingOpenRef.current = true;
+      setIsLoading(true);
+      injectBotpressStyles();
+      return;
+    }
 
     if (isOpen) {
-      window.botpress.close?.();
+      try {
+        window.botpress.close?.();
+      } catch {
+        // Ignore
+      }
       setIsOpen(false);
     } else {
-      window.botpress.open?.();
+      try {
+        window.botpress.open?.();
+      } catch {
+        // Ignore
+      }
       setIsOpen(true);
       injectBotpressStyles();
     }
   };
-
-
-  /*
-  |--------------------------------------------------------------------------
-  | DON'T RENDER LAUNCHER UNTIL BOTPRESS IS READY
-  |--------------------------------------------------------------------------
-  */
-
-  if (!ready) {
-    return null;
-  }
-
-
-  /*
-  |--------------------------------------------------------------------------
-  | CUSTOM KOOMBO LAUNCHER
-  |--------------------------------------------------------------------------
-  */
 
   return (
     <>
       <button
         type="button"
         onClick={toggleChat}
-        aria-label={
-          isOpen
-            ? "Close chat"
-            : "Open chat"
-        }
-
+        aria-label={isOpen ? "Close chat" : "Open chat"}
         className="
           group
           fixed
           z-[9999]
-
           flex
           items-center
           justify-center
-
           rounded-full
-
           text-white
-
           shadow-lg
-
           transition-all
           duration-300
           ease-out
-
           hover:scale-105
           hover:shadow-xl
           hover:bg-teal-500
-
           active:scale-95
         "
-
         style={{
           width: "56px",
           height: "56px",
@@ -501,9 +332,8 @@ export default function KoomboChatbot() {
           right: "16px",
         }}
       >
-
-        {/* PULSE ANIMATION */}
-        {!isOpen && (
+        {/* PULSE ANIMATION (Active when closed) */}
+        {!isOpen && !isLoading && (
           <span
             className="absolute inset-0 rounded-full pointer-events-none"
             style={{
@@ -513,10 +343,15 @@ export default function KoomboChatbot() {
           />
         )}
 
+        {/* LOADING SPINNER IF PENDING OPEN */}
+        {isLoading && (
+          <span
+            className="absolute inset-0 rounded-full border-2 border-white/40 border-t-white animate-spin pointer-events-none"
+          />
+        )}
 
         {/* ICONS */}
         <span className="relative flex h-6 w-6 items-center justify-center">
-
           {/* MODERN AI BOT ICON */}
           <svg
             viewBox="0 0 24 24"
@@ -542,7 +377,6 @@ export default function KoomboChatbot() {
             <path d="M9 15h6" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
 
-
           {/* CLOSE ICON */}
           <svg
             viewBox="0 0 24 24"
@@ -561,14 +395,11 @@ export default function KoomboChatbot() {
               strokeLinejoin="round"
             />
           </svg>
-
         </span>
       </button>
 
-
       {/* RESPONSIVE LAUNCHER POSITION & ANIMATIONS */}
       <style jsx global>{`
-
         @keyframes koomboBotPulse {
           0% {
             transform: scale(1);
@@ -601,7 +432,7 @@ export default function KoomboChatbot() {
           }
         }
 
-        /* MOBILE - Increased size but kept low */
+        /* MOBILE - Sits directly above bottom navigation bar */
         @media (max-width: 640px) {
           button[aria-label="Open chat"],
           button[aria-label="Close chat"] {
@@ -634,7 +465,6 @@ export default function KoomboChatbot() {
             height: 22px !important;
           }
         }
-
       `}</style>
     </>
   );

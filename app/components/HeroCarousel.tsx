@@ -89,7 +89,7 @@ export default function AdsCardSlider() {
   const next = () => goTo((active + 1) % ads.length);
 
   return (
-    <section className="bg-[#FAF9F6] px-4 py-8 sm:px-6 sm:py-10">
+    <section className="px-4 py-8 sm:px-6 sm:py-10" style={{ background: 'var(--bg)' }}>
       <div className="mx-auto max-w-6xl">
         {/* SIGNIFICANTLY INCREASED CARD HEIGHTS */}
         <div

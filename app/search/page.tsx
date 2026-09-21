@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import apiFetch from "../../lib/apiClient";
+import ProductCard from "../components/ProductCard";
 import Link from 'next/link';
 
 const MAX_SEARCH_HISTORY = 10;
@@ -353,43 +354,29 @@ export default function SearchPage() {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-4">
         {items.map((p) => {
-          const lid = p._id || p.id;
-          let avg: number | null = null;
-          try {
-            const raw = localStorage.getItem(`unimart:comments:${lid}`);
-            if (raw) {
-              const list = JSON.parse(raw) as any[];
-              if (list.length) avg = list.reduce((s, c) => s + (c.rating || 0), 0) / list.length;
-            }
-          } catch (e) { avg = null; }
+          const item = {
+            _id: p._id || p.id,
+            id: p.id,
+            title: p.title || p.name || 'Product',
+            price: p.price ?? p.amount ?? '—',
+            originalPrice: p.originalPrice ?? p.listPrice,
+            sellerName: p.sellerName || p.seller?.name || p.seller?.username,
+            imageUrls: p.imageUrls || p.images || (p.image ? [p.image] : []),
+            videoUrl: p.videoUrl || p.video,
+            rating: p.rating || undefined,
+            isVerified: p.isVerified ?? true,
+            discountPercent: p.discountPercent || 0,
+            likes: Number(p.likes || 0),
+            views: Number(p.views || 0),
+          };
 
           return (
-            <Link key={lid} href={`/listings/${lid}`} className="block">
-              <div className="bg-white rounded-lg shadow-sm p-3">
-                <div className="w-full h-40 bg-slate-100 rounded-md mb-3 overflow-hidden flex items-center justify-center">
-                  {p.imageUrls && p.imageUrls.length ? (
-                    <img src={p.imageUrls[0]} alt={p.title} className="object-cover w-full h-full" />
-                  ) : (
-                    <div className="text-slate-400">No image</div>
-                  )}
-                </div>
-                <div className="text-sm font-medium truncate">{p.title}</div>
-                <div className="text-[#fb6f20] font-bold mt-1">{p.price ? `₵${p.price}` : '—'}</div>
-
-                {/* Rating */}
-                <div className="mt-2 flex items-center gap-2">
-                  <div className="flex items-center text-yellow-400 text-sm">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <span key={i} className={`${i < Math.round(avg || 0) ? 'text-yellow-400' : 'text-gray-200'}`}>★</span>
-                    ))}
-                  </div>
-                  <span className="text-xs text-slate-500 ml-1">{avg ? avg.toFixed(1) : '—'}</span>
-                </div>
-              </div>
-            </Link>
+            <div key={item._id || item.id} className="h-full">
+              <ProductCard item={item} />
+            </div>
           );
         })}
-        </div>
+      </div>
         </div>
       </div>
     </div>

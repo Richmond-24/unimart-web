@@ -1,44 +1,48 @@
-
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --brand-teal: #0d9488;
-  --brand-teal-500: #14b8a6;
-  --brand-indigo: #4f46e5;
-  --header-height: 0px;
-  --footer-height: 0px;
-  --temu-orange: #fb6f20;
-  --temu-orange-dark: #e85d0a;
-  --temu-deal-red: #ff3b30;
-  --unimart-teal: #0d9488;
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --text: #0f172a;
+  --muted: #64748b;
+  --header-bg: #f8fafc;
+  --footer-bg: #f8fafc;
+  --primary: #6c5ce7;
+}
+
+html[data-theme="dark"] {
+  --bg: #edf0f5;
+  --surface: #dfe4ee;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --header-bg: #111827;
+  --footer-bg: #111827;
+  --primary: #8b5cf6;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  margin: 0;
 }
 
 /* Move Botpress / Webchat floating widget up on small screens so it doesn't cover footer/profile */
 @media (max-width: 640px) {
-  /* Target several reasonable widget/container class and id names used by common webchat embeds */
   .bpw-widget,
   .bpw-container,
   .bpw-floating,
   .botpress-webchat,
-  #bpw-webchat,
-  iframe[id^="bp-"],
-  iframe[src*="botpress"] {
+  #bpw-webchat {
     bottom: calc(4.5rem + env(safe-area-inset-bottom)) !important;
-    /* keep the widget above footer items */
     z-index: 99999 !important;
-    /* small upward nudge if needed */
     transform: translateY(-0.25rem) !important;
-  }
-
-  /* If the widget injects a container inside body, allow the container to be slightly smaller */
-  body > .botpress-webchat {
-    margin-bottom: 0.25rem !important;
   }
 }
 
-@theme inline {
+:root {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-figtree), var(--font-inter), var(--font-geist-sans);
@@ -104,16 +108,6 @@ html[data-app-stage="ready"] #unimart-app-overlay {
   display: none;
   pointer-events: none;
   opacity: 0;
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-  overflow-y: scroll;
-  overflow-x: hidden;
-  min-height: 100dvh;
-  -webkit-text-size-adjust: 100%;
 }
 
 input::placeholder,
@@ -221,6 +215,21 @@ html[data-app-stage="auth"] #site-content {
   visibility: hidden !important;
   height: 0 !important;
   overflow: hidden !important;
+}
+
+/* Ensure Botpress webchat is hidden on splash/onboard/auth stages */
+html[data-app-stage="splash"] .bpw-widget,
+html[data-app-stage="splash"] .botpress-webchat,
+html[data-app-stage="splash"] #bpw-webchat,
+html[data-app-stage="auth"] .bpw-widget,
+html[data-app-stage="auth"] .botpress-webchat,
+html[data-app-stage="auth"] #bpw-webchat,
+html[data-app-stage="onboard"] .bpw-widget,
+html[data-app-stage="onboard"] .botpress-webchat,
+html[data-app-stage="onboard"] #bpw-webchat {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 /* ── Category filter ─────────────────────────────────── */

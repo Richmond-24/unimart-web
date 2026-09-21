@@ -37,7 +37,7 @@ interface FashionItem {
   discountPercent?: number;
   views?: number;
   isVerified?: boolean;
-  condition?: string; // Added condition field
+  condition?: string;
 }
 
 interface VideoFashionCardProps {
@@ -144,21 +144,21 @@ function VideoFashionCard({ item }: VideoFashionCardProps) {
           h-full
           flex flex-col
           overflow-hidden
-          rounded-3xl
+          rounded-2xl
           bg-white
           border border-gray-100
           shadow-sm
           transition-all
           duration-500
-          hover:-translate-y-2
-          hover:shadow-2xl
+          hover:-translate-y-1
+          hover:shadow-xl
           hover:border-gray-200
         "
       >
         {/* =========================================================
-            MEDIA CONTAINER
+            MEDIA CONTAINER - RESPONSIVE ASPECT RATIO
         ========================================================== */}
-        <div className="relative aspect-[4/5] w-full overflow-hidden bg-gray-50">
+        <div className="relative w-full aspect-[3/4] sm:aspect-[4/5] overflow-hidden bg-gray-50">
           
           {/* Video or Image */}
           {hasVideo ? (
@@ -185,30 +185,30 @@ function VideoFashionCard({ item }: VideoFashionCardProps) {
             </div>
           )}
 
-          {/* Gradients for text readability */}
-          <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/60 to-transparent pointer-events-none opacity-60" />
-          <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none" />
+          {/* Gradients for text readability - Adjusted for mobile */}
+          <div className="absolute inset-x-0 top-0 h-20 sm:h-32 bg-gradient-to-b from-black/50 sm:from-black/60 to-transparent pointer-events-none opacity-60" />
+          <div className="absolute inset-x-0 bottom-0 h-32 sm:h-48 bg-gradient-to-t from-black/70 sm:from-black/80 via-black/30 sm:via-black/40 to-transparent pointer-events-none" />
 
           {/* =========================================================
-              TOP BADGES & ACTIONS
+              TOP BADGES & ACTIONS - COMPACT ON MOBILE
           ========================================================== */}
-          <div className="absolute top-4 left-4 z-20 flex flex-wrap gap-2 max-w-[80%]">
+          <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-20 flex flex-wrap gap-1.5 sm:gap-2 max-w-[75%] sm:max-w-[80%]">
             {item.discountPercent && item.discountPercent > 0 && (
-              <span className="px-3 py-1.5 rounded-full bg-red-500/90 backdrop-blur-md text-white text-[10px] font-bold shadow-lg animate-pulse-slow">
+              <span className="px-2 py-1 sm:px-3 sm:py-1.5 rounded-full bg-red-500/90 backdrop-blur-md text-white text-[9px] sm:text-[10px] font-bold shadow-lg animate-pulse-slow">
                 -{item.discountPercent}% OFF
               </span>
             )}
             
             {(item.isNewArrival || item.newArrival) && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#6C5CE7]/90 backdrop-blur-md text-white text-[10px] font-bold shadow-lg">
-                <Sparkles size={10} />
+              <span className="inline-flex items-center gap-1 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-full bg-[#6C5CE7]/90 backdrop-blur-md text-white text-[9px] sm:text-[10px] font-bold shadow-lg">
+                <Sparkles size={10} className="sm:w-2.5 sm:h-2.5" />
                 NEW
               </span>
             )}
           </div>
 
           {/* =========================================================
-              VIDEO INTERACTION CONTROLS
+              VIDEO INTERACTION CONTROLS - RESPONSIVE SIZING
           ========================================================== */}
           {hasVideo && (
             <>
@@ -221,8 +221,7 @@ function VideoFashionCard({ item }: VideoFashionCardProps) {
                     inset-0
                     m-auto
                     z-30
-                    w-16
-                    h-16
+                    w-12 h-12 sm:w-16 sm:h-16
                     rounded-full
                     bg-white/20
                     backdrop-blur-md
@@ -239,15 +238,15 @@ function VideoFashionCard({ item }: VideoFashionCardProps) {
                   "
                   aria-label="Play video"
                 >
-                  <Play size={32} fill="white" className="ml-1" />
+                  <Play size={24} className="sm:w-8 sm:h-8 ml-0.5 sm:ml-1" fill="white" />
                 </button>
               )}
 
               {/* Live Preview Indicator */}
               {!showPlayOverlay && (
-                 <div className="absolute top-4 right-4 z-20 px-2 py-1 rounded-lg bg-black/40 backdrop-blur-md text-white text-[9px] font-bold flex items-center gap-1">
-                   <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
-                   LIVE PREVIEW
+                 <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-lg bg-black/40 backdrop-blur-md text-white text-[8px] sm:text-[9px] font-bold flex items-center gap-1">
+                   <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+                   LIVE
                  </div>
               )}
 
@@ -256,11 +255,12 @@ function VideoFashionCard({ item }: VideoFashionCardProps) {
                 onClick={toggleMute}
                 className="
                   absolute
-                  bottom-4
-                  left-4
+                  bottom-2
+                  left-2
+                  sm:bottom-4
+                  sm:left-4
                   z-20
-                  w-9
-                  h-9
+                  w-8 h-8 sm:w-9 sm:h-9
                   rounded-full
                   bg-black/40
                   backdrop-blur-md
@@ -274,24 +274,24 @@ function VideoFashionCard({ item }: VideoFashionCardProps) {
                 "
                 aria-label={isMuted ? "Unmute" : "Mute"}
               >
-                {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                {isMuted ? <VolumeX size={14} className="sm:w-4 sm:h-4" /> : <Volume2 size={14} className="sm:w-4 sm:h-4" />}
               </button>
             </>
           )}
 
           {/* =========================================================
-              SOCIAL ACTIONS (RIGHT SIDE)
+              SOCIAL ACTIONS (RIGHT SIDE) - ADJUSTED POSITIONING
           ========================================================== */}
-          <div className="absolute right-3 bottom-32 z-20 flex flex-col gap-3">
+          <div className="absolute right-2 bottom-28 sm:right-3 sm:bottom-32 z-20 flex flex-col gap-2 sm:gap-3">
             {/* Like Button */}
             <button
               onClick={toggleLike}
-              className="group/btn flex flex-col items-center gap-1"
+              className="group/btn flex flex-col items-center gap-0.5 sm:gap-1"
               aria-label={isLiked ? "Unlike" : "Like"}
             >
               <div
                 className={`
-                  w-10 h-10
+                  w-8 h-8 sm:w-10 sm:h-10
                   rounded-full
                   backdrop-blur-md
                   border border-white/10
@@ -308,73 +308,73 @@ function VideoFashionCard({ item }: VideoFashionCardProps) {
                 `}
               >
                 <Heart
-                  size={18}
-                  className={`transition-colors duration-300 ${isLiked ? "text-white" : "text-white"}`}
+                  size={14}
+                  className="sm:w-[18px] sm:h-[18px] transition-colors duration-300 text-white"
                   fill={isLiked ? "white" : "none"}
                 />
               </div>
-              <span className="text-[10px] font-bold text-white drop-shadow-md bg-black/20 px-1.5 py-0.5 rounded-md backdrop-blur-sm">
+              <span className="text-[9px] sm:text-[10px] font-bold text-white drop-shadow-md bg-black/20 px-1 sm:px-1.5 py-0.5 rounded-md backdrop-blur-sm">
                 {(item.reviewCount || Math.floor(Math.random() * 500)).toLocaleString()}
               </span>
             </button>
 
             {/* View Count */}
-            <div className="flex flex-col items-center gap-1">
-              <div className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center text-white">
-                <Eye size={18} />
+            <div className="flex flex-col items-center gap-0.5 sm:gap-1">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center text-white">
+                <Eye size={14} className="sm:w-[18px] sm:h-[18px]" />
               </div>
-              <span className="text-[10px] font-bold text-white drop-shadow-md bg-black/20 px-1.5 py-0.5 rounded-md backdrop-blur-sm">
+              <span className="text-[9px] sm:text-[10px] font-bold text-white drop-shadow-md bg-black/20 px-1 sm:px-1.5 py-0.5 rounded-md backdrop-blur-sm">
                 {item.views ? (item.views / 1000).toFixed(1) + 'k' : '1.2k'}
               </span>
             </div>
           </div>
 
           {/* =========================================================
-              BOTTOM MEDIA INFO
+              BOTTOM MEDIA INFO - RESPONSIVE PADDING
           ========================================================== */}
-          <div className="absolute bottom-0 left-0 right-0 z-10 p-4 pr-12 pb-16">
+          <div className="absolute bottom-0 left-0 right-0 z-10 p-2.5 sm:p-4 pr-10 sm:pr-12 pb-12 sm:pb-16">
             {/* Seller Info */}
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-gray-900 text-xs font-bold shadow-sm border border-white/20">
+            <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-gray-900 text-[10px] sm:text-xs font-bold shadow-sm border border-white/20">
                 {(item.sellerName || item.seller || "S")[0].toUpperCase()}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-white/90 text-xs font-medium truncate drop-shadow-sm">
+                <p className="text-white/90 text-[10px] sm:text-xs font-medium truncate drop-shadow-sm">
                   {item.sellerName || item.seller || "Verified Seller"}
                 </p>
               </div>
             </div>
 
             {/* Title */}
-            <h3 className="text-white text-base font-bold leading-snug line-clamp-2 drop-shadow-md mb-1">
+            <h3 className="text-white text-sm sm:text-base font-bold leading-snug line-clamp-2 drop-shadow-md mb-1">
               {item.title}
             </h3>
           </div>
 
           {/* =========================================================
-              VERIFIED BANNER & CONDITION BADGE
+              VERIFIED BANNER & CONDITION BADGE - RESPONSIVE
           ========================================================== */}
           
           {/* Verified Seller Banner */}
           {item.isVerified && (
-            <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-r from-emerald-600/90 to-emerald-500/90 backdrop-blur-md py-2 px-4 flex items-center justify-center gap-2 border-t border-white/10">
-              <ShieldCheck size={14} className="text-white" />
-              <span className="text-white text-[10px] font-bold uppercase tracking-wider">Verified Seller</span>
+            <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-r from-emerald-600/90 to-emerald-500/90 backdrop-blur-md py-1.5 sm:py-2 px-2 sm:px-4 flex items-center justify-center gap-1.5 sm:gap-2 border-t border-white/10">
+              <ShieldCheck size={12} className="sm:w-3.5 sm:h-3.5 text-white" />
+              <span className="text-white text-[9px] sm:text-[10px] font-bold uppercase tracking-wider">Verified Seller</span>
             </div>
           )}
 
-          {/* Condition Badge (Floating above banner or bottom if no banner) */}
+          {/* Condition Badge */}
           {conditionStyle && (
-            <div className={`absolute ${item.isVerified ? 'bottom-10' : 'bottom-4'} left-4 z-20`}>
+            <div className={`absolute ${item.isVerified ? 'bottom-9 sm:bottom-10' : 'bottom-2 sm:bottom-4'} left-2 sm:left-4 z-20`}>
               <div className={`
-                inline-flex items-center gap-1.5 
-                px-3 py-1.5 rounded-lg 
+                inline-flex items-center gap-1 sm:gap-1.5 
+                px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg 
                 ${conditionStyle.bg} 
                 ${conditionStyle.text}
                 backdrop-blur-md shadow-lg border border-white/20
               `}>
-                <Tag size={12} />
-                <span className="text-[10px] font-bold uppercase tracking-wide">{conditionStyle.label}</span>
+                <Tag size={10} className="sm:w-3 sm:h-3" />
+                <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wide">{conditionStyle.label}</span>
               </div>
             </div>
           )}
@@ -382,17 +382,17 @@ function VideoFashionCard({ item }: VideoFashionCardProps) {
         </div>
 
         {/* =========================================================
-            FOOTER / PRICE ACTION
+            FOOTER / PRICE ACTION - COMPACT FOR MOBILE
         ========================================================== */}
-        <div className="p-4 flex items-center justify-between bg-white mt-auto">
-          <div className="flex flex-col">
-            <span className="text-xs text-gray-500 font-medium mb-0.5">Price</span>
-            <div className="flex items-baseline gap-2">
-              <span className="text-lg font-extrabold text-gray-900 tracking-tight">
+        <div className="p-2.5 sm:p-4 flex items-center justify-between bg-white mt-auto">
+          <div className="flex flex-col min-w-0 flex-1 mr-2">
+            <span className="text-[10px] sm:text-xs text-gray-500 font-medium mb-0.5">Price</span>
+            <div className="flex items-baseline gap-1.5 sm:gap-2 flex-wrap">
+              <span className="text-base sm:text-lg font-extrabold text-gray-900 tracking-tight truncate">
                 {priceDisplay}
               </span>
               {originalPriceDisplay && (
-                <span className="text-xs text-gray-400 line-through font-medium">
+                <span className="text-[10px] sm:text-xs text-gray-400 line-through font-medium">
                   {originalPriceDisplay}
                 </span>
               )}
@@ -406,8 +406,8 @@ function VideoFashionCard({ item }: VideoFashionCardProps) {
             }}
             className="
               shrink-0
-              w-10 h-10
-              rounded-xl
+              w-9 h-9 sm:w-10 sm:h-10
+              rounded-lg sm:rounded-xl
               bg-gray-900
               text-white
               flex items-center justify-center
@@ -419,7 +419,7 @@ function VideoFashionCard({ item }: VideoFashionCardProps) {
             "
             aria-label="Add to cart"
           >
-            <ShoppingBag size={18} />
+            <ShoppingBag size={16} className="sm:w-[18px] sm:h-[18px]" />
           </button>
         </div>
       </div>
@@ -458,7 +458,7 @@ export default function FashionDealsVideo() {
             videoUrl: p.videoUrl || p.video || undefined,
             isNewArrival: p.isNewArrival || p.newArrival || false,
             isVerified: p.isVerified || p.verified || false,
-            condition: p.condition || (Math.random() > 0.5 ? 'New' : 'Slightly Used'), // Mock condition if missing
+            condition: p.condition || (Math.random() > 0.5 ? 'New' : 'Slightly Used'),
             discountPercent: p.discountPercent || (p.originalPrice && p.price ? Math.round((1 - Number(p.price)/Number(p.originalPrice)) * 100) : 0),
             views: p.views || Math.floor(Math.random() * 5000)
           }));
@@ -476,38 +476,38 @@ export default function FashionDealsVideo() {
   }, []);
 
   return (
-    <section className="py-12 bg-[#FAFAFB]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="py-8 sm:py-12" style={{ background: 'var(--bg)' }}>
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
         
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-[#FF6B9D]/10 flex items-center justify-center shadow-lg shadow-[#FF6B9D]/10 rotate-3 hover:rotate-0 transition-transform duration-300">
-              <Sparkles className="text-[#FF6B9D]" size={24} />
+        {/* Header - Responsive */}
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 sm:gap-6 mb-6 sm:mb-10">
+          <div className="flex items-start gap-3 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-[#FF6B9D]/10 flex items-center justify-center shadow-lg shadow-[#FF6B9D]/10 rotate-3 hover:rotate-0 transition-transform duration-300">
+              <Sparkles className="text-[#FF6B9D] w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div>
-              <h2 className="text-3xl font-bold text-gray-900 tracking-tight">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
                 Fashion Picks
               </h2>
-              <p className="text-gray-500 mt-1 flex items-center gap-2 text-sm font-medium">
-                <Sparkles size={16} className="text-[#FF6B9D]" />
+              <p className="text-gray-500 mt-0.5 sm:mt-1 flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-medium">
+                <Sparkles size={14} className="sm:w-4 sm:h-4 text-[#FF6B9D]" />
                 Trendy styles from campus creators
               </p>
             </div>
           </div>
         </div>
 
-        {/* Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+        {/* Grid - Improved Responsive Gaps */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6">
           {/* Skeleton */}
-          {loading && new Array(5).fill(0).map((_, i) => (
-             <div key={i} className="rounded-3xl bg-white border border-gray-100 overflow-hidden shadow-sm h-full flex flex-col">
-              <div className="aspect-[4/5] bg-gray-100 animate-pulse relative" />
-              <div className="p-4 space-y-3 flex-1">
-                <div className="h-4 w-3/4 bg-gray-100 rounded-lg animate-pulse" />
+          {loading && new Array(6).fill(0).map((_, i) => (
+             <div key={i} className="rounded-2xl bg-white border border-gray-100 overflow-hidden shadow-sm h-full flex flex-col">
+              <div className="aspect-[3/4] sm:aspect-[4/5] bg-gray-100 animate-pulse relative" />
+              <div className="p-2.5 sm:p-4 space-y-2 sm:space-y-3 flex-1">
+                <div className="h-3 sm:h-4 w-3/4 bg-gray-100 rounded-lg animate-pulse" />
                 <div className="flex justify-between items-end mt-auto pt-2">
-                  <div className="h-6 w-20 bg-gray-100 rounded-lg animate-pulse" />
-                  <div className="w-10 h-10 bg-gray-100 rounded-xl animate-pulse" />
+                  <div className="h-5 sm:h-6 w-16 sm:w-20 bg-gray-100 rounded-lg animate-pulse" />
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gray-100 rounded-lg sm:rounded-xl animate-pulse" />
                 </div>
               </div>
             </div>
@@ -515,8 +515,8 @@ export default function FashionDealsVideo() {
 
           {/* Empty state */}
           {!loading && items.length === 0 && (
-            <div className="col-span-full text-center py-12 bg-white rounded-3xl border border-dashed border-gray-300">
-              <p className="text-gray-900 font-semibold text-lg">No fashion items found.</p>
+            <div className="col-span-full text-center py-12 sm:py-16 bg-white rounded-2xl sm:rounded-3xl border border-dashed border-gray-300 px-4">
+              <p className="text-gray-900 font-semibold text-base sm:text-lg">No fashion items found.</p>
             </div>
           )}
 
@@ -527,16 +527,15 @@ export default function FashionDealsVideo() {
         </div>
 
         {/* See all button */}
-        <div className="mt-12 flex justify-center">
+        <div className="mt-8 sm:mt-12 flex justify-center px-4">
           <Link 
             href="/search?category=fashion" 
             className="
               group
               inline-flex
               items-center
-              gap-3
-              px-8
-              py-3.5
+              gap-2 sm:gap-3
+              px-6 py-3 sm:px-8 sm:py-3.5
               rounded-full
               bg-white
               border border-gray-200
@@ -552,7 +551,7 @@ export default function FashionDealsVideo() {
             "
           >
             See all Fashion
-            <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+            <ArrowRight size={14} className="sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>
       </div>

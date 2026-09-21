@@ -42,13 +42,13 @@ const tabs = [
         className="relative group cursor-pointer"
       >
         {/* Animated Glow Background */}
-        <div className="absolute inset-0 bg-gradient-to-tr from-emerald-400 to-teal-600 rounded-2xl blur-lg opacity-40 group-hover:opacity-60 transition-opacity duration-300" />
+        <div className="absolute inset-0 bg-linear-to-tr from-emerald-400 to-teal-600 rounded-2xl blur-lg opacity-40 group-hover:opacity-60 transition-opacity duration-300" />
         
         {/* Main Button Body */}
-        <div className="relative w-14 h-14 rounded-2xl flex items-center justify-center overflow-hidden bg-gradient-to-br from-[#00c99f] via-[#00a884] to-[#008f6e] shadow-[0_8px_20px_-4px_rgba(0,168,132,0.4)] border border-white/20">
+        <div className="relative w-14 h-14 rounded-2xl flex items-center justify-center overflow-hidden bg-linear-to-br from-[#00c99f] via-[#00a884] to-[#008f6e] shadow-[0_8px_20px_-4px_rgba(0,168,132,0.4)] border border-white/20">
           
           {/* Shine Effect */}
-          <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out" />
+          <div className="absolute inset-0 bg-linear-to-tr from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
           
           {/* Logo Container */}
           <div className="relative w-8 h-8 drop-shadow-md">
@@ -97,6 +97,7 @@ export default function Footer() {
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
+  const navRef = React.useRef<HTMLElement | null>(null);
   const [cartCount, setCartCount] = React.useState(0);
   const navLockRef = React.useRef(false);
 
@@ -116,6 +117,26 @@ export default function Footer() {
     return () => {
       window.removeEventListener("storage", readCartCount);
       window.removeEventListener("unimart:cartUpdated", readCartCount);
+    };
+  }, []);
+
+  // Expose --footer-height so layout can properly reserve space
+  React.useEffect(() => {
+    const setFooterHeight = () => {
+      try {
+        const el = navRef.current as HTMLElement | null;
+        if (!el) return;
+        document.documentElement.style.setProperty('--footer-height', `${Math.round(el.offsetHeight)}px`);
+      } catch (e) {}
+    };
+
+    setFooterHeight();
+    const ro = new ResizeObserver(setFooterHeight);
+    if (navRef.current) ro.observe(navRef.current);
+    window.addEventListener('resize', setFooterHeight);
+    return () => {
+      try { ro.disconnect(); } catch (e) {}
+      window.removeEventListener('resize', setFooterHeight);
     };
   }, []);
 
@@ -147,14 +168,16 @@ export default function Footer() {
       role="navigation"
       aria-label="Primary"
       data-unimart-footer
-      className="fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur-2xl border-t border-black/[0.04] dark:border-white/[0.05] md:hidden z-50 overscroll-contain"
+      ref={navRef}
+      className="fixed bottom-0 left-0 right-0 backdrop-blur-2xl border-t border-black/4 dark:border-white/5 md:hidden z-50 overscroll-contain"
       style={{
         paddingBottom: "env(safe-area-inset-bottom)",
         boxShadow: "0 -4px 20px rgba(0,0,0,0.03)",
+        background: 'var(--footer-bg)'
       }}
     >
       <div className="max-w-7xl mx-auto px-4">
-        <div className="flex items-end justify-between h-[72px] relative">
+        <div className="flex items-end justify-between h-18 relative">
           {tabs.map((t) => {
             const active = t.match(pathname);
             const isMiddle = Boolean(t.raised);
@@ -167,7 +190,7 @@ export default function Footer() {
                 onClick={() => handleNav(t.href)}
                 aria-current={active ? "page" : undefined}
                 aria-label={t.label || "Explore"}
-                className={`flex-1 min-w-[44px] min-h-[44px] flex flex-col items-center justify-center gap-1 py-2 select-none touch-manipulation transition-all duration-200 ${
+                className={`flex-1 min-w-11 min-h-11 flex flex-col items-center justify-center gap-1 py-2 select-none touch-manipulation transition-all duration-200 ${
                   isMiddle ? "justify-end pb-2" : "active:scale-95"
                 }`}
                 style={{ WebkitTapHighlightColor: "transparent" }}
@@ -198,7 +221,7 @@ export default function Footer() {
                         <motion.span 
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
-                          className="absolute top-0 right-2 w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white dark:border-gray-900 shadow-sm"
+                          className="absolute top-0 right-2 w-4.5 h-4.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white dark:border-gray-900 shadow-sm"
                         >
                           {cartCount > 9 ? "9+" : cartCount}
                         </motion.span>
