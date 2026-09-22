@@ -348,15 +348,15 @@ export default function Header() {
               ================================================== */}
 
           <div
-            className="flex items-center gap-3 transition-all duration-300 ease-out"
+            className="flex items-center gap-2 sm:gap-3 transition-all duration-300 ease-out"
             style={{
-              paddingTop: `${16 - scrollProgress * 6}px`,
-              paddingBottom: `${16 - scrollProgress * 6}px`,
+              paddingTop: `${12 - scrollProgress * 4}px`,
+              paddingBottom: `${12 - scrollProgress * 4}px`,
             }}
           >
 
             {/* ==================================================
-                LARGER LOGO
+                LOGO
                 ================================================== */}
 
             <LinkLogo
@@ -446,7 +446,7 @@ export default function Header() {
                 >
 
                   <svg
-                    className="absolute left-4 w-5 h-5 text-teal-500 dark:text-teal-400"
+                    className="absolute left-3 w-4 h-4 text-teal-500 dark:text-teal-400"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -467,7 +467,7 @@ export default function Header() {
                     onBlur={() =>
                       setSearchFocused(false)
                     }
-                    className="w-full bg-transparent py-3 pl-11 pr-4 text-base text-gray-800 dark:text-gray-100 placeholder-teal-500 dark:placeholder-teal-400 font-medium focus:outline-none"
+                    className="w-full bg-transparent py-2.5 pl-9 pr-3 text-sm text-gray-800 dark:text-gray-100 placeholder-teal-500 dark:placeholder-teal-400 font-medium focus:outline-none"
                     aria-label="Search"
                   />
 
@@ -481,7 +481,7 @@ export default function Header() {
                 ACTION ICONS
                 ================================================== */}
 
-            <div className="flex items-center gap-1 flex-shrink-0">
+            <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
 
               {/* ==================================================
                   MESSAGES
@@ -493,12 +493,12 @@ export default function Header() {
                   router.push("/messages")
                 }
                 aria-label="Messages"
-                className="relative p-2.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-90 transition-all duration-150"
+                className="relative p-2 sm:p-2.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-90 transition-all duration-150"
               >
 
                 <svg
                   viewBox="0 0 24 24"
-                  className="w-7 h-7 text-gray-700 dark:text-gray-200"
+                  className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700 dark:text-gray-200"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth={2}
@@ -509,7 +509,7 @@ export default function Header() {
                 </svg>
 
                 {messageCount > 0 && (
-                  <span className="absolute top-1 right-1 bg-teal-600 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center border-2 border-white dark:border-gray-900">
+                  <span className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 bg-teal-600 text-white text-[8px] sm:text-[10px] font-bold rounded-full min-w-[15px] h-[15px] sm:min-w-[18px] sm:h-[18px] flex items-center justify-center border-2 border-white dark:border-gray-900">
                     {messageCount > 9
                       ? "9+"
                       : messageCount}
@@ -528,12 +528,12 @@ export default function Header() {
                   router.push("/cart")
                 }
                 aria-label="Cart"
-                className="relative p-2.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-90 transition-all duration-150"
+                className="relative p-2 sm:p-2.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-90 transition-all duration-150"
               >
 
                 <svg
                   viewBox="0 0 24 24"
-                  className="w-7 h-7 text-gray-700 dark:text-gray-200"
+                  className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700 dark:text-gray-200"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth={2}
@@ -547,7 +547,7 @@ export default function Header() {
                 </svg>
 
                 {cartCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 bg-teal-600 text-white text-[11px] font-bold rounded-full min-w-[20px] h-[20px] flex items-center justify-center border-2 border-white dark:border-gray-900 animate-bounce">
+                  <span className="absolute top-0 right-0 sm:-top-0.5 sm:-right-0.5 bg-teal-600 text-white text-[8px] sm:text-[11px] font-bold rounded-full min-w-[15px] h-[15px] sm:min-w-[20px] sm:h-[20px] flex items-center justify-center border-2 border-white dark:border-gray-900 animate-bounce">
                     {cartCount > 9
                       ? "9+"
                       : cartCount}
@@ -642,7 +642,7 @@ export default function Header() {
           <div
             className="overflow-hidden transition-all duration-300 ease-out"
             style={{
-              maxHeight: `${(1 - scrollProgress) * 76}px`,
+              maxHeight: `${(1 - scrollProgress) * 64}px`,
               opacity: 1 - scrollProgress,
               transform: `translateY(${
                 -scrollProgress * 8
@@ -650,12 +650,12 @@ export default function Header() {
             }}
           >
 
-            <div className="pb-3 pt-1">
+            <div className="pb-2.5 pt-0.5 sm:pb-3 sm:pt-1">
 
               <div className="flex items-center justify-between">
 
                 {/* User greeting */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5 sm:gap-3">
 
                   {/* Avatar */}
                   <button
@@ -665,9 +665,9 @@ export default function Header() {
                     className="flex-shrink-0"
                   >
 
-                    <div className="w-12 h-12 rounded-full bg-teal-50 dark:bg-gray-800 flex items-center justify-center shadow-sm border-2 border-teal-100 dark:border-gray-700">
+                    <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-teal-50 dark:bg-gray-800 flex items-center justify-center shadow-sm border-2 border-teal-100 dark:border-gray-700">
 
-                      <span className="text-teal-600 dark:text-teal-400 font-bold text-lg">
+                      <span className="text-teal-600 dark:text-teal-400 font-bold text-sm sm:text-lg">
                         {greetingName
                           ? greetingName
                               .charAt(0)
@@ -682,11 +682,11 @@ export default function Header() {
                   {/* Greeting */}
                   <div className="flex flex-col">
 
-                    <h2 className="text-gray-900 dark:text-white font-semibold text-base leading-tight">
+                    <h2 className="text-gray-900 dark:text-white font-semibold text-sm sm:text-base leading-tight">
                       {greeting} 👋
                     </h2>
 
-                    <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">
+                    <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm mt-0.5">
                       Ready to shop amazing deals?
                     </p>
 
@@ -704,12 +704,12 @@ export default function Header() {
                       )
                     }
                     aria-label="Notifications"
-                    className="relative p-2.5 rounded-full bg-teal-50 dark:bg-gray-800 hover:bg-teal-100 dark:hover:bg-gray-700 active:scale-90 transition-all duration-150"
+                    className="relative p-2 sm:p-2.5 rounded-full bg-teal-50 dark:bg-gray-800 hover:bg-teal-100 dark:hover:bg-gray-700 active:scale-90 transition-all duration-150"
                   >
 
                     <svg
                       viewBox="0 0 24 24"
-                      className="w-6 h-6 text-teal-600 dark:text-teal-400"
+                      className="w-5 h-5 sm:w-6 sm:h-6 text-teal-600 dark:text-teal-400"
                       fill="currentColor"
                       strokeWidth={0}
                     >
@@ -719,7 +719,7 @@ export default function Header() {
                     </svg>
 
                     {notificationCount > 0 && (
-                      <span className="absolute top-1 right-1 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center border-2 border-white dark:border-gray-900">
+                      <span className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 bg-red-500 text-white text-[8px] sm:text-[9px] font-bold rounded-full min-w-[14px] h-[14px] sm:min-w-[16px] sm:h-[16px] flex items-center justify-center border-2 border-white dark:border-gray-900">
                         {notificationCount > 9
                           ? "9+"
                           : notificationCount}
@@ -757,7 +757,7 @@ export default function Header() {
 
         <div className="max-w-7xl mx-auto">
 
-          <div className="flex items-center justify-around h-[64px] px-1">
+          <div className="flex items-center justify-around h-[56px] px-1">
 
             {TABS.map((t) => {
 
@@ -774,7 +774,7 @@ export default function Header() {
                   onClick={() =>
                     router.push(t.href)
                   }
-                  className={`flex-1 flex flex-col items-center justify-center py-1.5 px-1 transition-all duration-200 relative ${
+                  className={`flex-1 flex flex-col items-center justify-center py-1 px-1 transition-all duration-200 relative ${
                     active
                       ? "text-teal-600"
                       : "text-gray-400"
@@ -790,7 +790,7 @@ export default function Header() {
                   <div className="relative mb-0.5">
 
                     <IconComponent
-                      className={`w-6 h-6 ${
+                      className={`w-5 h-5 ${
                         active
                           ? "scale-110"
                           : ""
@@ -800,7 +800,7 @@ export default function Header() {
                     {/* Cart badge */}
                     {t.key === "cart" &&
                       cartCount > 0 && (
-                        <span className="absolute -top-1.5 -right-2 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center shadow-md border-2 border-white">
+                        <span className="absolute -top-1.5 -right-2 bg-red-500 text-white text-[8px] font-bold rounded-full min-w-[15px] h-[15px] flex items-center justify-center shadow-md border-2 border-white">
                           {cartCount > 9
                             ? "9+"
                             : cartCount}
@@ -810,7 +810,7 @@ export default function Header() {
                     {/* Messages badge */}
                     {t.key === "messages" &&
                       messageCount > 0 && (
-                        <span className="absolute -top-1.5 -right-2 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center shadow-md border-2 border-white">
+                        <span className="absolute -top-1.5 -right-2 bg-red-500 text-white text-[8px] font-bold rounded-full min-w-[15px] h-[15px] flex items-center justify-center shadow-md border-2 border-white">
                           {messageCount > 9
                             ? "9+"
                             : messageCount}
@@ -821,7 +821,7 @@ export default function Header() {
 
                   {/* Label */}
                   <span
-                    className={`text-[10px] font-medium ${
+                    className={`text-[9px] sm:text-[10px] font-medium ${
                       active
                         ? "font-semibold"
                         : ""
@@ -931,7 +931,7 @@ function getTabIcon(key: string) {
 }
 
 // ==================================================
-// LARGER LOGO
+// LOGO
 // ==================================================
 
 function LinkLogo({
@@ -940,37 +940,31 @@ function LinkLogo({
   scrollProgress: number;
 }) {
   /*
-   * Increased from 64x64 to approximately 78x78.
-   *
-   * The logo gently reduces as the user scrolls so the
-   * header still collapses smoothly.
+   * Sized per-breakpoint with Tailwind (small on mobile,
+   * larger on desktop) instead of one large fixed pixel
+   * size, so the mobile header stays compact. A subtle
+   * scale-down on scroll is layered on top for all sizes.
    */
 
-  const logoSize =
-    78 - scrollProgress * 10;
+  const scale = 1 - scrollProgress * 0.12;
 
   return (
     <a
       href="/"
-      className="flex-shrink-0 flex items-center justify-center"
+      className="flex-shrink-0 flex items-center justify-center w-9 h-9 sm:w-12 sm:h-12 md:w-14 md:h-14 transition-transform duration-300 ease-out"
       aria-label="Koombo home"
       style={{
-        width: `${logoSize}px`,
-        height: `${logoSize}px`,
-        minWidth: `${logoSize}px`,
-        transition:
-          "width 300ms ease-out, height 300ms ease-out, min-width 300ms ease-out",
+        transform: `scale(${scale})`,
       }}
     >
       <Image
         src="/swoop-logo.png"
         alt="Koombo"
-        width={78}
-        height={78}
+        width={56}
+        height={56}
         className="w-full h-full object-contain"
         priority
       />
     </a>
   );
 }
-

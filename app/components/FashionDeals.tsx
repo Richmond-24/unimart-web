@@ -1,568 +1,1898 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
-import apiFetch from "../../lib/apiClient";
-import Link from 'next/link';
-import { 
-  Play, 
-  Volume2, 
-  VolumeX, 
-  Heart, 
-  ShoppingBag, 
-  Sparkles, 
-  Eye, 
+import React, { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import {
+  Play,
+  Volume2,
+  VolumeX,
+  Star,
+  Heart,
+  MessageCircle,
+  Bookmark,
+  Share2,
   CheckCircle2,
   ArrowRight,
+  Eye,
+  X,
+  Plus,
+  Minus,
+  Truck,
   ShieldCheck,
-  Tag
+  Sparkles,
+  Tag,
+  ShoppingBag,
 } from "lucide-react";
+
+import apiFetch from "../../lib/apiClient";
+
+/* -------------------------------------------------------------------------- */
+/* Types                                                                      */
+/* -------------------------------------------------------------------------- */
 
 interface FashionItem {
   _id: string;
   id?: string;
+
   title: string;
+
   price: number | string;
   originalPrice?: number | string;
+
   sellerName?: string;
   seller?: string;
+
   imageUrls?: string[];
   images?: string[];
+
   videoUrl?: string;
   video?: string;
-  rating?: number;
+
+  rating?: number | string;
   reviewCount?: number;
+
   isNewArrival?: boolean;
   newArrival?: boolean;
+
   category?: string;
+
   discountPercent?: number;
+
+  likes?: number;
   views?: number;
+
   isVerified?: boolean;
+
   condition?: string;
+
+  description?: string;
+  location?: string;
 }
 
 interface VideoFashionCardProps {
   item: FashionItem;
 }
 
-function VideoFashionCard({ item }: VideoFashionCardProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const cardRef = useRef<HTMLDivElement>(null);
-  
+interface ShopLayerProps {
+  item: FashionItem;
+  onClose: () => void;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Helpers                                                                    */
+/* -------------------------------------------------------------------------- */
+
+function formatPrice(price: number | string | undefined) {
+  const numericPrice = Number(price);
+
+  if (!Number.isFinite(numericPrice)) {
+    return "GH₵0";
+  }
+
+  return `GH₵${numericPrice.toLocaleString("en-GH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+function getImage(item: FashionItem) {
+  if (item.imageUrls?.length) {
+    return item.imageUrls[0];
+  }
+
+  if (item.images?.length) {
+    return item.images[0];
+  }
+
+  return "";
+}
+
+function getVideo(item: FashionItem) {
+  return item.videoUrl || item.video || "";
+}
+
+function getSellerName(item: FashionItem) {
+  return item.sellerName || item.seller || "Koombo Seller";
+}
+
+function getDiscountPercent(item: FashionItem) {
+  if (
+    typeof item.discountPercent === "number" &&
+    item.discountPercent > 0
+  ) {
+    return Math.round(item.discountPercent);
+  }
+
+  const price = Number(item.price);
+  const originalPrice = Number(item.originalPrice);
+
+  if (
+    Number.isFinite(price) &&
+    Number.isFinite(originalPrice) &&
+    originalPrice > price
+  ) {
+    return Math.round(
+      ((originalPrice - price) / originalPrice) * 100
+    );
+  }
+
+  return 0;
+}
+
+function formatCompactNumber(value?: number) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return null;
+  }
+
+  if (value >= 1000000) {
+    return `${(value / 1000000).toFixed(1)}M`;
+  }
+
+  if (value >= 1000) {
+    return `${(value / 1000).toFixed(1)}K`;
+  }
+
+  return value.toString();
+}
+
+function getConditionLabel(condition?: string) {
+  if (!condition) return null;
+
+  const value = condition.toLowerCase();
+
+  if (value.includes("new")) {
+    return "Brand New";
+  }
+
+  if (value.includes("slight") || value.includes("like")) {
+    return "Like New";
+  }
+
+  if (value.includes("good")) {
+    return "Good Condition";
+  }
+
+  return condition;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Skeleton                                                                   */
+/* -------------------------------------------------------------------------- */
+
+function CardSkeleton() {
+  return (
+    <div className="overflow-hidden rounded-[26px] bg-white">
+      <div className="aspect-[4/5] animate-pulse bg-gray-200" />
+
+      <div className="space-y-3 p-4">
+        <div className="h-4 w-4/5 animate-pulse rounded bg-gray-200" />
+        <div className="h-4 w-2/5 animate-pulse rounded bg-gray-200" />
+        <div className="h-10 w-full animate-pulse rounded-xl bg-gray-200" />
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Fashion Product Card                                                       */
+/* -------------------------------------------------------------------------- */
+
+function VideoFashionCard({
+  item,
+}: VideoFashionCardProps) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [isLiked, setIsLiked] = useState(false);
-  const [showPlayOverlay, setShowPlayOverlay] = useState(true);
+  const [isSaved, setIsSaved] = useState(false);
+  const [showShopLayer, setShowShopLayer] = useState(false);
 
-  const hasVideo = Boolean(item.videoUrl || item.video);
-  const image = item.imageUrls?.[0] || item.images?.[0];
-  const lid = item._id || item.id;
+  const image = getImage(item);
+  const video = getVideo(item);
 
-  const priceDisplay = typeof item.price === 'number' ? `GH₵${item.price}` : (item.price || 'Price on request');
-  const originalPriceDisplay = item.originalPrice ? (typeof item.originalPrice === 'number' ? `GH₵${item.originalPrice}` : item.originalPrice) : null;
+  const hasVideo = Boolean(video);
 
-  // Determine condition styling
-  const getConditionStyle = (condition?: string) => {
-    if (!condition) return null;
-    const lower = condition.toLowerCase();
-    if (lower.includes('new')) return { bg: 'bg-emerald-500/90', text: 'text-white', label: 'Brand New' };
-    if (lower.includes('slight') || lower.includes('like')) return { bg: 'bg-blue-500/90', text: 'text-white', label: 'Like New' };
-    if (lower.includes('good')) return { bg: 'bg-amber-500/90', text: 'text-white', label: 'Good Condition' };
-    return { bg: 'bg-gray-500/90', text: 'text-white', label: condition };
-  };
+  const sellerName = getSellerName(item);
+  const discount = getDiscountPercent(item);
 
-  const conditionStyle = getConditionStyle(item.condition);
+  const likes = formatCompactNumber(item.likes);
+  const views = formatCompactNumber(item.views);
 
-  // Auto-play logic when in viewport
+  const conditionLabel = getConditionLabel(item.condition);
+
+  /* ---------------------------------------------------------------------- */
+  /* Intersection observer                                                  */
+  /* ---------------------------------------------------------------------- */
+
   useEffect(() => {
-    if (!hasVideo || !videoRef.current || !cardRef.current) return;
+    const videoElement = videoRef.current;
 
-    const video = videoRef.current;
-    video.muted = isMuted;
+    if (!videoElement || !hasVideo) {
+      return;
+    }
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
-          video.play().then(() => {
-            setIsPlaying(true);
-            setShowPlayOverlay(false);
-          }).catch(() => {
-            setIsPlaying(false);
-            setShowPlayOverlay(true);
-          });
+        if (entry.isIntersecting) {
+          videoElement
+            .play()
+            .then(() => {
+              setIsPlaying(true);
+            })
+            .catch(() => {
+              setIsPlaying(false);
+            });
         } else {
-          video.pause();
+          videoElement.pause();
           setIsPlaying(false);
-          setShowPlayOverlay(true);
         }
       },
-      { threshold: 0.6 }
+      {
+        threshold: 0.55,
+      }
     );
 
-    observer.observe(cardRef.current);
-    return () => observer.disconnect();
-  }, [hasVideo, isMuted]);
+    observer.observe(videoElement);
 
-  const togglePlay = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!videoRef.current) return;
+    return () => {
+      observer.disconnect();
+    };
+  }, [hasVideo]);
 
-    if (videoRef.current.paused) {
-      videoRef.current.play().then(() => {
-        setIsPlaying(true);
-        setShowPlayOverlay(false);
-      });
+  /* ---------------------------------------------------------------------- */
+  /* Play                                                                    */
+  /* ---------------------------------------------------------------------- */
+
+  const togglePlay = (
+    event?: React.MouseEvent
+  ) => {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    const videoElement = videoRef.current;
+
+    if (!videoElement) {
+      return;
+    }
+
+    if (videoElement.paused) {
+      videoElement
+        .play()
+        .then(() => {
+          setIsPlaying(true);
+        })
+        .catch(() => {});
     } else {
-      videoRef.current.pause();
+      videoElement.pause();
       setIsPlaying(false);
-      setShowPlayOverlay(true);
     }
   };
 
-  const toggleMute = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!videoRef.current) return;
+  /* ---------------------------------------------------------------------- */
+  /* Mute                                                                    */
+  /* ---------------------------------------------------------------------- */
 
-    const newMutedState = !isMuted;
-    videoRef.current.muted = newMutedState;
-    setIsMuted(newMutedState);
+  const toggleMute = (
+    event: React.MouseEvent
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const videoElement = videoRef.current;
+
+    if (!videoElement) {
+      return;
+    }
+
+    videoElement.muted = !videoElement.muted;
+
+    setIsMuted(videoElement.muted);
   };
 
-  const toggleLike = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsLiked((prev) => !prev);
+  /* ---------------------------------------------------------------------- */
+  /* Share                                                                   */
+  /* ---------------------------------------------------------------------- */
+
+  const handleShare = async (
+    event: React.MouseEvent
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const id = item._id || item.id;
+
+    const shareUrl =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/listings/${id}`
+        : "";
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: item.title,
+          text: `Check out ${item.title} on Koombo`,
+          url: shareUrl,
+        });
+      } else if (
+        navigator.clipboard &&
+        shareUrl
+      ) {
+        await navigator.clipboard.writeText(
+          shareUrl
+        );
+      }
+    } catch {
+      // User cancelled sharing.
+    }
   };
 
   return (
-    <Link href={`/listings/${lid}`} className="group block h-full">
-      <div
-        ref={cardRef}
+    <>
+      <article
         className="
+          group
           relative
-          h-full
-          flex flex-col
           overflow-hidden
-          rounded-2xl
-          bg-white
-          border border-gray-100
+          rounded-[26px]
+          bg-black
           shadow-sm
           transition-all
-          duration-500
+          duration-300
           hover:-translate-y-1
           hover:shadow-xl
-          hover:border-gray-200
         "
       >
-        {/* =========================================================
-            MEDIA CONTAINER - RESPONSIVE ASPECT RATIO
-        ========================================================== */}
-        <div className="relative w-full aspect-[3/4] sm:aspect-[4/5] overflow-hidden bg-gray-50">
-          
-          {/* Video or Image */}
+        {/* ---------------------------------------------------------------- */}
+        {/* Media                                                             */}
+        {/* ---------------------------------------------------------------- */}
+
+        <div
+          className="
+            relative
+            aspect-[4/5]
+            w-full
+            overflow-hidden
+            bg-gray-100
+          "
+          onClick={togglePlay}
+        >
           {hasVideo ? (
             <video
               ref={videoRef}
-              src={item.videoUrl || item.video}
-              poster={image}
-              className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-              loop
+              src={video}
+              poster={image || undefined}
               muted={isMuted}
+              loop
               playsInline
               preload="metadata"
-              onClick={togglePlay}
+              className="
+                h-full
+                w-full
+                object-cover
+                transition-transform
+                duration-700
+                group-hover:scale-[1.02]
+              "
             />
           ) : image ? (
             <img
               src={image}
               alt={item.title}
-              className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+              className="
+                h-full
+                w-full
+                object-cover
+                transition-transform
+                duration-700
+                group-hover:scale-[1.02]
+              "
             />
           ) : (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-              <ShoppingBag className="text-gray-300" size={48} />
+            <div className="flex h-full w-full items-center justify-center bg-gray-100">
+              <ShoppingBag
+                size={42}
+                className="text-gray-300"
+              />
             </div>
           )}
 
-          {/* Gradients for text readability - Adjusted for mobile */}
-          <div className="absolute inset-x-0 top-0 h-20 sm:h-32 bg-gradient-to-b from-black/50 sm:from-black/60 to-transparent pointer-events-none opacity-60" />
-          <div className="absolute inset-x-0 bottom-0 h-32 sm:h-48 bg-gradient-to-t from-black/70 sm:from-black/80 via-black/30 sm:via-black/40 to-transparent pointer-events-none" />
+          {/* Gradient */}
 
-          {/* =========================================================
-              TOP BADGES & ACTIONS - COMPACT ON MOBILE
-          ========================================================== */}
-          <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-20 flex flex-wrap gap-1.5 sm:gap-2 max-w-[75%] sm:max-w-[80%]">
-            {item.discountPercent && item.discountPercent > 0 && (
-              <span className="px-2 py-1 sm:px-3 sm:py-1.5 rounded-full bg-red-500/90 backdrop-blur-md text-white text-[9px] sm:text-[10px] font-bold shadow-lg animate-pulse-slow">
-                -{item.discountPercent}% OFF
+          <div
+            className="
+              pointer-events-none
+              absolute
+              inset-0
+              bg-gradient-to-t
+              from-black/85
+              via-black/10
+              to-black/10
+            "
+          />
+
+          {/* ---------------------------------------------------------------- */}
+          {/* Top badges                                                       */}
+          {/* ---------------------------------------------------------------- */}
+
+          <div className="absolute left-3 top-3 z-10 flex flex-wrap gap-2">
+            {discount > 0 && (
+              <span
+                className="
+                  rounded-full
+                  bg-white
+                  px-3
+                  py-1.5
+                  text-xs
+                  font-bold
+                  text-gray-900
+                  shadow-lg
+                "
+              >
+                {discount}% off
               </span>
             )}
-            
-            {(item.isNewArrival || item.newArrival) && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-full bg-[#6C5CE7]/90 backdrop-blur-md text-white text-[9px] sm:text-[10px] font-bold shadow-lg">
-                <Sparkles size={10} className="sm:w-2.5 sm:h-2.5" />
+
+            {(item.isNewArrival ||
+              item.newArrival) && (
+              <span
+                className="
+                  inline-flex
+                  items-center
+                  gap-1
+                  rounded-full
+                  bg-[#0B8F86]
+                  px-3
+                  py-1.5
+                  text-xs
+                  font-bold
+                  text-white
+                  shadow-lg
+                "
+              >
+                <Sparkles size={12} />
                 NEW
               </span>
             )}
           </div>
 
-          {/* =========================================================
-              VIDEO INTERACTION CONTROLS - RESPONSIVE SIZING
-          ========================================================== */}
+          {/* ---------------------------------------------------------------- */}
+          {/* Mute                                                             */}
+          {/* ---------------------------------------------------------------- */}
+
           {hasVideo && (
-            <>
-              {/* Central Play/Pause Overlay */}
-              {showPlayOverlay && (
-                <button
-                  onClick={togglePlay}
-                  className="
-                    absolute
-                    inset-0
-                    m-auto
-                    z-30
-                    w-12 h-12 sm:w-16 sm:h-16
-                    rounded-full
-                    bg-white/20
-                    backdrop-blur-md
-                    border border-white/40
-                    flex
-                    items-center
-                    justify-center
-                    text-white
-                    hover:bg-white/30
-                    hover:scale-110
-                    transition-all
-                    duration-300
-                    shadow-xl
-                  "
-                  aria-label="Play video"
-                >
-                  <Play size={24} className="sm:w-8 sm:h-8 ml-0.5 sm:ml-1" fill="white" />
-                </button>
+            <button
+              type="button"
+              aria-label={
+                isMuted
+                  ? "Unmute video"
+                  : "Mute video"
+              }
+              onClick={toggleMute}
+              className="
+                absolute
+                right-3
+                top-3
+                z-20
+                flex
+                h-9
+                w-9
+                items-center
+                justify-center
+                rounded-full
+                bg-black/45
+                text-white
+                backdrop-blur-md
+                transition
+                hover:bg-black/65
+              "
+            >
+              {isMuted ? (
+                <VolumeX size={17} />
+              ) : (
+                <Volume2 size={17} />
               )}
+            </button>
+          )}
 
-              {/* Live Preview Indicator */}
-              {!showPlayOverlay && (
-                 <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-lg bg-black/40 backdrop-blur-md text-white text-[8px] sm:text-[9px] font-bold flex items-center gap-1">
-                   <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-red-500 animate-pulse"></span>
-                   LIVE
-                 </div>
-              )}
+          {/* ---------------------------------------------------------------- */}
+          {/* Play                                                             */}
+          {/* ---------------------------------------------------------------- */}
 
-              {/* Mute Toggle */}
-              <button
-                onClick={toggleMute}
-                className="
-                  absolute
-                  bottom-2
-                  left-2
-                  sm:bottom-4
-                  sm:left-4
-                  z-20
-                  w-8 h-8 sm:w-9 sm:h-9
+          {hasVideo && !isPlaying && (
+            <button
+              type="button"
+              aria-label="Play video"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                togglePlay();
+              }}
+              className="
+                absolute
+                left-1/2
+                top-1/2
+                z-20
+                flex
+                h-14
+                w-14
+                -translate-x-1/2
+                -translate-y-1/2
+                items-center
+                justify-center
+                rounded-full
+                bg-white/90
+                text-gray-900
+                shadow-xl
+                backdrop-blur
+                transition
+                hover:scale-105
+              "
+            >
+              <Play
+                size={22}
+                fill="currentColor"
+                className="ml-0.5"
+              />
+            </button>
+          )}
+
+          {/* ---------------------------------------------------------------- */}
+          {/* Social controls                                                   */}
+          {/* ---------------------------------------------------------------- */}
+
+          <div
+            className="
+              absolute
+              bottom-[130px]
+              right-3
+              z-20
+              flex
+              flex-col
+              items-center
+              gap-4
+            "
+          >
+            {/* Like */}
+
+            <button
+              type="button"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                setIsLiked((value) => !value);
+              }}
+              className="flex flex-col items-center gap-1 text-white"
+              aria-label={
+                isLiked ? "Unlike" : "Like"
+              }
+            >
+              <span
+                className={`
+                  flex
+                  h-10
+                  w-10
+                  items-center
+                  justify-center
                   rounded-full
                   bg-black/40
                   backdrop-blur-md
-                  border border-white/10
-                  flex
-                  items-center
-                  justify-center
-                  text-white
-                  hover:bg-black/60
                   transition
-                "
-                aria-label={isMuted ? "Unmute" : "Mute"}
-              >
-                {isMuted ? <VolumeX size={14} className="sm:w-4 sm:h-4" /> : <Volume2 size={14} className="sm:w-4 sm:h-4" />}
-              </button>
-            </>
-          )}
-
-          {/* =========================================================
-              SOCIAL ACTIONS (RIGHT SIDE) - ADJUSTED POSITIONING
-          ========================================================== */}
-          <div className="absolute right-2 bottom-28 sm:right-3 sm:bottom-32 z-20 flex flex-col gap-2 sm:gap-3">
-            {/* Like Button */}
-            <button
-              onClick={toggleLike}
-              className="group/btn flex flex-col items-center gap-0.5 sm:gap-1"
-              aria-label={isLiked ? "Unlike" : "Like"}
-            >
-              <div
-                className={`
-                  w-8 h-8 sm:w-10 sm:h-10
-                  rounded-full
-                  backdrop-blur-md
-                  border border-white/10
-                  flex
-                  items-center
-                  justify-center
-                  transition-all
-                  duration-300
+                  hover:scale-105
                   ${
                     isLiked
-                      ? "bg-red-500 border-red-500 shadow-red-500/30 shadow-lg"
-                      : "bg-black/40 hover:bg-black/60"
+                      ? "text-red-500"
+                      : "text-white"
                   }
                 `}
               >
                 <Heart
-                  size={14}
-                  className="sm:w-[18px] sm:h-[18px] transition-colors duration-300 text-white"
-                  fill={isLiked ? "white" : "none"}
+                  size={19}
+                  fill={
+                    isLiked
+                      ? "currentColor"
+                      : "none"
+                  }
                 />
-              </div>
-              <span className="text-[9px] sm:text-[10px] font-bold text-white drop-shadow-md bg-black/20 px-1 sm:px-1.5 py-0.5 rounded-md backdrop-blur-sm">
-                {(item.reviewCount || Math.floor(Math.random() * 500)).toLocaleString()}
+              </span>
+
+              {likes && (
+                <span className="text-[10px] font-medium text-white">
+                  {likes}
+                </span>
+              )}
+            </button>
+
+            {/* Comments */}
+
+            <button
+              type="button"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+              }}
+              className="flex flex-col items-center gap-1 text-white"
+              aria-label="Comments"
+            >
+              <span
+                className="
+                  flex
+                  h-10
+                  w-10
+                  items-center
+                  justify-center
+                  rounded-full
+                  bg-black/40
+                  backdrop-blur-md
+                  transition
+                  hover:scale-105
+                "
+              >
+                <MessageCircle size={19} />
               </span>
             </button>
 
-            {/* View Count */}
-            <div className="flex flex-col items-center gap-0.5 sm:gap-1">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center text-white">
-                <Eye size={14} className="sm:w-[18px] sm:h-[18px]" />
-              </div>
-              <span className="text-[9px] sm:text-[10px] font-bold text-white drop-shadow-md bg-black/20 px-1 sm:px-1.5 py-0.5 rounded-md backdrop-blur-sm">
-                {item.views ? (item.views / 1000).toFixed(1) + 'k' : '1.2k'}
+            {/* Save */}
+
+            <button
+              type="button"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                setIsSaved((value) => !value);
+              }}
+              className="flex flex-col items-center gap-1 text-white"
+              aria-label={
+                isSaved ? "Unsave" : "Save"
+              }
+            >
+              <span
+                className={`
+                  flex
+                  h-10
+                  w-10
+                  items-center
+                  justify-center
+                  rounded-full
+                  bg-black/40
+                  backdrop-blur-md
+                  transition
+                  hover:scale-105
+                  ${
+                    isSaved
+                      ? "text-[#0B8F86]"
+                      : "text-white"
+                  }
+                `}
+              >
+                <Bookmark
+                  size={19}
+                  fill={
+                    isSaved
+                      ? "currentColor"
+                      : "none"
+                  }
+                />
               </span>
-            </div>
+            </button>
+
+            {/* Share */}
+
+            <button
+              type="button"
+              onClick={handleShare}
+              className="flex flex-col items-center gap-1 text-white"
+              aria-label="Share"
+            >
+              <span
+                className="
+                  flex
+                  h-10
+                  w-10
+                  items-center
+                  justify-center
+                  rounded-full
+                  bg-black/40
+                  backdrop-blur-md
+                  transition
+                  hover:scale-105
+                "
+              >
+                <Share2 size={18} />
+              </span>
+            </button>
           </div>
 
-          {/* =========================================================
-              BOTTOM MEDIA INFO - RESPONSIVE PADDING
-          ========================================================== */}
-          <div className="absolute bottom-0 left-0 right-0 z-10 p-2.5 sm:p-4 pr-10 sm:pr-12 pb-12 sm:pb-16">
-            {/* Seller Info */}
-            <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
-              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-gray-900 text-[10px] sm:text-xs font-bold shadow-sm border border-white/20">
-                {(item.sellerName || item.seller || "S")[0].toUpperCase()}
+          {/* ---------------------------------------------------------------- */}
+          {/* Product information                                              */}
+          {/* ---------------------------------------------------------------- */}
+
+          <div
+            className="
+              absolute
+              inset-x-0
+              bottom-0
+              z-10
+              p-4
+              pr-16
+            "
+          >
+            {/* Seller */}
+
+            <div className="mb-2 flex items-center gap-2">
+              <div
+                className="
+                  flex
+                  h-8
+                  w-8
+                  shrink-0
+                  items-center
+                  justify-center
+                  rounded-full
+                  bg-white
+                  text-xs
+                  font-bold
+                  text-[#0B4F5C]
+                "
+              >
+                {sellerName
+                  .charAt(0)
+                  .toUpperCase()}
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-white/90 text-[10px] sm:text-xs font-medium truncate drop-shadow-sm">
-                  {item.sellerName || item.seller || "Verified Seller"}
-                </p>
+
+              <div className="min-w-0">
+                <div className="flex items-center gap-1">
+                  <span className="truncate text-xs font-semibold text-white">
+                    {sellerName}
+                  </span>
+
+                  {item.isVerified && (
+                    <CheckCircle2
+                      size={13}
+                      className="shrink-0 text-[#21D4C5]"
+                      fill="currentColor"
+                    />
+                  )}
+                </div>
+
+                {item.location && (
+                  <p className="truncate text-[10px] text-white/70">
+                    {item.location}
+                  </p>
+                )}
               </div>
             </div>
 
             {/* Title */}
-            <h3 className="text-white text-sm sm:text-base font-bold leading-snug line-clamp-2 drop-shadow-md mb-1">
+
+            <h3
+              className="
+                line-clamp-2
+                text-sm
+                font-semibold
+                leading-5
+                text-white
+              "
+            >
               {item.title}
             </h3>
-          </div>
 
-          {/* =========================================================
-              VERIFIED BANNER & CONDITION BADGE - RESPONSIVE
-          ========================================================== */}
-          
-          {/* Verified Seller Banner */}
-          {item.isVerified && (
-            <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-r from-emerald-600/90 to-emerald-500/90 backdrop-blur-md py-1.5 sm:py-2 px-2 sm:px-4 flex items-center justify-center gap-1.5 sm:gap-2 border-t border-white/10">
-              <ShieldCheck size={12} className="sm:w-3.5 sm:h-3.5 text-white" />
-              <span className="text-white text-[9px] sm:text-[10px] font-bold uppercase tracking-wider">Verified Seller</span>
-            </div>
-          )}
+            {/* Price */}
 
-          {/* Condition Badge */}
-          {conditionStyle && (
-            <div className={`absolute ${item.isVerified ? 'bottom-9 sm:bottom-10' : 'bottom-2 sm:bottom-4'} left-2 sm:left-4 z-20`}>
-              <div className={`
-                inline-flex items-center gap-1 sm:gap-1.5 
-                px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg 
-                ${conditionStyle.bg} 
-                ${conditionStyle.text}
-                backdrop-blur-md shadow-lg border border-white/20
-              `}>
-                <Tag size={10} className="sm:w-3 sm:h-3" />
-                <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wide">{conditionStyle.label}</span>
-              </div>
-            </div>
-          )}
-
-        </div>
-
-        {/* =========================================================
-            FOOTER / PRICE ACTION - COMPACT FOR MOBILE
-        ========================================================== */}
-        <div className="p-2.5 sm:p-4 flex items-center justify-between bg-white mt-auto">
-          <div className="flex flex-col min-w-0 flex-1 mr-2">
-            <span className="text-[10px] sm:text-xs text-gray-500 font-medium mb-0.5">Price</span>
-            <div className="flex items-baseline gap-1.5 sm:gap-2 flex-wrap">
-              <span className="text-base sm:text-lg font-extrabold text-gray-900 tracking-tight truncate">
-                {priceDisplay}
+            <div className="mt-2 flex items-center gap-2">
+              <span className="text-lg font-bold text-white">
+                {formatPrice(item.price)}
               </span>
-              {originalPriceDisplay && (
-                <span className="text-[10px] sm:text-xs text-gray-400 line-through font-medium">
-                  {originalPriceDisplay}
+
+              {item.originalPrice &&
+                Number(item.originalPrice) >
+                  Number(item.price) && (
+                  <span className="text-xs text-white/55 line-through">
+                    {formatPrice(
+                      item.originalPrice
+                    )}
+                  </span>
+                )}
+            </div>
+
+            {/* Rating / Views */}
+
+            <div className="mt-1 flex items-center gap-3 text-[10px] text-white/75">
+              {item.rating !== undefined &&
+                item.rating !== null && (
+                  <span className="flex items-center gap-1">
+                    <Star
+                      size={11}
+                      fill="currentColor"
+                      className="text-yellow-400"
+                    />
+
+                    {Number(item.rating).toFixed(
+                      1
+                    )}
+
+                    {item.reviewCount !==
+                      undefined && (
+                      <span>
+                        ({item.reviewCount})
+                      </span>
+                    )}
+                  </span>
+                )}
+
+              {views && (
+                <span className="flex items-center gap-1">
+                  <Eye size={11} />
+                  {views}
                 </span>
               )}
             </div>
+
+            {/* View Product */}
+
+            <button
+              type="button"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                setShowShopLayer(true);
+              }}
+              className="
+                mt-3
+                flex
+                w-full
+                items-center
+                justify-center
+                gap-2
+                rounded-xl
+                bg-[#0B8F86]
+                px-4
+                py-3
+                text-sm
+                font-bold
+                text-white
+                shadow-lg
+                transition
+                hover:bg-[#087A73]
+                active:scale-[0.98]
+              "
+            >
+              View Product
+              <ArrowRight size={16} />
+            </button>
           </div>
 
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-            className="
-              shrink-0
-              w-9 h-9 sm:w-10 sm:h-10
-              rounded-lg sm:rounded-xl
-              bg-gray-900
-              text-white
-              flex items-center justify-center
-              hover:bg-gray-800
-              hover:scale-105
-              active:scale-95
-              transition-all
-              shadow-lg shadow-gray-900/20
-            "
-            aria-label="Add to cart"
-          >
-            <ShoppingBag size={16} className="sm:w-[18px] sm:h-[18px]" />
-          </button>
+          {/* ---------------------------------------------------------------- */}
+          {/* Condition badge                                                  */}
+          {/* ---------------------------------------------------------------- */}
+
+          {conditionLabel && (
+            <div className="absolute bottom-3 left-3 z-20">
+              <div
+                className="
+                  inline-flex
+                  items-center
+                  gap-1
+                  rounded-lg
+                  bg-black/45
+                  px-2.5
+                  py-1.5
+                  text-white
+                  backdrop-blur-md
+                "
+              >
+                <Tag size={11} />
+
+                <span className="text-[10px] font-bold">
+                  {conditionLabel}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
-      </div>
-    </Link>
+      </article>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Shop Layer                                                         */}
+      {/* ------------------------------------------------------------------ */}
+
+      {showShopLayer && (
+        <ShopLayer
+          item={item}
+          onClose={() =>
+            setShowShopLayer(false)
+          }
+        />
+      )}
+    </>
   );
 }
 
-export default function FashionDealsVideo() {
-  const [items, setItems] = useState<FashionItem[]>([]);
-  const [loading, setLoading] = useState(false);
+/* -------------------------------------------------------------------------- */
+/* Shop Layer                                                                 */
+/* -------------------------------------------------------------------------- */
+
+function ShopLayer({
+  item,
+  onClose,
+}: ShopLayerProps) {
+  const [quantity, setQuantity] = useState(1);
+
+  const image = getImage(item);
+  const video = getVideo(item);
+  const sellerName = getSellerName(item);
+  const discount = getDiscountPercent(item);
+  const conditionLabel = getConditionLabel(
+    item.condition
+  );
+
+  const price = Number(item.price) || 0;
+  const total = price * quantity;
+
+  /* ---------------------------------------------------------------------- */
+  /* Lock background scroll                                                 */
+  /* ---------------------------------------------------------------------- */
 
   useEffect(() => {
-    let mounted = true;
-    const load = async () => {
-      setLoading(true);
-      try {
-        const res = await apiFetch('/public/listings?category=Fashion&limit=8');
-        let data: any[] = [];
+    const previousOverflow =
+      document.body.style.overflow;
 
-        if (mounted) {
-          if (res?.success && Array.isArray(res.data)) {
-            data = res.data;
-          } else if (Array.isArray(res?.data)) {
-            data = res.data;
-          } else if (Array.isArray(res)) {
-            data = res;
-          }
+    document.body.style.overflow = "hidden";
 
-          const mapped = data.map((p: any) => ({
-            ...p,
-            _id: p._id || p.id,
-            title: p.title || p.name || 'Fresh fashion find',
-            price: p.price || p.amount || 0,
-            sellerName: p.sellerName || p.seller?.name || p.seller?.username || 'verified seller',
-            imageUrls: p.imageUrls || p.images || (p.image ? [p.image] : []),
-            videoUrl: p.videoUrl || p.video || undefined,
-            isNewArrival: p.isNewArrival || p.newArrival || false,
-            isVerified: p.isVerified || p.verified || false,
-            condition: p.condition || (Math.random() > 0.5 ? 'New' : 'Slightly Used'),
-            discountPercent: p.discountPercent || (p.originalPrice && p.price ? Math.round((1 - Number(p.price)/Number(p.originalPrice)) * 100) : 0),
-            views: p.views || Math.floor(Math.random() * 5000)
-          }));
-          setItems(mapped);
-        }
-      } catch (err) {
-        console.error('Error loading fashion listings', err);
-        setItems([]);
-      } finally {
-        if (mounted) setLoading(false);
-      }
+    return () => {
+      document.body.style.overflow =
+        previousOverflow;
     };
-    load();
-    return () => { mounted = false };
   }, []);
 
+  /* ---------------------------------------------------------------------- */
+  /* Escape key                                                             */
+  /* ---------------------------------------------------------------------- */
+
+  useEffect(() => {
+    const handleKeyDown = (
+      event: KeyboardEvent
+    ) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    window.addEventListener(
+      "keydown",
+      handleKeyDown
+    );
+
+    return () => {
+      window.removeEventListener(
+        "keydown",
+        handleKeyDown
+      );
+    };
+  }, [onClose]);
+
+  /* ---------------------------------------------------------------------- */
+  /* Continue                                                               */
+  /* ---------------------------------------------------------------------- */
+
+  const handleContinue = () => {
+    const id = item._id || item.id;
+
+    if (!id) return;
+
+    window.location.href = `/listings/${id}`;
+  };
+
   return (
-    <section className="py-8 sm:py-12" style={{ background: 'var(--bg)' }}>
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
-        
-        {/* Header - Responsive */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 sm:gap-6 mb-6 sm:mb-10">
-          <div className="flex items-start gap-3 sm:gap-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-[#FF6B9D]/10 flex items-center justify-center shadow-lg shadow-[#FF6B9D]/10 rotate-3 hover:rotate-0 transition-transform duration-300">
-              <Sparkles className="text-[#FF6B9D] w-5 h-5 sm:w-6 sm:h-6" />
-            </div>
-            <div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
-                Fashion Picks
-              </h2>
-              <p className="text-gray-500 mt-0.5 sm:mt-1 flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-medium">
-                <Sparkles size={14} className="sm:w-4 sm:h-4 text-[#FF6B9D]" />
-                Trendy styles from campus creators
-              </p>
-            </div>
-          </div>
+    <div
+      className="
+        fixed
+        inset-0
+        z-[100]
+        flex
+        items-end
+        justify-center
+        bg-black/60
+        backdrop-blur-sm
+        overscroll-none
+      "
+      role="dialog"
+      aria-modal="true"
+      aria-label="Product details"
+      onMouseDown={(event) => {
+        if (
+          event.target ===
+          event.currentTarget
+        ) {
+          onClose();
+        }
+      }}
+    >
+      <div
+        className="
+          relative
+          flex
+          w-full
+          max-w-2xl
+          min-h-0
+          max-h-[92dvh]
+          flex-col
+          overflow-hidden
+          rounded-t-[28px]
+          bg-white
+          shadow-2xl
+          sm:max-h-[90dvh]
+          sm:rounded-[28px]
+        "
+        onMouseDown={(event) => {
+          event.stopPropagation();
+        }}
+      >
+        {/* Handle */}
+
+        <div
+          className="
+            flex
+            shrink-0
+            justify-center
+            bg-white
+            pt-2
+            pb-1
+          "
+        >
+          <div className="h-1.5 w-12 rounded-full bg-gray-200" />
         </div>
 
-        {/* Grid - Improved Responsive Gaps */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6">
-          {/* Skeleton */}
-          {loading && new Array(6).fill(0).map((_, i) => (
-             <div key={i} className="rounded-2xl bg-white border border-gray-100 overflow-hidden shadow-sm h-full flex flex-col">
-              <div className="aspect-[3/4] sm:aspect-[4/5] bg-gray-100 animate-pulse relative" />
-              <div className="p-2.5 sm:p-4 space-y-2 sm:space-y-3 flex-1">
-                <div className="h-3 sm:h-4 w-3/4 bg-gray-100 rounded-lg animate-pulse" />
-                <div className="flex justify-between items-end mt-auto pt-2">
-                  <div className="h-5 sm:h-6 w-16 sm:w-20 bg-gray-100 rounded-lg animate-pulse" />
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gray-100 rounded-lg sm:rounded-xl animate-pulse" />
+        {/* Close */}
+
+        <button
+          type="button"
+          aria-label="Close"
+          onClick={onClose}
+          className="
+            absolute
+            right-3
+            top-3
+            z-20
+            flex
+            h-10
+            w-10
+            items-center
+            justify-center
+            rounded-full
+            bg-black/55
+            text-white
+            backdrop-blur-md
+            transition
+            hover:bg-black/70
+          "
+        >
+          <X size={19} />
+        </button>
+
+        {/* ---------------------------------------------------------------- */}
+        {/* Scrollable content                                                */}
+        {/* ---------------------------------------------------------------- */}
+
+        <div
+          className="
+            min-h-0
+            flex-1
+            overflow-y-auto
+            overscroll-contain
+            [-webkit-overflow-scrolling:touch]
+          "
+        >
+          {/* Product media */}
+
+          <div
+            className="
+              relative
+              h-[190px]
+              w-full
+              overflow-hidden
+              bg-gray-100
+              min-[375px]:h-[220px]
+              sm:h-[280px]
+              md:h-[320px]
+            "
+          >
+            {video ? (
+              <video
+                src={video}
+                poster={image || undefined}
+                muted
+                loop
+                autoPlay
+                playsInline
+                className="h-full w-full object-cover"
+              />
+            ) : image ? (
+              <img
+                src={image}
+                alt={item.title}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center text-sm text-gray-400">
+                No product image
+              </div>
+            )}
+
+            {discount > 0 && (
+              <div
+                className="
+                  absolute
+                  left-4
+                  top-4
+                  rounded-full
+                  bg-white
+                  px-3
+                  py-1.5
+                  text-xs
+                  font-bold
+                  text-gray-900
+                  shadow-lg
+                "
+              >
+                {discount}% off
+              </div>
+            )}
+          </div>
+
+          {/* Details */}
+
+          <div className="space-y-5 p-4 sm:p-6">
+            {/* Heading */}
+
+            <div>
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <p className="mb-1 text-xs font-medium uppercase tracking-wide text-[#0B8F86]">
+                    {item.category ||
+                      "Fashion"}
+                  </p>
+
+                  <h2
+                    className="
+                      text-xl
+                      font-bold
+                      leading-tight
+                      text-gray-900
+                      sm:text-2xl
+                    "
+                  >
+                    {item.title}
+                  </h2>
+                </div>
+
+                <div className="shrink-0 text-right">
+                  <p className="text-xl font-bold text-gray-900 sm:text-2xl">
+                    {formatPrice(item.price)}
+                  </p>
+
+                  {item.originalPrice &&
+                    Number(item.originalPrice) >
+                      Number(item.price) && (
+                      <p className="text-xs text-gray-400 line-through">
+                        {formatPrice(
+                          item.originalPrice
+                        )}
+                      </p>
+                    )}
+                </div>
+              </div>
+
+              {/* Rating */}
+
+              {(item.rating !== undefined ||
+                item.reviewCount !== undefined) && (
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {item.rating !== undefined &&
+                    item.rating !== null && (
+                      <span className="flex items-center gap-1 rounded-full bg-yellow-50 px-2.5 py-1 text-xs font-semibold text-yellow-700">
+                        <Star
+                          size={13}
+                          fill="currentColor"
+                        />
+
+                        {Number(
+                          item.rating
+                        ).toFixed(1)}
+                      </span>
+                    )}
+
+                  {item.reviewCount !==
+                    undefined && (
+                    <span className="text-xs text-gray-500">
+                      {item.reviewCount}{" "}
+                      {item.reviewCount === 1
+                        ? "review"
+                        : "reviews"}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Condition */}
+
+              {conditionLabel && (
+                <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-700">
+                  <Tag size={13} />
+                  {conditionLabel}
+                </div>
+              )}
+            </div>
+
+            {/* Description */}
+
+            {item.description && (
+              <div>
+                <h3 className="mb-2 text-sm font-bold text-gray-900">
+                  About this product
+                </h3>
+
+                <p className="text-sm leading-6 text-gray-600">
+                  {item.description}
+                </p>
+              </div>
+            )}
+
+            {/* Seller */}
+
+            <div
+              className="
+                rounded-2xl
+                border
+                border-gray-100
+                bg-gray-50
+                p-4
+              "
+            >
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                Seller
+              </p>
+
+              <div className="flex items-center gap-3">
+                <div
+                  className="
+                    flex
+                    h-11
+                    w-11
+                    shrink-0
+                    items-center
+                    justify-center
+                    rounded-full
+                    bg-[#0B4F5C]
+                    text-sm
+                    font-bold
+                    text-white
+                  "
+                >
+                  {sellerName
+                    .charAt(0)
+                    .toUpperCase()}
+                </div>
+
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1">
+                    <p className="truncate text-sm font-bold text-gray-900">
+                      {sellerName}
+                    </p>
+
+                    {item.isVerified && (
+                      <CheckCircle2
+                        size={14}
+                        className="shrink-0 text-[#0B8F86]"
+                        fill="currentColor"
+                      />
+                    )}
+                  </div>
+
+                  {item.location && (
+                    <p className="mt-0.5 truncate text-xs text-gray-500">
+                      {item.location}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
-          ))}
 
-          {/* Empty state */}
-          {!loading && items.length === 0 && (
-            <div className="col-span-full text-center py-12 sm:py-16 bg-white rounded-2xl sm:rounded-3xl border border-dashed border-gray-300 px-4">
-              <p className="text-gray-900 font-semibold text-base sm:text-lg">No fashion items found.</p>
+            {/* Delivery / protection */}
+
+            <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
+              <div
+                className="
+                  rounded-2xl
+                  border
+                  border-gray-100
+                  p-4
+                "
+              >
+                <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-full bg-[#E8F7F5] text-[#0B8F86]">
+                  <Truck size={17} />
+                </div>
+
+                <h3 className="text-sm font-semibold text-gray-900">
+                  Delivery
+                </h3>
+
+                <p className="mt-1 text-xs leading-5 text-gray-500">
+                  Delivery details are shown before you complete your purchase.
+                </p>
+              </div>
+
+              <div
+                className="
+                  rounded-2xl
+                  border
+                  border-gray-100
+                  p-4
+                "
+              >
+                <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-full bg-[#E8F7F5] text-[#0B8F86]">
+                  <ShieldCheck size={17} />
+                </div>
+
+                <h3 className="text-sm font-semibold text-gray-900">
+                  Secure shopping
+                </h3>
+
+                <p className="mt-1 text-xs leading-5 text-gray-500">
+                  Review the seller and product details before ordering.
+                </p>
+              </div>
+            </div>
+
+            {/* Quantity */}
+
+            <div>
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-sm font-bold text-gray-900">
+                  Quantity
+                </h3>
+
+                <span className="text-xs text-gray-500">
+                  {formatPrice(total)} total
+                </span>
+              </div>
+
+              <div
+                className="
+                  flex
+                  w-fit
+                  items-center
+                  rounded-xl
+                  border
+                  border-gray-200
+                  bg-white
+                "
+              >
+                <button
+                  type="button"
+                  aria-label="Decrease quantity"
+                  disabled={quantity <= 1}
+                  onClick={() => {
+                    setQuantity((value) =>
+                      Math.max(
+                        1,
+                        value - 1
+                      )
+                    );
+                  }}
+                  className="
+                    flex
+                    h-11
+                    w-11
+                    items-center
+                    justify-center
+                    text-gray-700
+                    transition
+                    hover:bg-gray-50
+                    disabled:cursor-not-allowed
+                    disabled:opacity-30
+                  "
+                >
+                  <Minus size={16} />
+                </button>
+
+                <span
+                  className="
+                    flex
+                    h-11
+                    min-w-10
+                    items-center
+                    justify-center
+                    border-x
+                    border-gray-200
+                    px-3
+                    text-sm
+                    font-bold
+                    text-gray-900
+                  "
+                >
+                  {quantity}
+                </span>
+
+                <button
+                  type="button"
+                  aria-label="Increase quantity"
+                  onClick={() => {
+                    setQuantity((value) =>
+                      Math.min(
+                        99,
+                        value + 1
+                      )
+                    );
+                  }}
+                  className="
+                    flex
+                    h-11
+                    w-11
+                    items-center
+                    justify-center
+                    text-gray-700
+                    transition
+                    hover:bg-gray-50
+                  "
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
+            </div>
+
+            <div className="h-2" />
+          </div>
+        </div>
+
+        {/* ---------------------------------------------------------------- */}
+        {/* Sticky Continue button                                           */}
+        {/* ---------------------------------------------------------------- */}
+
+        <div
+          className="
+            shrink-0
+            border-t
+            border-gray-100
+            bg-white
+            px-4
+            pt-3
+            pb-[calc(12px+env(safe-area-inset-bottom))]
+            sm:px-6
+            sm:pt-4
+          "
+        >
+          <button
+            type="button"
+            onClick={handleContinue}
+            className="
+              flex
+              min-h-[50px]
+              w-full
+              items-center
+              justify-center
+              gap-2
+              rounded-2xl
+              bg-[#0B8F86]
+              px-5
+              py-3.5
+              text-sm
+              font-bold
+              text-white
+              shadow-lg
+              shadow-[#0B8F86]/20
+              transition
+              hover:bg-[#087A73]
+              active:scale-[0.99]
+            "
+          >
+            Continue
+            <ArrowRight size={17} />
+          </button>
+
+          <p className="mt-2 text-center text-[10px] text-gray-400">
+            Review product details and complete your purchase
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Main Fashion Section                                                       */
+/* -------------------------------------------------------------------------- */
+
+export default function FashionDealsVideo() {
+  const [items, setItems] = useState<FashionItem[]>([]);
+  const [loading, setLoading] =
+    useState(true);
+  const [error, setError] =
+    useState("");
+
+  useEffect(() => {
+    let mounted = true;
+
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const res = await apiFetch(
+          "/public/listings?category=Fashion&limit=12"
+        );
+
+        if (!mounted) return;
+
+        let data: any[] = [];
+
+        if (
+          res?.success &&
+          Array.isArray(res.data)
+        ) {
+          data = res.data;
+        } else if (
+          Array.isArray(res?.data)
+        ) {
+          data = res.data;
+        } else if (Array.isArray(res)) {
+          data = res;
+        }
+
+        const mapped: FashionItem[] =
+          data
+            .map((p: any) => {
+              const price =
+                p?.price ??
+                p?.amount ??
+                0;
+
+              const originalPrice =
+                p?.originalPrice ??
+                p?.listPrice;
+
+              let discountPercent =
+                p?.discountPercent;
+
+              if (
+                (!discountPercent ||
+                  discountPercent <= 0) &&
+                Number(originalPrice) >
+                  Number(price)
+              ) {
+                discountPercent =
+                  Math.round(
+                    ((Number(
+                      originalPrice
+                    ) -
+                      Number(price)) /
+                      Number(
+                        originalPrice
+                      )) *
+                      100
+                  );
+              }
+
+              const rawImages =
+                p?.imageUrls ??
+                p?.images ??
+                (p?.image
+                  ? [p.image]
+                  : []);
+
+              return {
+                ...p,
+
+                _id:
+                  p?._id ||
+                  p?.id ||
+                  "",
+
+                id: p?.id,
+
+                title:
+                  p?.title ||
+                  p?.name ||
+                  "Fresh fashion find",
+
+                price,
+
+                originalPrice,
+
+                sellerName:
+                  p?.sellerName ||
+                  p?.seller?.name ||
+                  p?.seller?.username,
+
+                imageUrls:
+                  Array.isArray(
+                    rawImages
+                  )
+                    ? rawImages.filter(
+                        Boolean
+                      )
+                    : [],
+
+                videoUrl:
+                  p?.videoUrl ||
+                  p?.video ||
+                  undefined,
+
+                isNewArrival:
+                  Boolean(
+                    p?.isNewArrival ||
+                      p?.newArrival
+                  ),
+
+                isVerified:
+                  Boolean(
+                    p?.isVerified ||
+                      p?.verified
+                  ),
+
+                discountPercent,
+
+                likes:
+                  typeof p?.likes ===
+                  "number"
+                    ? p.likes
+                    : undefined,
+
+                views:
+                  typeof p?.views ===
+                  "number"
+                    ? p.views
+                    : undefined,
+
+                rating:
+                  p?.rating,
+
+                reviewCount:
+                  p?.reviewCount,
+
+                condition:
+                  p?.condition,
+
+                description:
+                  p?.description,
+
+                location:
+                  p?.location ||
+                  p?.seller?.location,
+
+                category:
+                  p?.category ||
+                  "Fashion",
+              };
+            })
+            .filter(
+              (item: FashionItem) =>
+                Boolean(item._id)
+            );
+
+        setItems(mapped);
+      } catch (err) {
+        console.error(
+          "Error loading fashion listings:",
+          err
+        );
+
+        if (mounted) {
+          setError(
+            "Unable to load fashion products right now."
+          );
+
+          setItems([]);
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    load();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  return (
+    <section
+      className="w-full py-8 sm:py-12"
+      style={{
+        background: "var(--bg)",
+      }}
+    >
+      <div className="mx-auto max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8">
+        {/* ---------------------------------------------------------------- */}
+        {/* Header                                                            */}
+        {/* ---------------------------------------------------------------- */}
+
+        <div className="mb-6 flex items-end justify-between gap-4 sm:mb-8">
+          <div>
+            <p className="mb-1 text-xs font-bold uppercase tracking-[0.16em] text-[#0B8F86]">
+              Koombo Fashion
+            </p>
+
+            <h2 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
+              Fashion Picks
+            </h2>
+
+            <p className="mt-1 max-w-xl text-sm text-gray-500">
+              Discover fashion through videos and shop directly from sellers.
+            </p>
+          </div>
+        </div>
+
+        {/* ---------------------------------------------------------------- */}
+        {/* Error                                                             */}
+        {/* ---------------------------------------------------------------- */}
+
+        {error && (
+          <div
+            className="
+              mb-6
+              rounded-2xl
+              border
+              border-red-100
+              bg-red-50
+              p-5
+              text-center
+            "
+          >
+            <p className="text-sm font-medium text-red-600">
+              {error}
+            </p>
+          </div>
+        )}
+
+        {/* ---------------------------------------------------------------- */}
+        {/* Grid                                                              */}
+        {/* ---------------------------------------------------------------- */}
+
+        <div
+          className="
+            grid
+            grid-cols-2
+            gap-3
+            sm:gap-4
+            lg:grid-cols-3
+            xl:grid-cols-4
+            2xl:grid-cols-5
+          "
+        >
+          {loading &&
+            Array.from({ length: 8 }).map(
+              (_, index) => (
+                <CardSkeleton
+                  key={index}
+                />
+              )
+            )}
+
+          {!loading &&
+            items.map((item) => (
+              <VideoFashionCard
+                key={
+                  item._id ||
+                  item.id
+                }
+                item={item}
+              />
+            ))}
+        </div>
+
+        {/* ---------------------------------------------------------------- */}
+        {/* Empty                                                             */}
+        {/* ---------------------------------------------------------------- */}
+
+        {!loading &&
+          items.length === 0 &&
+          !error && (
+            <div
+              className="
+                rounded-3xl
+                border
+                border-gray-100
+                bg-gray-50
+                px-6
+                py-14
+                text-center
+              "
+            >
+              <div
+                className="
+                  mx-auto
+                  flex
+                  h-14
+                  w-14
+                  items-center
+                  justify-center
+                  rounded-full
+                  bg-white
+                  text-[#0B8F86]
+                  shadow-sm
+                "
+              >
+                <ShoppingBag size={22} />
+              </div>
+
+              <h3 className="mt-4 text-lg font-bold text-gray-900">
+                Nothing to discover yet
+              </h3>
+
+              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-500">
+                New fashion products and videos will appear here as sellers start sharing on Koombo.
+              </p>
             </div>
           )}
 
-          {/* Items */}
-          {!loading && items.map((item) => (
-            <VideoFashionCard key={item._id || item.id} item={item} />
-          ))}
-        </div>
+        {/* ---------------------------------------------------------------- */}
+        {/* See all                                                           */}
+        {/* ---------------------------------------------------------------- */}
 
-        {/* See all button */}
-        <div className="mt-8 sm:mt-12 flex justify-center px-4">
-          <Link 
-            href="/search?category=fashion" 
-            className="
-              group
-              inline-flex
-              items-center
-              gap-2 sm:gap-3
-              px-6 py-3 sm:px-8 sm:py-3.5
-              rounded-full
-              bg-white
-              border border-gray-200
-              text-sm
-              font-bold
-              text-gray-900
-              hover:border-[#FF6B9D]
-              hover:text-[#FF6B9D]
-              hover:shadow-xl
-              hover:shadow-[#FF6B9D]/10
-              transition-all
-              duration-300
-            "
-          >
-            See all Fashion
-            <ArrowRight size={14} className="sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
-          </Link>
-        </div>
+        {!loading &&
+          items.length > 0 && (
+            <div className="mt-8 flex justify-center sm:mt-10">
+              <Link
+                href="/search?category=Fashion"
+                className="
+                  group
+                  inline-flex
+                  items-center
+                  gap-2
+                  rounded-full
+                  border
+                  border-gray-200
+                  bg-white
+                  px-6
+                  py-3
+                  text-sm
+                  font-bold
+                  text-gray-900
+                  transition
+                  duration-300
+                  hover:border-[#0B8F86]
+                  hover:text-[#0B8F86]
+                  hover:shadow-xl
+                "
+              >
+                See all Fashion
+
+                <ArrowRight
+                  size={16}
+                  className="
+                    transition-transform
+                    duration-300
+                    group-hover:translate-x-1
+                  "
+                />
+              </Link>
+            </div>
+          )}
       </div>
-      
-      <style jsx global>{`
-        @keyframes pulse-slow {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.8; }
-        }
-        .animate-pulse-slow { animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-      `}</style>
     </section>
   );
 }

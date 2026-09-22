@@ -226,8 +226,8 @@ function TrustRing({ score, size = 56, strokeWidth = 3, children }: {
         />
         <defs>
           <linearGradient id="trustRingGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#FFB020" />
-            <stop offset="100%" stopColor="#FF6B9D" />
+            <stop offset="0%" stopColor="#0D9488" />
+            <stop offset="100%" stopColor="#0EA5E9" />
           </linearGradient>
         </defs>
       </svg>
@@ -270,7 +270,7 @@ function BottomSheet({ open, onClose, title, children }: {
 function TrustBadge({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
     <div className="flex items-center gap-1.5 bg-[#F6F5F8] rounded-xl px-3 py-2 lg:hover:bg-[#EFEEF3] transition-colors">
-      <span className="text-[#6C5CE7]">{icon}</span>
+      <span className="text-[#0D9488]">{icon}</span>
       <span className="text-[11px] font-bold text-[#14141A]">{label}</span>
     </div>
   );
@@ -404,7 +404,8 @@ export default function ListingPage() {
   const [showShare, setShowShare] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
-  const [mediaIndex, setMediaIndex] = useState(0);
+  const [viewMode, setViewMode] = useState<"video" | "photos">("photos");
+  const [photoIndex, setPhotoIndex] = useState(0);
   const [commentInput, setCommentInput] = useState("");
   const [reviewRating, setReviewRating] = useState(5);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -623,15 +624,23 @@ export default function ListingPage() {
     return () => { mounted = false; };
   }, [id, isSignedIn]);
 
+  // Default to the video tab when a listing with video loads, else photos
+  useEffect(() => {
+    if (!listing) return;
+    const hasVideo = Boolean(listing.videoUrls?.[0] || listing.videoUrl);
+    setViewMode(hasVideo ? "video" : "photos");
+    setPhotoIndex(0);
+  }, [listing?._id, listing?.id]);
+
   // Handle video playback
   useEffect(() => {
-    if (media[mediaIndex]?.type === "video" && videoRef.current) {
+    if (viewMode === "video" && videoRef.current) {
       videoRef.current.play().catch(() => setIsPlaying(false));
       setIsPlaying(true);
     } else {
       setIsPlaying(false);
     }
-  }, [mediaIndex, listing]);
+  }, [viewMode, listing]);
 
   // ===== HANDLERS =====
   const handleSendComment = async (e: React.FormEvent) => {
@@ -887,7 +896,7 @@ export default function ListingPage() {
   // RENDER - FIXED STICKY HEADER
   // =========================================================================
   return (
-    <div className="min-h-screen bg-white text-[#14141A] font-sans selection:bg-[#6C5CE7] selection:text-white overflow-x-hidden w-full">
+    <div className="min-h-screen bg-white text-[#14141A] font-sans selection:bg-[#0D9488] selection:text-white overflow-x-hidden w-full">
       {/* Quick Add Notification */}
       {quickAddNotification.visible && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-[#14141A] text-white rounded-full px-4 py-2 shadow-xl animate-in slide-in-from-top duration-300">
@@ -941,71 +950,96 @@ export default function ListingPage() {
         {/* ===================== TOP GRID: MEDIA + INFO ===================== */}
         <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-12 lg:items-start">
 
-          {/* ===================== HERO MEDIA CAROUSEL ===================== */}
+          {/* ===================== HERO MEDIA — VIDEO / PHOTOS TABS ===================== */}
           <div className="relative w-full aspect-[4/5] lg:aspect-square bg-black overflow-hidden lg:rounded-3xl lg:sticky lg:top-6">
-            {media.map((m, i) => (
-              <div
-                key={i}
-                className="absolute inset-0 transition-opacity duration-300"
-                style={{ opacity: i === mediaIndex ? 1 : 0, pointerEvents: i === mediaIndex ? "auto" : "none" }}
-              >
-                {m.type === "video" ? (
-                  <video
-                    ref={videoRef}
-                    src={m.src}
-                    poster={m.poster}
-                    className="w-full h-full object-cover"
-                    loop
-                    muted
-                    playsInline
-                    onClick={() => {
-                      if (!videoRef.current) return;
-                      if (isPlaying) videoRef.current.pause();
-                      else videoRef.current.play();
-                      setIsPlaying(!isPlaying);
-                    }}
-                  />
-                ) : (
-                  <img src={m.src} className="w-full h-full object-cover" alt={listing.title} />
+            {/* Social-commerce style Video / Photos switcher */}
+            {videoUrl && (
+              <div className="absolute top-2.5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-0.5 bg-black/40 backdrop-blur-md rounded-full p-1">
+                <button
+                  onClick={() => setViewMode("video")}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-black transition-all ${
+                    viewMode === "video" ? "bg-white text-[#14141A]" : "text-white/80"
+                  }`}
+                >
+                  <Play size={9} className={viewMode === "video" ? "fill-[#14141A] text-[#14141A]" : "fill-white text-white"} />
+                  Video
+                </button>
+                <button
+                  onClick={() => setViewMode("photos")}
+                  className={`px-3 py-1.5 rounded-full text-[11px] font-black transition-all ${
+                    viewMode === "photos" ? "bg-white text-[#14141A]" : "text-white/80"
+                  }`}
+                >
+                  Photos · {photos.length}
+                </button>
+              </div>
+            )}
+
+            {viewMode === "video" && videoUrl ? (
+              <div className="absolute inset-0">
+                <video
+                  ref={videoRef}
+                  src={videoUrl}
+                  poster={listing.videoThumbnail || photos[0]}
+                  className="w-full h-full object-cover"
+                  loop
+                  muted
+                  playsInline
+                  onClick={() => {
+                    if (!videoRef.current) return;
+                    if (isPlaying) videoRef.current.pause();
+                    else videoRef.current.play();
+                    setIsPlaying(!isPlaying);
+                  }}
+                />
+                {!isPlaying && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="w-14 h-14 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center">
+                      <Play size={26} className="text-white ml-1" fill="white" />
+                    </div>
+                  </div>
                 )}
               </div>
-            ))}
-            <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-transparent to-black/10 pointer-events-none" />
-
-            {media[mediaIndex]?.type === "video" && !isPlaying && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="w-14 h-14 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center">
-                  <Play size={26} className="text-white ml-1" fill="white" />
-                </div>
+            ) : (
+              <div className="absolute inset-0">
+                {photos.map((p, i) => (
+                  <div
+                    key={i}
+                    className="absolute inset-0 transition-opacity duration-300"
+                    style={{ opacity: i === photoIndex ? 1 : 0, pointerEvents: i === photoIndex ? "auto" : "none" }}
+                  >
+                    <img src={p} className="w-full h-full object-cover" alt={listing.title} />
+                  </div>
+                ))}
+                {photos.length > 1 && (
+                  <>
+                    <button
+                      onClick={() => setPhotoIndex(i => (i - 1 + photos.length) % photos.length)}
+                      className="absolute left-2 lg:left-3 top-1/2 -translate-y-1/2 w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-black/35 backdrop-blur-md flex items-center justify-center hover:bg-black/50 transition-colors"
+                    >
+                      <ChevronLeft size={16} className="text-white" />
+                    </button>
+                    <button
+                      onClick={() => setPhotoIndex(i => (i + 1) % photos.length)}
+                      className="absolute right-2 lg:right-3 top-1/2 -translate-y-1/2 w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-black/35 backdrop-blur-md flex items-center justify-center hover:bg-black/50 transition-colors"
+                    >
+                      <ChevronRight size={16} className="text-white" />
+                    </button>
+                    <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-1.5">
+                      {photos.map((_, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setPhotoIndex(i)}
+                          className={`h-1.5 rounded-full transition-all ${i === photoIndex ? "w-5 bg-white" : "w-1.5 bg-white/40"}`}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
-            {/* Carousel nav */}
-            {media.length > 1 && (
-              <>
-                <button
-                  onClick={() => setMediaIndex(i => (i - 1 + media.length) % media.length)}
-                  className="absolute left-2 lg:left-3 top-1/2 -translate-y-1/2 w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-black/35 backdrop-blur-md flex items-center justify-center hover:bg-black/50 transition-colors"
-                >
-                  <ChevronLeft size={16} className="text-white" />
-                </button>
-                <button
-                  onClick={() => setMediaIndex(i => (i + 1) % media.length)}
-                  className="absolute right-2 lg:right-3 top-1/2 -translate-y-1/2 w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-black/35 backdrop-blur-md flex items-center justify-center hover:bg-black/50 transition-colors"
-                >
-                  <ChevronRight size={16} className="text-white" />
-                </button>
-                <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-1.5">
-                  {media.map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setMediaIndex(i)}
-                      className={`h-1.5 rounded-full transition-all ${i === mediaIndex ? "w-5 bg-white" : "w-1.5 bg-white/40"}`}
-                    />
-                  ))}
-                </div>
-              </>
-            )}
+            <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-transparent to-black/10 pointer-events-none" />
 
             <div className="absolute bottom-3 right-3 flex items-center gap-1 bg-black/35 backdrop-blur-md rounded-full px-2.5 py-1">
               <Eye size={12} className="text-white/80" />
@@ -1052,12 +1086,12 @@ export default function ListingPage() {
                     onClick={handleFollowToggle}
                     disabled={followBusy || !isSignedIn}
                     className={`px-4 py-2 rounded-full text-xs font-black transition-all active:scale-95 ${
-                      following ? "bg-[#F6F5F8] text-[#14141A] lg:hover:bg-[#EFEEF3]" : "bg-[#14141A] text-white lg:hover:bg-[#14141A]/85"
+                      following ? "bg-[#F6F5F8] text-[#14141A] lg:hover:bg-[#EFEEF3]" : "bg-gradient-to-r from-[#0D9488] to-[#0EA5E9] text-white lg:hover:opacity-90"
                     } ${followBusy ? "opacity-70" : ""}`}
                   >
                     {followBusy ? "Saving..." : following ? "Following" : "Follow"}
                   </button>
-                  <span className="text-[11px] font-semibold text-[#FF8A00]">{formatCount(followCount)} followers</span>
+                  <span className="text-[11px] font-semibold text-[#0D9488]">{formatCount(followCount)} followers</span>
                 </div>
               </div>
 
@@ -1067,7 +1101,7 @@ export default function ListingPage() {
               {/* Price + rating */}
               <div className="flex items-center gap-3 mb-2">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-[28px] lg:text-[36px] leading-none font-black text-[#FF8A00]">GH₵ {listing.price}</span>
+                  <span className="text-[28px] lg:text-[36px] leading-none font-black text-[#0D9488]">GH₵ {listing.price}</span>
                   {listing.originalPrice && (
                     <span className="text-xs lg:text-sm text-[#6B6B76] line-through">GH₵ {listing.originalPrice}</span>
                   )}
@@ -1106,7 +1140,7 @@ export default function ListingPage() {
                   className={`flex-1 py-3.5 rounded-2xl font-black text-sm flex items-center justify-center gap-1.5 transition-all border-2 ${
                     cartAdded
                       ? "bg-[#00D9A3] border-[#00D9A3] text-white"
-                      : "bg-white border-[#14141A]/15 text-[#14141A] hover:border-[#14141A]/30 active:scale-[0.98]"
+                      : "bg-white border-[#14141A]/15 text-[#14141A] hover:border-[#0D9488]/40 active:scale-[0.98]"
                   }`}
                 >
                   <ShoppingBag size={16} />
@@ -1114,7 +1148,7 @@ export default function ListingPage() {
                 </button>
                 <button
                   onClick={handleBuyNow}
-                  className="flex-[1.4] py-3.5 rounded-2xl font-black text-sm text-white bg-gradient-to-r from-[#2563EB] to-[#3B82F6] hover:opacity-90 active:scale-[0.98] shadow-lg shadow-[#3B82F6]/25 transition-all"
+                  className="flex-[1.4] py-3.5 rounded-2xl font-black text-sm text-white bg-gradient-to-r from-[#0D9488] to-[#0EA5E9] hover:opacity-90 active:scale-[0.98] shadow-lg shadow-[#0EA5E9]/25 transition-all"
                 >
                   Buy Now
                 </button>
@@ -1124,11 +1158,11 @@ export default function ListingPage() {
               <div className="flex items-center justify-between border-y border-[#14141A]/8 py-2.5 mb-5">
                 <button onClick={handleLike} className="flex items-center gap-1.5 active:scale-95 lg:hover:text-[#FF6B9D] transition">
                   <Heart size={19} className={liked ? "text-[#FF6B9D] fill-[#FF6B9D]" : "text-[#14141A]"} />
-                  <span className={`text-xs font-bold ${liked ? "text-[#FF8A00]" : "text-[#FF8A00]"}`}>{formatCount(likeCount)}</span>
+                  <span className={`text-xs font-bold ${liked ? "text-[#0D9488]" : "text-[#0D9488]"}`}>{formatCount(likeCount)}</span>
                 </button>
                 <button onClick={() => setShowComments(true)} className="flex items-center gap-1.5 active:scale-95 transition">
                   <MessageCircle size={19} className="text-[#14141A]" />
-                  <span className="text-xs font-bold text-[#FF8A00]">{formatCount(comments.length)}</span>
+                  <span className="text-xs font-bold text-[#0D9488]">{formatCount(comments.length)}</span>
                 </button>
                 <button onClick={handleSaveToggle} disabled={saveBusy} className="flex items-center gap-1.5 active:scale-95 transition disabled:opacity-70">
                   <Bookmark size={19} className={saved ? "text-[#FFB020] fill-[#FFB020]" : "text-[#14141A]"} />
@@ -1149,7 +1183,7 @@ export default function ListingPage() {
                 {isLongDesc && (
                   <button
                     onClick={() => setDescExpanded(v => !v)}
-                    className="flex items-center gap-1 text-xs font-black text-[#6C5CE7] mt-1.5 lg:hover:text-[#5a4bd4] transition-colors"
+                    className="flex items-center gap-1 text-xs font-black text-[#0D9488] mt-1.5 lg:hover:text-[#0b7d73] transition-colors"
                   >
                     {descExpanded ? "Show less" : "Read more"}
                     <ChevronDown size={13} className={`transition-transform ${descExpanded ? "rotate-180" : ""}`} />
@@ -1167,7 +1201,7 @@ export default function ListingPage() {
                     {videoUrl && (
                       <button
                         onClick={() => setShowVideoModal(true)}
-                        className="relative w-16 h-16 lg:w-20 lg:h-20 rounded-2xl overflow-hidden shrink-0 border border-[#14141A]/8 active:scale-95 lg:hover:border-[#6C5CE7]/40 transition"
+                        className="relative w-16 h-16 lg:w-20 lg:h-20 rounded-2xl overflow-hidden shrink-0 border border-[#14141A]/8 active:scale-95 lg:hover:border-[#0D9488]/40 transition"
                       >
                         <img src={listing.videoThumbnail || photos[0]} className="w-full h-full object-cover" alt={`${listing.title} video`} />
                         <div className="absolute inset-0 bg-black/35 flex items-center justify-center">
@@ -1180,7 +1214,7 @@ export default function ListingPage() {
                       <button
                         key={i}
                         onClick={() => { setGalleryIndex(i); setShowGallery(true); }}
-                        className="w-16 h-16 lg:w-20 lg:h-20 rounded-2xl overflow-hidden shrink-0 border border-[#14141A]/8 active:scale-95 lg:hover:border-[#6C5CE7]/40 transition"
+                        className="w-16 h-16 lg:w-20 lg:h-20 rounded-2xl overflow-hidden shrink-0 border border-[#14141A]/8 active:scale-95 lg:hover:border-[#0D9488]/40 transition"
                       >
                         <img src={p} className="w-full h-full object-cover" alt={`${listing.title} photo ${i + 1}`} />
                       </button>
@@ -1195,7 +1229,7 @@ export default function ListingPage() {
                   <Link
                     key={tag}
                     href={`/feed?tag=${encodeURIComponent(tag)}`}
-                    className="flex items-center gap-1 bg-[#F6F5F8] rounded-full pl-1.5 pr-2.5 py-1 text-[11px] font-bold text-[#6C5CE7] lg:hover:bg-[#6C5CE7]/10 transition-colors"
+                    className="flex items-center gap-1 bg-[#F6F5F8] rounded-full pl-1.5 pr-2.5 py-1 text-[11px] font-bold text-[#0D9488] lg:hover:bg-[#0D9488]/10 transition-colors"
                   >
                     <Tag size={10} />#{tag}
                   </Link>
@@ -1206,7 +1240,7 @@ export default function ListingPage() {
               <div className="mb-2">
                 <div className="flex items-center justify-between mb-2">
                   <h2 className="text-xs font-black uppercase tracking-wide text-[#6B6B76]">Reviews</h2>
-                  <button onClick={() => setShowComments(true)} className="text-[11px] font-black text-[#6C5CE7] lg:hover:text-[#5a4bd4] transition-colors">See all</button>
+                  <button onClick={() => setShowComments(true)} className="text-[11px] font-black text-[#0D9488] lg:hover:text-[#0b7d73] transition-colors">See all</button>
                 </div>
                 <div className="space-y-3">
                   {commentsLoading && comments.length === 0 && (
@@ -1249,7 +1283,7 @@ export default function ListingPage() {
               </div>
               <p className="text-[11px] lg:text-sm text-[#6B6B76] font-medium mt-0.5">🎬 Short clips and viral finds on Koombo</p>
             </div>
-            <Link href="/feed" className="text-[11px] lg:text-sm font-black text-[#6C5CE7] shrink-0 flex items-center gap-1 lg:hover:text-[#5a4bd4] transition-colors">
+            <Link href="/feed" className="text-[11px] lg:text-sm font-black text-[#0D9488] shrink-0 flex items-center gap-1 lg:hover:text-[#0b7d73] transition-colors">
               View all <ChevronRight size={12} />
             </Link>
           </div>
@@ -1268,7 +1302,7 @@ export default function ListingPage() {
                   onClick={() => setFeedTab(tab.key)}
                   className={`flex items-center gap-1.5 px-3.5 py-1.5 lg:px-5 lg:py-2 rounded-full text-xs lg:text-sm font-black shrink-0 transition-all ${
                     active
-                      ? "bg-gradient-to-r from-[#6C5CE7] to-[#FF6B9D] text-white shadow-md shadow-[#6C5CE7]/20"
+                      ? "bg-gradient-to-r from-[#0D9488] to-[#0EA5E9] text-white shadow-md shadow-[#0EA5E9]/20"
                       : "bg-[#F6F5F8] text-[#6B6B76] hover:bg-[#E8E7EC]"
                   }`}
                 >
@@ -1311,7 +1345,7 @@ export default function ListingPage() {
           <div className="mt-6 lg:mt-12 px-4 lg:px-0">
             <div className="flex items-center justify-between mb-2 lg:mb-4">
               <h3 className="text-xs lg:text-base font-black uppercase tracking-wide text-[#6B6B76]">Shop the look</h3>
-              <span className="text-[10px] lg:text-sm text-[#6C5CE7] font-black lg:hover:text-[#5a4bd4] transition-colors cursor-pointer">See all →</span>
+              <span className="text-[10px] lg:text-sm text-[#0D9488] font-black lg:hover:text-[#0b7d73] transition-colors cursor-pointer">See all →</span>
             </div>
             <div className="flex gap-2 lg:gap-4 overflow-x-auto no-scrollbar pb-2">
               {feedProducts.slice(0, 4).map((item) => (
@@ -1324,7 +1358,7 @@ export default function ListingPage() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
                   <div className="absolute bottom-2 left-2 right-2">
                     <p className="text-[9px] lg:text-xs font-bold text-white truncate">{item.title}</p>
-                    <p className="text-[10px] lg:text-sm font-black text-[#FF8A00]">GH₵{item.price}</p>
+                    <p className="text-[10px] lg:text-sm font-black text-[#0EA5E9]">GH₵{item.price}</p>
                   </div>
                   {item.discount && (
                     <div className="absolute top-2 left-2 bg-red-500 rounded-full px-1.5 py-0.5">
@@ -1388,9 +1422,9 @@ export default function ListingPage() {
                 value={commentInput}
                 onChange={(e) => setCommentInput(e.target.value)}
                 placeholder="Share a review..."
-                className="flex-1 bg-[#F6F5F8] rounded-full px-4 py-2.5 text-sm text-[#14141A] placeholder:text-[#6B6B76] outline-none focus:ring-2 focus:ring-[#6C5CE7]/40 transition"
+                className="flex-1 bg-[#F6F5F8] rounded-full px-4 py-2.5 text-sm text-[#14141A] placeholder:text-[#6B6B76] outline-none focus:ring-2 focus:ring-[#0D9488]/40 transition"
               />
-              <button type="submit" disabled={commentsLoading} className="w-10 h-10 rounded-full bg-gradient-to-br from-[#6C5CE7] to-[#FF6B9D] flex items-center justify-center shrink-0 disabled:opacity-70">
+              <button type="submit" disabled={commentsLoading} className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0D9488] to-[#0EA5E9] flex items-center justify-center shrink-0 disabled:opacity-70">
                 <Send size={15} className="text-white" />
               </button>
             </div>
@@ -1453,7 +1487,7 @@ export default function ListingPage() {
                 key={i}
                 onClick={() => setGalleryIndex(i)}
                 className={`w-14 h-14 rounded-xl overflow-hidden shrink-0 border-2 transition ${
-                  i === galleryIndex ? "border-[#6C5CE7]" : "border-transparent opacity-60"
+                  i === galleryIndex ? "border-[#0D9488]" : "border-transparent opacity-60"
                 }`}
               >
                 <img src={p} className="w-full h-full object-cover" alt="" />
@@ -1552,7 +1586,7 @@ export default function ListingPage() {
               <img src={photos[0]} className="w-11 h-11 rounded-xl object-cover shrink-0" alt={listing.title} />
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-black text-[#14141A] truncate">{listing.title}</p>
-                <span className="text-sm font-black text-[#FF8A00]">GH₵ {listing.price}</span>
+                <span className="text-sm font-black text-[#0D9488]">GH₵ {listing.price}</span>
               </div>
               <button
                 onClick={handleAddCart}
@@ -1562,7 +1596,7 @@ export default function ListingPage() {
               </button>
               <button
                 onClick={handleBuyNow}
-                className="px-4 py-2.5 rounded-full bg-gradient-to-r from-[#0EA5E9] to-[#14B8A6] text-white text-xs font-black shrink-0 active:scale-95 transition"
+                className="px-4 py-2.5 rounded-full bg-gradient-to-r from-[#0D9488] to-[#0EA5E9] text-white text-xs font-black shrink-0 active:scale-95 transition"
               >
                 Buy Now
               </button>
@@ -1574,7 +1608,7 @@ export default function ListingPage() {
         {/* ===================== FLOATING CHAT BUTTON ===================== */}
         <button
           onClick={handleOpenChat}
-          className="fixed bottom-4 right-4 z-40 flex items-center gap-2 rounded-full bg-[#FF6B35] px-3.5 py-2.5 text-[13px] font-semibold text-white shadow-[0_10px_24px_rgba(246,72,11,0.22)] ring-1 ring-white/20 backdrop-blur-sm transition-all active:scale-95 sm:bottom-5 sm:right-5"
+          className="fixed bottom-4 right-4 z-40 flex items-center gap-2 rounded-full bg-gradient-to-r from-[#0D9488] to-[#0EA5E9] px-3.5 py-2.5 text-[13px] font-semibold text-white shadow-[0_10px_24px_rgba(14,165,233,0.28)] ring-1 ring-white/20 backdrop-blur-sm transition-all active:scale-95 sm:bottom-5 sm:right-5"
         >
           <MessageCircle size={16} />
           <span className="hidden sm:inline">Message seller</span>

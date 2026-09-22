@@ -7,13 +7,13 @@ export default function ThemeScript() {
             try {
               const saved = localStorage.getItem("unimart-theme");
               const isValid = saved === "light" || saved === "dark";
-              const theme = isValid ? saved : "dark"; // default to dark brand styling for all screens
+              const theme = isValid ? saved : "light";
 
               document.documentElement.setAttribute("data-theme", theme);
               document.documentElement.style.colorScheme = theme;
             } catch (e) {
-              document.documentElement.setAttribute("data-theme", "dark");
-              document.documentElement.style.colorScheme = "dark";
+              document.documentElement.setAttribute("data-theme", "light");
+              document.documentElement.style.colorScheme = "light";
             }
           })();
         `,

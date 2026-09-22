@@ -206,11 +206,10 @@ export default function SwoopChatbot() {
   const pendingOpenRef = useRef(false);
 
   useEffect(() => {
-    // Only initialize Botpress on allowed routes (home, listing details, profile)
+    // Initialize Botpress on allowed routes even while the app is still finishing
+    // its splash/auth onboarding flow. The previous app-stage gate prevented the
+    // widget from ever loading, which left the button stuck in its loading state.
     if (typeof window === 'undefined') return;
-    // Do not initialize while app is in non-ready stage (splash/onboard/auth)
-    const appStage = document.documentElement.getAttribute('data-app-stage');
-    if (appStage && appStage !== 'ready') return;
 
     const pathname = window.location.pathname || '/';
     const allowed = (
@@ -292,15 +291,14 @@ export default function SwoopChatbot() {
     // Check if script element already exists in DOM
     const existingScript = document.getElementById("botpress-webchat-script") as HTMLScriptElement | null;
     if (existingScript) {
-      if (window.botpress) {
+      if (window.botpress || window.botpressWebChat) {
         configureBotpress();
       } else {
-        existingScript.addEventListener("load", configureBotpress);
+        existingScript.addEventListener("load", configureBotpress, { once: true });
       }
       return;
     }
 
-    // Create and append the Botpress script
     const script = document.createElement("script");
     script.id = "botpress-webchat-script";
     script.src = "https://cdn.botpress.cloud/webchat/v3.3/inject.js";
@@ -312,6 +310,7 @@ export default function SwoopChatbot() {
 
     script.onerror = () => {
       console.warn("Unable to load Botpress Webchat script.");
+      setReady(true);
       setIsLoading(false);
     };
 
@@ -329,6 +328,16 @@ export default function SwoopChatbot() {
       pendingOpenRef.current = true;
       setIsLoading(true);
       injectBotpressStyles();
+
+      window.setTimeout(() => {
+        const botpressNow = getBotpressApi();
+        if (!botpressNow && !ready) {
+          pendingOpenRef.current = false;
+          setIsLoading(false);
+          console.warn("Botpress did not initialize in time; chat launch timed out.");
+        }
+      }, 5000);
+
       return;
     }
 
